@@ -92,6 +92,34 @@ The agent reads its config exclusively from environment variables. `remote-claud
 
 ## Updating config
 
+### Already know the IP? Three ways to set it directly
+
+If you already have a working address for the Mac Mini (e.g., a fixed Tailscale IP, a LAN IP with a DHCP reservation, or a hostname), you don't need to re-run the Tailscale picker.
+
+**1. Edit `remote-claude.yml` by hand.** It's just YAML. Change `remote.host` and `remote.agentUrl`, save, run `remote-claude doctor` to verify. No daemon to restart.
+
+**2. Re-run `setup` with `--host`** (and `--force` to overwrite):
+
+```bash
+remote-claude setup --force --host 100.64.0.7
+```
+
+This skips Tailscale detection entirely. Other prompts still come up with their previous defaults — answer or accept.
+
+**3. Fully non-interactive** (all values from flags):
+
+```bash
+remote-claude setup --force \
+  --host 100.64.0.7 \
+  --user rebin \
+  --project my_app \
+  --path '~/workspace/${project}'
+```
+
+See [`setup` reference](/commands/#setup) for every flag.
+
+### Other changes
+
 `remote-claude.yml` is just YAML — edit it with any editor. Changes are picked up on the next `ask`. There's no daemon or cache to restart.
 
 After changing the **agent**'s env vars (e.g., bumping `RC_TIMEOUT_SEC`):
