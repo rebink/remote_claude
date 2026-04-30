@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a defect in Remote Claude.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Exact commands run on laptop and Mac Mini.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: cli-version
+    attributes:
+      label: remote-claude --version
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version (laptop / agent)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: macOS / OS version (laptop / agent)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Run with RC_VERBOSE=1 if possible.
+      render: shell

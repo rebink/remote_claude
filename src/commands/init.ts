@@ -5,13 +5,13 @@ import prompts from 'prompts';
 import { log } from '../lib/log.ts';
 
 export async function runInit(cwd: string, opts: { force?: boolean } = {}): Promise<void> {
-  const target = join(cwd, 'devbridge.yml');
+  const target = join(cwd, 'remote-claude.yml');
   if (existsSync(target) && !opts.force) {
-    log.warn(`devbridge.yml already exists at ${target}. Use --force to overwrite.`);
+    log.warn(`remote-claude.yml already exists at ${target}. Use --force to overwrite.`);
     return;
   }
 
-  log.step('Configuring DevBridge for this project');
+  log.step('Configuring Remote Claude for this project');
   const answers = await prompts([
     { type: 'text', name: 'project', message: 'Project name (folder name on remote)', initial: basename(cwd) },
     { type: 'text', name: 'host', message: 'Mac Mini host (IP or hostname)', initial: '192.168.1.10' },
@@ -19,7 +19,7 @@ export async function runInit(cwd: string, opts: { force?: boolean } = {}): Prom
     { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' },
     { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 },
     { type: 'text', name: 'agentUrl', message: 'Agent URL', initial: 'http://${host}:7878' },
-    { type: 'text', name: 'tokenEnv', message: 'Env var holding bearer token', initial: 'DEVBRIDGE_TOKEN' },
+    { type: 'text', name: 'tokenEnv', message: 'Env var holding bearer token', initial: 'RC_TOKEN' },
   ], { onCancel: () => process.exit(1) });
 
   const remotePath = String(answers.path).replace('${project}', String(answers.project));
@@ -50,9 +50,9 @@ ai:
   await writeFile(target, yaml, 'utf8');
   log.ok(`Wrote ${target}`);
 
-  await mkdir(join(cwd, '.devbridge'), { recursive: true });
-  await ensureGitignoreEntry(cwd, ['.devbridge/']);
-  log.dim('Set DEVBRIDGE_TOKEN in your shell before running `devbridge ask`.');
+  await mkdir(join(cwd, '.remote-claude'), { recursive: true });
+  await ensureGitignoreEntry(cwd, ['.remote-claude/']);
+  log.dim(`Set ${answers.tokenEnv} in your shell before running \`remote-claude ask\`.`);
 }
 
 async function ensureGitignoreEntry(cwd: string, entries: string[]): Promise<void> {

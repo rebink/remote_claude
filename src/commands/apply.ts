@@ -5,7 +5,7 @@ import { applyPatchInteractive } from '../lib/patch.ts';
 import { log } from '../lib/log.ts';
 
 export async function runApply(cwd: string, patchPath?: string): Promise<void> {
-  const target = patchPath ? resolve(cwd, patchPath) : join(cwd, '.devbridge', 'last.patch');
+  const target = patchPath ? resolve(cwd, patchPath) : join(cwd, '.remote-claude', 'last.patch');
   if (!existsSync(target)) {
     log.err(`Patch file not found: ${target}`);
     process.exitCode = 1;

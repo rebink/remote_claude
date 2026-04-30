@@ -26,14 +26,14 @@ export async function runDoctor(cwd: string): Promise<void> {
     detail: gitRepo.status === 0 ? cwd : 'patches require a local git repo to apply',
   });
 
-  const cfgPath = join(cwd, 'devbridge.yml');
+  const cfgPath = join(cwd, 'remote-claude.yml');
   const hasCfg = existsSync(cfgPath);
-  checks.push({ name: 'devbridge.yml present', pass: hasCfg, detail: hasCfg ? cfgPath : 'run `devbridge init`' });
+  checks.push({ name: 'remote-claude.yml present', pass: hasCfg, detail: hasCfg ? cfgPath : 'run `remote-claude init`' });
 
   if (hasCfg) {
     try {
       const cfg = await loadConfig(cwd);
-      checks.push({ name: 'devbridge.yml valid', pass: true });
+      checks.push({ name: 'remote-claude.yml valid', pass: true });
 
       const ssh = spawnSync(
         'ssh',
@@ -64,7 +64,7 @@ export async function runDoctor(cwd: string): Promise<void> {
         checks.push({ name: 'agent /health', pass: false, detail: (err as Error).message });
       }
     } catch (err) {
-      checks.push({ name: 'devbridge.yml valid', pass: false, detail: (err as Error).message });
+      checks.push({ name: 'remote-claude.yml valid', pass: false, detail: (err as Error).message });
     }
   }
 

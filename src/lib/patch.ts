@@ -86,7 +86,7 @@ export function summarizeDiff(diff: string): { files: string[]; added: number; r
 }
 
 export async function savePatch(diff: string, cwd: string): Promise<string> {
-  const dir = join(cwd, '.devbridge');
+  const dir = join(cwd, '.remote-claude');
   await mkdir(dir, { recursive: true });
   const path = join(dir, 'last.patch');
   await writeFile(path, diff, 'utf8');
@@ -121,7 +121,7 @@ export async function applyPatchInteractive(diff: string, cwd: string): Promise<
   const choices = [
     { title: 'Apply all changes', value: 'apply', disabled: !wholeOk },
     { title: 'Apply selected files…', value: 'selective' },
-    { title: 'Save patch to .devbridge/last.patch (do not apply)', value: 'save' },
+    { title: 'Save patch to .remote-claude/last.patch (do not apply)', value: 'save' },
     { title: 'Reject', value: 'reject' },
   ].filter((c) => !('disabled' in c && c.disabled));
 
