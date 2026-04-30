@@ -18,7 +18,21 @@ interface SetupAnswers {
   token: string;
 }
 
-export async function runSetup(cwd: string, opts: { force?: boolean } = {}): Promise<void> {
+export interface SetupOptions {
+  force?: boolean;
+  /** Skip Tailscale auto-detection (also implied by --host). */
+  noTailscale?: boolean;
+  /** Pre-filled values; any provided flag becomes the answer (no prompt). */
+  host?: string;
+  user?: string;
+  project?: string;
+  path?: string;
+  sshPort?: number;
+  agentPort?: number;
+  token?: string;
+}
+
+export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<void> {
   const target = join(cwd, 'remote-claude.yml');
   if (existsSync(target) && !opts.force) {
     log.warn(`remote-claude.yml already exists. Use --force to overwrite.`);
@@ -28,10 +42,15 @@ export async function runSetup(cwd: string, opts: { force?: boolean } = {}): Pro
   log.step(chalk.bold('Remote Claude — one-shot setup'));
   console.log();
 
-  const ts = tailscaleStatus();
-  const answers = ts.running && ts.peers.length > 0
-    ? await tailnetFlow(cwd, ts.peers)
-    : await manualFlow(cwd, ts);
+  // --host (or --no-tailscale) skips the tailnet picker entirely.
+  const skipTailscale = opts.noTailscale === true || typeof opts.host === 'string';
+  const ts = skipTailscale
+    ? { installed: false, running: false, peers: [] as TailscalePeer[] }
+    : tailscaleStatus();
+
+  const answers = !skipTailscale && ts.running && ts.peers.length > 0
+    ? await tailnetFlow(cwd, ts.peers, opts)
+    : await manualFlow(cwd, ts, opts);
 
   await writeYaml(cwd, answers);
   await mkdir(join(cwd, '.remote-claude'), { recursive: true });
@@ -62,7 +81,12 @@ export async function runSetup(cwd: string, opts: { force?: boolean } = {}): Pro
   console.log();
 }
 
-async function tailnetFlow(cwd: string, peers: TailscalePeer[]): Promise<SetupAnswers> {
+/** Build a prompts question only if the corresponding flag wasn't provided. */
+function maybeAsk<T>(skip: boolean, q: prompts.PromptObject<string>): prompts.PromptObject<string> | null {
+  return skip ? null : q;
+}
+
+async function tailnetFlow(cwd: string, peers: TailscalePeer[], opts: SetupOptions): Promise<SetupAnswers> {
   log.ok('Tailscale is running — picking the Mac Mini from your tailnet.');
   const candidates = peers
     .filter((p) => p.online)
@@ -84,54 +108,79 @@ async function tailnetFlow(cwd: string, peers: TailscalePeer[]): Promise<SetupAn
   const tsPeer = peer as TailscalePeer;
   const useDns = tsPeer.dnsName && tsPeer.dnsName !== tsPeer.hostname;
   const host = useDns ? tsPeer.dnsName : tsPeer.ipv4;
+  const agentPort = opts.agentPort ?? 7878;
 
-  const detail = await prompts([
-    { type: 'text', name: 'project', message: 'Project name on remote', initial: basename(cwd) },
-    { type: 'text', name: 'user', message: 'Remote user (SSH)', initial: process.env.USER ?? 'rebin' },
-    { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' },
-    { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 },
-  ], { onCancel: () => process.exit(1) });
+  const questions = [
+    maybeAsk(!!opts.project, { type: 'text', name: 'project', message: 'Project name on remote', initial: basename(cwd) }),
+    maybeAsk(!!opts.user, { type: 'text', name: 'user', message: 'Remote user (SSH)', initial: process.env.USER ?? 'rebin' }),
+    maybeAsk(!!opts.path, { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' }),
+    maybeAsk(opts.sshPort !== undefined, { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 }),
+  ].filter((q): q is prompts.PromptObject<string> => q !== null);
 
-  const path = String(detail.path).replace('${project}', String(detail.project));
+  const detail = questions.length ? await prompts(questions, { onCancel: () => process.exit(1) }) : {};
+
+  const project = (opts.project ?? detail.project) as string;
+  const user = (opts.user ?? detail.user) as string;
+  const pathTpl = (opts.path ?? detail.path) as string;
+  const path = pathTpl.replace('${project}', project);
+  const sshPort = (opts.sshPort ?? detail.sshPort) as number;
+
   return {
-    project: String(detail.project),
+    project,
     host,
-    user: String(detail.user),
+    user,
     path,
-    sshPort: Number(detail.sshPort),
-    agentUrl: `http://${host}:7878`,
-    token: generateToken(),
+    sshPort,
+    agentUrl: `http://${host}:${agentPort}`,
+    token: opts.token ?? generateToken(),
   };
 }
 
-async function manualFlow(cwd: string, ts: { installed: boolean; running: boolean }): Promise<SetupAnswers> {
-  if (!ts.installed) {
-    log.warn('Tailscale not detected.');
-    log.dim('  Install: brew install tailscale && sudo tailscale up');
-    log.dim('  Or continue with a manual host below.');
-  } else if (!ts.running) {
-    log.warn('Tailscale is installed but not running. Run `sudo tailscale up` for auto-discovery.');
+async function manualFlow(
+  cwd: string,
+  ts: { installed: boolean; running: boolean },
+  opts: SetupOptions,
+): Promise<SetupAnswers> {
+  if (!opts.host) {
+    if (!ts.installed) {
+      log.warn('Tailscale not detected.');
+      log.dim('  Install: brew install tailscale && sudo tailscale up');
+      log.dim('  Or continue with a manual host below.');
+    } else if (!ts.running) {
+      log.warn('Tailscale is installed but not running. Run `sudo tailscale up` for auto-discovery.');
+    }
+    console.log();
+  } else {
+    log.ok(`Using host from --host: ${opts.host}`);
   }
-  console.log();
 
-  const a = await prompts([
-    { type: 'text', name: 'project', message: 'Project name on remote', initial: basename(cwd) },
-    { type: 'text', name: 'host', message: 'Mac Mini host (IP or hostname)', initial: '192.168.1.10' },
-    { type: 'text', name: 'user', message: 'Remote user (SSH)', initial: process.env.USER ?? 'rebin' },
-    { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' },
-    { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 },
-    { type: 'number', name: 'agentPort', message: 'Agent HTTP port', initial: 7878 },
-  ], { onCancel: () => process.exit(1) });
+  const questions = [
+    maybeAsk(!!opts.project, { type: 'text', name: 'project', message: 'Project name on remote', initial: basename(cwd) }),
+    maybeAsk(!!opts.host, { type: 'text', name: 'host', message: 'Mac Mini host (IP or hostname)', initial: '192.168.1.10' }),
+    maybeAsk(!!opts.user, { type: 'text', name: 'user', message: 'Remote user (SSH)', initial: process.env.USER ?? 'rebin' }),
+    maybeAsk(!!opts.path, { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' }),
+    maybeAsk(opts.sshPort !== undefined, { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 }),
+    maybeAsk(opts.agentPort !== undefined, { type: 'number', name: 'agentPort', message: 'Agent HTTP port', initial: 7878 }),
+  ].filter((q): q is prompts.PromptObject<string> => q !== null);
 
-  const path = String(a.path).replace('${project}', String(a.project));
+  const a = questions.length ? await prompts(questions, { onCancel: () => process.exit(1) }) : {};
+
+  const project = (opts.project ?? a.project) as string;
+  const host = (opts.host ?? a.host) as string;
+  const user = (opts.user ?? a.user) as string;
+  const pathTpl = (opts.path ?? a.path) as string;
+  const path = pathTpl.replace('${project}', project);
+  const sshPort = (opts.sshPort ?? a.sshPort) as number;
+  const agentPort = (opts.agentPort ?? a.agentPort ?? 7878) as number;
+
   return {
-    project: String(a.project),
-    host: String(a.host),
-    user: String(a.user),
+    project,
+    host,
+    user,
     path,
-    sshPort: Number(a.sshPort),
-    agentUrl: `http://${a.host}:${a.agentPort}`,
-    token: generateToken(),
+    sshPort,
+    agentUrl: `http://${host}:${agentPort}`,
+    token: opts.token ?? generateToken(),
   };
 }
 

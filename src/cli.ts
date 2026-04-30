@@ -19,8 +19,26 @@ program
   .command('setup')
   .description('One-shot setup: auto-detect Tailscale peers, generate token, write config')
   .option('-f, --force', 'overwrite existing remote-claude.yml')
+  .option('--no-tailscale', 'skip Tailscale auto-detection')
+  .option('--host <host>', 'Mac Mini IP/hostname (skips Tailscale picker)')
+  .option('--user <user>', 'remote SSH user')
+  .option('--project <name>', 'project folder name on remote')
+  .option('--path <path>', 'remote project path (use ${project} as placeholder)')
+  .option('--ssh-port <n>', 'SSH port', (v: string) => Number(v))
+  .option('--agent-port <n>', 'agent HTTP port', (v: string) => Number(v))
+  .option('--token <token>', 'bearer token (default: random 32-byte hex)')
   .action(async (opts) => {
-    await runSetup(process.cwd(), opts);
+    await runSetup(process.cwd(), {
+      force: opts.force,
+      noTailscale: opts.tailscale === false,
+      host: opts.host,
+      user: opts.user,
+      project: opts.project,
+      path: opts.path,
+      sshPort: opts.sshPort,
+      agentPort: opts.agentPort,
+      token: opts.token,
+    });
   });
 
 program
