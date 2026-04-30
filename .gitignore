@@ -1,7 +1,12 @@
 node_modules/
 dist/
-.devbridge/
+.remote-claude/
 *.log
 .DS_Store
 .env
 .env.local
+
+# Override the user's global gitignore for files that ARE part of this project
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md

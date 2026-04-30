@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-const verbose = process.env.DEVBRIDGE_VERBOSE === '1';
+const verbose = process.env.RC_VERBOSE === '1';
 
 export const log = {
   info: (msg: string) => console.log(chalk.cyan('›'), msg),

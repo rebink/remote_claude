@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { runInit } from './commands/init.ts';
+import { runSetup } from './commands/setup.ts';
 import { runSync } from './commands/sync.ts';
 import { runAsk } from './commands/ask.ts';
 import { runApply } from './commands/apply.ts';
@@ -10,14 +11,22 @@ const VERSION = '0.1.0';
 
 const program = new Command();
 program
-  .name('devbridge')
-  .description('Local-first dev tool: push project to remote Mac Mini, run Claude Code there, return a reviewable diff.')
+  .name('remote-claude')
+  .description('Local-first dev tool: push your project to a remote Mac Mini, run Claude Code there, and pull back a reviewable unified diff.')
   .version(VERSION);
 
 program
+  .command('setup')
+  .description('One-shot setup: auto-detect Tailscale peers, generate token, write config')
+  .option('-f, --force', 'overwrite existing remote-claude.yml')
+  .action(async (opts) => {
+    await runSetup(process.cwd(), opts);
+  });
+
+program
   .command('init')
-  .description('Create devbridge.yml in the current project')
-  .option('-f, --force', 'overwrite existing devbridge.yml')
+  .description('Minimal config (alias for setup --no-tailscale; rarely needed)')
+  .option('-f, --force', 'overwrite existing remote-claude.yml')
   .action(async (opts) => {
     await runInit(process.cwd(), opts);
   });
@@ -45,7 +54,7 @@ program
 
 program
   .command('apply')
-  .description('Apply a previously saved patch (default: .devbridge/last.patch)')
+  .description('Apply a previously saved patch (default: .remote-claude/last.patch)')
   .argument('[patch]', 'path to a patch file')
   .action(async (patch?: string) => {
     await runApply(process.cwd(), patch);
@@ -60,6 +69,6 @@ program
 
 program.parseAsync(process.argv).catch((err: Error) => {
   log.err(err.message);
-  if (process.env.DEVBRIDGE_VERBOSE === '1') console.error(err.stack);
+  if (process.env.RC_VERBOSE === '1') console.error(err.stack);
   process.exit(1);
 });
