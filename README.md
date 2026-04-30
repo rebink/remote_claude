@@ -1,8 +1,11 @@
 # Remote Claude
 
 [![CI](https://github.com/rebink/remote_claude/actions/workflows/ci.yml/badge.svg)](https://github.com/rebink/remote_claude/actions/workflows/ci.yml)
+[![Docs](https://github.com/rebink/remote_claude/actions/workflows/docs.yml/badge.svg)](https://github.com/rebink/remote_claude/actions/workflows/docs.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](#requirements)
+
+📖 **Full docs:** [remote-claude.vercel.app](https://remote-claude.vercel.app) — quickstart, architecture, API reference, troubleshooting.
 
 > **Local-first development. AI executes remotely. Diffs come back for review.**
 

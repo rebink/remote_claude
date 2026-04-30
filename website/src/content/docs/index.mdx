@@ -1,0 +1,74 @@
+---
+title: Remote Claude
+description: Local-first dev tool. AI executes remotely. Diffs come back for review.
+template: splash
+hero:
+  tagline: Local-first development. AI executes remotely. Diffs come back for review.
+  image:
+    file: ../../assets/logo.svg
+  actions:
+    - text: Quickstart
+      link: /quickstart/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/rebink/remote_claude
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Why Remote Claude?
+
+You've got a fast laptop and a heavyweight Mac Mini sitting on your desk. Why force AI to crawl over SSH-mounted filesystems when it could just live where the compute is?
+
+Remote Claude pushes your project to the Mini, runs Claude Code there with **full repo context**, and ships the result back as a **unified diff** you can preview and `git apply`. No mystery edits. No remote-FS latency in your editor. No bidirectional-sync conflict hell.
+
+<CardGrid stagger>
+  <Card title="Local stays local" icon="laptop">
+    Your IDE, hot-reload, debugger — untouched. Editing speed is what it always was.
+  </Card>
+  <Card title="AI stays remote" icon="rocket">
+    Claude runs on the Mini with the whole repo, big memory, and the heat sink it deserves.
+  </Card>
+  <Card title="Diffs cross the wire" icon="approve-check">
+    Every change is a unified diff you preview. `git apply` only what you want.
+  </Card>
+  <Card title="Zero network surprises" icon="seti:lock">
+    Bearer-token HTTP + SSH keys. Recommended over Tailscale — never internet-exposed.
+  </Card>
+</CardGrid>
+
+## Three commands per side
+
+```bash title="Mac Mini"
+pnpm add -g github:rebink/remote_claude
+remote-claude-agent install
+# → registered as a launchd service, prints a TOKEN
+```
+
+```bash title="Laptop"
+pnpm add -g github:rebink/remote_claude
+remote-claude setup            # auto-detects Tailscale peers
+remote-claude ask "refactor login_bloc to freezed"
+```
+
+## How it works
+
+```
+MacBook (remote-claude CLI)        Mac Mini (remote-claude-agent)
+  - source of truth                  - bearer-token HTTP
+  - rsync push (one-way)             - clean git tree per request
+  - HTTP /ask                        - spawn `claude --print`
+  - diff preview                     - capture `git diff` + untracked
+  - git apply (selective)            - reset working tree
+```
+
+We deliberately **don't** ask Claude to "produce a diff" — Claude Code is excellent at *editing files* (its native skill) but unreliable at hand-rolling unified diffs. Instead the agent lets it edit a clean checkout, then derives the diff from `git`. Robust, no prompt fragility.
+
+<LinkCard
+  title="Read the architecture"
+  description="Walk through the request lifecycle, why we use git diff, and the fail-safe model."
+  href="/architecture/"
+/>
