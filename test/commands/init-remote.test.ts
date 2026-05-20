@@ -36,4 +36,26 @@ describe('init-remote', () => {
       projectName: 'app',
     });
   });
+
+  it('propagates agentRequest errors (e.g. timeout)', async () => {
+    const fakeCfg: Config = {
+      project: 'app',
+      remote: {
+        host: 'mac-mini',
+        user: 'me',
+        path: '/tmp/p/app',
+        agentUrl: 'http://mac-mini:7777',
+        token: 'tkn',
+      },
+      sync: { exclude: [] },
+      ai: { command: 'claude', args: ['--print'], timeoutSec: 600 },
+    };
+    vi.spyOn(config, 'loadConfig').mockResolvedValue(fakeCfg);
+    vi.spyOn(client, 'agentRequest').mockRejectedValue(
+      new Error('Agent POST /init timed out after 1000ms'),
+    );
+    await expect(
+      runInitRemote({ gitUrl: 'x', branch: 'main', project: 'app' }),
+    ).rejects.toThrow(/timed out/);
+  });
 });
