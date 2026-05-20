@@ -7,6 +7,7 @@ dist/
 .DS_Store
 .env
 .env.local
+vendor/sshpass/sshpass-*
 
 # Override the user's global gitignore for files that ARE part of this project
 !README.md
