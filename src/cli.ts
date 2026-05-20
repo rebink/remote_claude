@@ -84,8 +84,9 @@ program
 program
   .command('sync')
   .description('Sync project files to the remote Mac Mini')
-  .action(async () => {
-    await runSync(process.cwd());
+  .option('--json', 'JSONL output (for the VS Code extension)')
+  .action(async (opts: { json?: boolean }) => {
+    await runSync(process.cwd(), { json: !!opts.json });
   });
 
 program

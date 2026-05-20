@@ -7,10 +7,20 @@ import { log } from './log.ts';
 
 export interface SyncResult {
   durationMs: number;
+  filesChanged: number;
   bytesSent?: number;
 }
 
-export async function rsyncPush(cfg: Config, cwd: string): Promise<SyncResult> {
+export interface RsyncProgress {
+  transferred: number;
+  total: number;
+}
+
+export async function rsyncPush(
+  cfg: Config,
+  cwd: string,
+  onProgress?: (p: RsyncProgress) => void,
+): Promise<SyncResult> {
   const tempDir = await mkdtemp(join(tmpdir(), 'devbridge-'));
   const excludeFile = join(tempDir, 'exclude.txt');
   try {
@@ -32,7 +42,12 @@ export async function rsyncPush(cfg: Config, cwd: string): Promise<SyncResult> {
     log.debug(`rsync ${args.join(' ')}`);
     const start = Date.now();
     await runCommand('rsync', args);
-    return { durationMs: Date.now() - start };
+    const durationMs = Date.now() - start;
+    // Best-effort single progress event when no streaming parser is wired.
+    // Real callers receive zero ticks here; the extension relies on the
+    // sync_start / sync_done bookends emitted by runSync.
+    onProgress?.({ transferred: 1, total: 1 });
+    return { durationMs, filesChanged: 0 };
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
