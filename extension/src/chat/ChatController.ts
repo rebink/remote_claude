@@ -3,6 +3,7 @@ import { CliClient } from '../cli/CliClient.ts';
 import type { CliEvent, ChangedFile } from '../cli/events.ts';
 import { ChatStore } from './ChatStore.ts';
 import type { ChatPanel } from './ChatPanel.ts';
+import type { SyncController } from '../sync/SyncController.ts';
 import { applyPatch, filterPatchToFiles } from '../diff/applyPatch.ts';
 import { makeBeforeUri } from '../diff/DiffContentProvider.ts';
 import { mkdtempSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
@@ -22,12 +23,25 @@ export class ChatController {
     private readonly cli: CliClient,
     private readonly store: ChatStore,
     private readonly output: vscode.OutputChannel,
+    private readonly syncCtrl: SyncController,
   ) {}
 
   async send(chatId: string, prompt: string): Promise<void> {
     if (this.inFlight.has(chatId)) {
       vscode.window.showWarningMessage('A turn is already in flight for this chat.');
       return;
+    }
+    // Ask-time guard: warn when live-sync is off and the workspace is dirty.
+    const dirty = this.syncCtrl.getOutOfSyncFiles();
+    if (!this.syncCtrl.isLiveSync() && dirty.length > 0) {
+      const choice = await vscode.window.showInformationMessage(
+        `${dirty.length} files changed since last sync.`,
+        'Sync first', 'Turn on live sync', 'Send anyway'
+      );
+      if (choice === undefined) return;             // user dismissed; abort
+      if (choice === 'Sync first') await this.syncCtrl.syncOnce();
+      if (choice === 'Turn on live sync') this.syncCtrl.setLiveSync(true);
+      // 'Send anyway' falls through to the spawn below
     }
     this.store.appendTurn(chatId, { role: 'user', text: prompt, timestamp: Date.now() });
     this.store.appendTurn(chatId, { role: 'assistant', text: '', timestamp: Date.now(), patch: null });
