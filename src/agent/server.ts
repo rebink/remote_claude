@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { verifyToken } from './auth.ts';
 import { captureDiff, isClean, isGitRepo, resetClean } from './git.ts';
 import { findClaude, runClaude } from './claude.ts';
+import { runInit } from './init.ts';
 
 export interface AgentOptions {
   token: string;
@@ -89,6 +90,29 @@ export function buildServer(opts: AgentOptions) {
       stderr: claudeResult.stderr,
       exitCode: claudeResult.exitCode,
     };
+  });
+
+  app.post('/init', async (req, reply) => {
+    const body = (req.body ?? {}) as {
+      gitUrl?: string;
+      branch?: string;
+      projectName?: string;
+    };
+    if (!body.gitUrl || !body.projectName) {
+      reply.code(400);
+      return { ok: false, code: 'missing_fields' };
+    }
+    const result = await runInit({
+      projectsRoot: opts.projectsRoot,
+      gitUrl: body.gitUrl,
+      branch: body.branch ?? 'main',
+      projectName: body.projectName,
+    });
+    if (!result.ok) {
+      reply.code(409);
+      return result;
+    }
+    return result;
   });
 
   return app;
