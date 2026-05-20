@@ -1,0 +1,17 @@
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--vscode-font-family); color: var(--vscode-foreground); }
+body { background: var(--vscode-sideBar-background); padding: 8px; }
+.chat-list { border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 8px; margin-bottom: 8px; }
+.chat-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; cursor: pointer; border-radius: 3px; }
+.chat-item:hover { background: var(--vscode-list-hoverBackground); }
+.chat-item.active { background: var(--vscode-list-activeSelectionBackground); }
+.chat-del { background: transparent; opacity: 0.5; border: none; padding: 0 6px; cursor: pointer; color: var(--vscode-foreground); }
+.chat-del:hover { opacity: 1; }
+.turn { padding: 8px 0; border-bottom: 1px solid var(--vscode-panel-border); white-space: pre-wrap; }
+.turn.user { color: var(--vscode-textPreformat-foreground); }
+.diff-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; }
+.diff-file { display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer; }
+.diff-actions { margin-top: 8px; display: flex; gap: 4px; }
+button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 10px; cursor: pointer; border-radius: 2px; }
+button:hover { background: var(--vscode-button-hoverBackground); }
+button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+textarea { width: 100%; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); padding: 4px 6px; resize: vertical; min-height: 60px; font-family: var(--vscode-font-family); }
