@@ -62,16 +62,31 @@ export class SetupWizard {
           return this.postState();
         }
         return;
-      case 'step1Submit':
-        // T30 will validate the host/user/port and advance; for now just accept and advance.
-        this.state = {
-          ...this.state,
-          host: msg.host as string,
-          user: (msg.user as string) || this.state.user,
-          sshPort: (msg.port as number) || 22,
-          step: 2,
-        };
+      case 'step1ListPeers': {
+        // One-shot CLI call (not JSONL) — small exception to call spawnSync directly here
+        // since the runJsonl helper is for streaming subcommands. See M5.T30.
+        try {
+          const cp = await import('node:child_process');
+          const r = cp.spawnSync('remote-claude', ['setup', '--list-peers', '--json'], { encoding: 'utf8' });
+          const peers = r.status === 0 ? JSON.parse(r.stdout || '[]') : [];
+          this.panel?.webview.postMessage({ type: 'step1Peers', peers });
+        } catch (err) {
+          this.output.appendLine(`step1ListPeers failed: ${(err as Error).message}`);
+          this.panel?.webview.postMessage({ type: 'step1Peers', peers: [] });
+        }
+        return;
+      }
+      case 'step1Submit': {
+        const host = msg.host as string;
+        const user = msg.user as string;
+        const port = (msg.port as number) || 22;
+        if (!host || !user) {
+          this.state = { ...this.state, error: 'Host and user are required' };
+          return this.postState();
+        }
+        this.state = { ...this.state, host, user, sshPort: port, step: 2, error: undefined };
         return this.postState();
+      }
       case 'step2Submit':
         // T31 will run the ssh-copy-id flow.
         this.state = { ...this.state, step: 3 };
