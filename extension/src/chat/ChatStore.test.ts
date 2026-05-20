@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ChatStore } from './ChatStore.ts';
@@ -20,6 +20,19 @@ describe('ChatStore', () => {
 
     store2.deleteChat(id);
     expect(store2.listChats()).toHaveLength(0);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('skips malformed transcript lines on load', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rc-cs-'));
+    const store = new ChatStore(dir);
+    const id = store.createChat('partial');
+    store.appendTurn(id, { role: 'user', text: 'a', timestamp: 0 });
+    // simulate a half-written final line
+    appendFileSync(store.transcriptPath(id), '{"role":"assistant","te');
+    const t = store.loadTranscript(id);
+    expect(t).toHaveLength(1);
+    expect(t[0].text).toBe('a');
     rmSync(dir, { recursive: true, force: true });
   });
 });

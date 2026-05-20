@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, unlinkSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type { ChangedFile } from '../cli/events.ts';
 
 export interface ChatSummary { id: string; title: string; createdAt: number; lastActivity: number }
 export interface Turn {
@@ -8,7 +9,7 @@ export interface Turn {
   text: string;
   timestamp: number;
   patch?: string | null;
-  files?: { path: string; status: string; additions: number; deletions: number }[];
+  files?: ChangedFile[];
   applied?: boolean;
   rejected?: boolean;
   saved?: boolean;
@@ -62,7 +63,13 @@ export class ChatStore {
   loadTranscript(id: string): Turn[] {
     const p = this.transcriptPath(id);
     if (!existsSync(p)) return [];
-    return readFileSync(p, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as Turn);
+    const out: Turn[] = [];
+    for (const line of readFileSync(p, 'utf8').split('\n')) {
+      if (!line) continue;
+      try { out.push(JSON.parse(line) as Turn); }
+      catch { /* skip malformed line — e.g., half-written entry */ }
+    }
+    return out;
   }
 
   savePatch(id: string, turnIndex: number, patch: string): string {
