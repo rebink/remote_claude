@@ -69,3 +69,41 @@ export function probeClaudeVersion(commandPath: string): string | undefined {
   if (r.status === 0 && r.stdout) return r.stdout.trim();
   return undefined;
 }
+
+/**
+ * Streaming Claude runner used by `runChatTurn`. Resumes a Claude session by id
+ * and streams stdout chunks via `onText`. Resolves when the child exits 0.
+ *
+ * Configurable via env:
+ *   RC_CLAUDE_BIN  — path to the claude binary (default: "claude")
+ *   RC_CLAUDE_ARGS — space-separated args (default: "--print")
+ */
+export const claudeRunner = {
+  async run(
+    sessionId: string,
+    prompt: string,
+    onText: (chunk: string) => void,
+  ): Promise<{ tokensIn: number; tokensOut: number }> {
+    return new Promise<{ tokensIn: number; tokensOut: number }>((resolve, reject) => {
+      const bin = process.env.RC_CLAUDE_BIN || 'claude';
+      const baseArgs = process.env.RC_CLAUDE_ARGS?.split(' ').filter(Boolean) ?? ['--print'];
+      const args = baseArgs.concat(['--resume', sessionId]);
+      const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+      let out = '';
+      child.stdout.on('data', (c: Buffer) => {
+        const s = c.toString();
+        out += s;
+        onText(s);
+      });
+      child.on('error', reject);
+      child.on('close', (code) => {
+        if (code === 0) resolve({ tokensIn: 0, tokensOut: out.length });
+        else reject(new Error(`claude exited ${code}`));
+      });
+
+      child.stdin.write(prompt);
+      child.stdin.end();
+    });
+  },
+};
