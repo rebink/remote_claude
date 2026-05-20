@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { DiffContentProvider, SCHEME } from './diff/DiffContentProvider.ts';
 import { ChatStore } from './chat/ChatStore.ts';
 import { ChatPanel } from './chat/ChatPanel.ts';
@@ -10,6 +11,7 @@ import { registerCommands } from './commands.ts';
 import { SyncController } from './sync/SyncController.ts';
 import { StatusBarController } from './statusbar/StatusBarController.ts';
 import { FileDecorationProvider } from './sync/FileDecorationProvider.ts';
+import { SetupWizard } from './setup/SetupWizard.ts';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Remote Claude');
@@ -28,7 +30,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const status = new StatusBarController(ws, sync);
   context.subscriptions.push({ dispose: () => status.dispose() });
 
-  registerCommands(context, { output, chatStore, sync, status });
+  const setupWizard = new SetupWizard(context.extensionUri, output);
+
+  registerCommands(context, { output, chatStore, sync, status, setupWizard });
 
   const decor = new FileDecorationProvider(sync, chatStore);
   context.subscriptions.push(vscode.window.registerFileDecorationProvider(decor));
@@ -50,6 +54,12 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   controller.panel = chatPanel;
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatPanel.viewId, chatPanel));
+
+  const configPath = join(ws, 'remote-claude.yml');
+  if (!existsSync(configPath)) {
+    // Defer slightly so the activation hot path doesn't block on opening a tab.
+    setTimeout(() => setupWizard.show(), 100);
+  }
 }
 
 export function deactivate(): void {}

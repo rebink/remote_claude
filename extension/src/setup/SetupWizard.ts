@@ -1,0 +1,104 @@
+import * as vscode from 'vscode';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+
+export interface WizardState {
+  step: 1 | 2 | 3 | 4;
+  host?: string;
+  user?: string;
+  sshPort?: number;
+  keyPath?: string;
+  gitUrl?: string;
+  branch?: string;
+  projectName?: string;
+  localPath?: string;
+  error?: string;
+  busy?: boolean;
+}
+
+export class SetupWizard {
+  private panel?: vscode.WebviewPanel;
+  private state: WizardState = { step: 1 };
+
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly output: vscode.OutputChannel,
+  ) {}
+
+  show(): vscode.WebviewPanel {
+    if (this.panel) {
+      this.panel.reveal();
+      return this.panel;
+    }
+    const panel = vscode.window.createWebviewPanel(
+      'remoteClaude.setup',
+      'Remote Claude — Setup',
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'dist', 'setup-webview')],
+      }
+    );
+    this.panel = panel;
+    panel.onDidDispose(() => { this.panel = undefined; });
+    panel.webview.html = this.renderHtml(panel.webview);
+    panel.webview.onDidReceiveMessage((m) => this.handleMessage(m));
+    return panel;
+  }
+
+  private postState(): void {
+    this.panel?.webview.postMessage({ type: 'state', state: this.state });
+  }
+
+  private async handleMessage(msg: { type: string; [k: string]: unknown }): Promise<void> {
+    switch (msg.type) {
+      case 'ready':
+        return this.postState();
+      case 'back':
+        if (this.state.step > 1) {
+          this.state = { ...this.state, step: (this.state.step - 1) as 1 | 2 | 3 | 4, error: undefined };
+          return this.postState();
+        }
+        return;
+      case 'step1Submit':
+        // T30 will validate the host/user/port and advance; for now just accept and advance.
+        this.state = {
+          ...this.state,
+          host: msg.host as string,
+          user: (msg.user as string) || this.state.user,
+          sshPort: (msg.port as number) || 22,
+          step: 2,
+        };
+        return this.postState();
+      case 'step2Submit':
+        // T31 will run the ssh-copy-id flow.
+        this.state = { ...this.state, step: 3 };
+        return this.postState();
+      case 'step3Submit':
+        // T32 will run the git clone flow.
+        this.state = { ...this.state, step: 4 };
+        return this.postState();
+      case 'step4Finish':
+        // T33 will run doctor and then trigger a workspace reload.
+        this.panel?.dispose();
+        return;
+      default:
+        this.output.appendLine(`SetupWizard: unknown message type "${msg.type}"`);
+    }
+  }
+
+  private renderHtml(webview: vscode.Webview): string {
+    const dist = vscode.Uri.joinPath(this.extensionUri, 'dist', 'setup-webview');
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'main.js'));
+    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'styles.css'));
+    const nonce = randomBytes(16).toString('base64');
+    const html = readFileSync(join(this.extensionUri.fsPath, 'dist', 'setup-webview', 'index.html'), 'utf8');
+    return html
+      .replace(/\$\{cspSource\}/g, webview.cspSource)
+      .replace(/\$\{nonce\}/g, nonce)
+      .replace(/\$\{scriptUri\}/g, scriptUri.toString())
+      .replace(/\$\{stylesUri\}/g, stylesUri.toString());
+  }
+}
