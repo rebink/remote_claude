@@ -20,6 +20,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommands(context, { output, chatStore });
 
   const chatPanel = new ChatPanel(context.extensionUri, chatStore, {
+    output,
     onSend: (id, p) => output.appendLine(`[stub] send ${id}: ${p}`),
     onDiffAction: (a) => output.appendLine(`[stub] diff: ${JSON.stringify(a)}`),
     onOpenDiff: (a) => output.appendLine(`[stub] open: ${JSON.stringify(a)}`),
