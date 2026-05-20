@@ -1,0 +1,48 @@
+{
+  "name": "remote-claude-vscode",
+  "displayName": "Remote Claude",
+  "description": "Chat with Claude on a remote Mac Mini from VS Code.",
+  "version": "0.1.0",
+  "publisher": "remote-claude",
+  "private": true,
+  "engines": { "vscode": "^1.80.0", "node": ">=20" },
+  "categories": ["AI", "Other"],
+  "main": "./dist/extension.cjs",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "remoteClaude.openSetup", "title": "Remote Claude: Setup…" },
+      { "command": "remoteClaude.newChat", "title": "Remote Claude: New Chat" },
+      { "command": "remoteClaude.toggleLiveSync", "title": "Remote Claude: Toggle Live Sync" },
+      { "command": "remoteClaude.viewOutput", "title": "Remote Claude: Show Output" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "remoteClaude", "title": "Remote Claude", "icon": "$(comment-discussion)" }
+      ]
+    },
+    "views": {
+      "remoteClaude": [
+        { "type": "webview", "id": "remoteClaude.chatPanel", "name": "Chat" }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsup src/extension.ts --format cjs --external vscode --out-dir dist",
+    "dev": "tsup src/extension.ts --format cjs --external vscode --out-dir dist --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/vscode": "^1.80.0",
+    "@vscode/test-electron": "^2.4.1",
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.4"
+  },
+  "remoteClaude": {
+    "minimumCliVersion": "0.2.0"
+  }
+}
