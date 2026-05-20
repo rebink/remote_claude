@@ -1,4 +1,7 @@
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 export interface TailscalePeer {
   hostname: string;
@@ -89,14 +92,21 @@ export interface PeerInfo {
  * expected to treat empty as "no peers available" rather than "error".
  */
 export async function getPeers(): Promise<PeerInfo[]> {
-  const r = spawnSync('tailscale', ['status', '--json'], { encoding: 'utf8', timeout: 5000 });
-  if (r.error || r.status === null || r.status !== 0) return [];
+  let stdout: string;
+  try {
+    const res = await execFileAsync('tailscale', ['status', '--json']);
+    stdout = res.stdout;
+  } catch {
+    return []; // tailscale not installed, or non-zero exit
+  }
+
   let parsed: RawStatus & { Peer?: Record<string, RawPeer & { LastSeen?: string }> };
   try {
-    parsed = JSON.parse(r.stdout) as typeof parsed;
+    parsed = JSON.parse(stdout) as typeof parsed;
   } catch {
     return [];
   }
+
   const out: PeerInfo[] = [];
   const rawPeers = parsed.Peer ?? {};
   for (const id in rawPeers) {
@@ -105,8 +115,8 @@ export async function getPeers(): Promise<PeerInfo[]> {
     const dns = p.DNSName?.replace(/\.$/, '') ?? '';
     const ip = p.TailscaleIPs?.find((x) => x.includes('.')) ?? '';
     out.push({
-      hostname: p.HostName,
-      host: dns || ip || p.HostName,
+      hostname: p.HostName ?? '',
+      host: (dns || ip || p.HostName) ?? '',
       online: !!p.Online,
       lastSeen: p.LastSeen ?? '',
     });

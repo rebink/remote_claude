@@ -32,7 +32,7 @@ program
   .action(async (opts) => {
     if (opts.listPeers) {
       const { runSetupListPeers } = await import('./commands/setup.ts');
-      await runSetupListPeers();
+      await runSetupListPeers({ json: !!opts.json });
       return;
     }
     await runSetup(process.cwd(), {
