@@ -23,7 +23,7 @@ const AskBody = z.object({
 
 export const InitBody = z.object({
   gitUrl: z.string().min(1),
-  branch: z.string().min(1).optional(),
+  branch: z.string().min(1).regex(/^[a-zA-Z0-9_][a-zA-Z0-9/_.-]*$/, 'invalid branch name').optional(),
   projectName: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
 });
 

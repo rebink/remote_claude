@@ -58,4 +58,11 @@ describe('InitBody validation (path traversal)', () => {
     expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'a/b' }).success).toBe(false);
     expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'normal-name_1.0' }).success).toBe(true);
   });
+
+  it('rejects branch names with leading hyphens or whitespace', () => {
+    expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'p', branch: '-x' }).success).toBe(false);
+    expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'p', branch: ' evil ' }).success).toBe(false);
+    expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'p', branch: 'feat/foo-bar.v1.0' }).success).toBe(true);
+    expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'p' }).success).toBe(true);
+  });
 });
