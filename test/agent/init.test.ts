@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runInit } from '../../src/agent/init.ts';
-import { InitBody } from '../../src/agent/server.ts';
+import { InitBody, buildServer } from '../../src/agent/server.ts';
+import * as initMod from '../../src/agent/init.ts';
 import * as fs from 'node:fs';
 import * as cp from 'node:child_process';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 vi.mock('node:child_process');
 vi.mock('node:fs', async (importOriginal) => {
@@ -64,5 +68,72 @@ describe('InitBody validation (path traversal)', () => {
     expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'p', branch: ' evil ' }).success).toBe(false);
     expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'p', branch: 'feat/foo-bar.v1.0' }).success).toBe(true);
     expect(InitBody.safeParse({ gitUrl: 'x', projectName: 'p' }).success).toBe(true);
+  });
+});
+
+describe('POST /init HTTP status mapping', () => {
+  function makeApp() {
+    const dir = mkdtempSync(join(tmpdir(), 'rc-init-http-'));
+    return buildServer({
+      token: 't',
+      projectsRoot: dir,
+      claudeCommand: 'claude',
+      claudeArgs: [],
+      timeoutSec: 60,
+      version: 'test',
+      sessionStorePath: join(dir, 'sessions.json'),
+    });
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns 409 when result.code === "target_exists"', async () => {
+    vi.spyOn(initMod, 'runInit').mockResolvedValue({
+      ok: false,
+      code: 'target_exists',
+      stderr: 'not empty',
+    });
+    const app = makeApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/init',
+      headers: { authorization: 'Bearer t', 'content-type': 'application/json' },
+      payload: { gitUrl: 'git@example.com:x.git', projectName: 'p' },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('returns 500 when result.code === "clone_failed"', async () => {
+    vi.spyOn(initMod, 'runInit').mockResolvedValue({
+      ok: false,
+      code: 'clone_failed',
+      stderr: 'network down',
+    });
+    const app = makeApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/init',
+      headers: { authorization: 'Bearer t', 'content-type': 'application/json' },
+      payload: { gitUrl: 'git@example.com:x.git', projectName: 'p' },
+    });
+    expect(res.statusCode).toBe(500);
+  });
+
+  it('returns 500 when result.code === "rev_parse_failed"', async () => {
+    vi.spyOn(initMod, 'runInit').mockResolvedValue({
+      ok: false,
+      code: 'rev_parse_failed',
+      stderr: 'no HEAD',
+    });
+    const app = makeApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/init',
+      headers: { authorization: 'Bearer t', 'content-type': 'application/json' },
+      payload: { gitUrl: 'git@example.com:x.git', projectName: 'p' },
+    });
+    expect(res.statusCode).toBe(500);
   });
 });
