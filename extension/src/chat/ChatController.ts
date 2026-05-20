@@ -115,7 +115,12 @@ export class ChatController {
     writeFileSync(join(tmpDir, file.path), current);
 
     const single = filterPatchToFiles(turn.patch, [file.path]);
-    await applyPatch(single, tmpDir);
+    const applyRes = await applyPatch(single, tmpDir);
+    if (!applyRes.ok) {
+      vscode.window.showWarningMessage(
+        `Diff preview for ${file.path} may be inaccurate — the local file has drifted from Claude's input. Apply will use a 3-way merge against your current content.`
+      );
+    }
 
     const left = makeBeforeUri(file.path);
     const right = vscode.Uri.file(join(tmpDir, file.path));
