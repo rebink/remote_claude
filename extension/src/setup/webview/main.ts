@@ -28,8 +28,12 @@ let selectedHost = '';
 let userValue = '';
 let portValue = 22;
 
+interface Step2Result { ok: boolean; code?: string; stderr?: string }
+let step2Result: Step2Result | undefined;
+let pwValue = '';
+
 window.addEventListener('message', (event: MessageEvent) => {
-  const msg = event.data as { type: string; state?: Partial<WizardState>; peers?: Peer[] };
+  const msg = event.data as { type: string; state?: Partial<WizardState>; peers?: Peer[]; result?: Step2Result };
   if (msg.type === 'state' && msg.state) {
     state = { ...state, ...msg.state };
     render();
@@ -40,6 +44,9 @@ window.addEventListener('message', (event: MessageEvent) => {
       const firstOnline = peers.find((p) => p.online);
       if (firstOnline) selectedHost = firstOnline.host;
     }
+    render();
+  } else if (msg.type === 'step2Result' && msg.result) {
+    step2Result = msg.result;
     render();
   }
 });
@@ -151,15 +158,67 @@ function renderStep1(): HTMLElement {
 }
 
 function renderStep2(): HTMLElement {
-  // T31 fills this in with the password form.
-  return h('div', {},
+  const container = h('div', {},
     h('h1', {}, 'Step 2 — Sign in to the Mac Mini'),
-    h('p', { className: 'note' }, 'Password capture arrives in M5.T31.'),
-    h('div', { className: 'actions' },
-      h('button', { className: 'secondary', events: { click: () => vscode.postMessage({ type: 'back' }) } }, 'Back'),
-      h('button', { events: { click: () => vscode.postMessage({ type: 'step2Submit' }) } }, 'Next'),
-    ),
+    h('p', { className: 'note' }, 'We use your password once to install an SSH key, then discard it. You won’t be asked again.'),
   );
+
+  // Username (pre-filled from step 1; allow editing for typos)
+  const userInput = h('input', { type: 'text', placeholder: 'rebin', value: state.user ?? '' }) as HTMLInputElement;
+  userInput.addEventListener('input', () => { state.user = userInput.value; });
+  container.append(h('div', { className: 'form-row' },
+    h('label', {}, 'SSH username'),
+    userInput,
+  ));
+
+  // Password (single-shot)
+  const pwInput = h('input', { type: 'password', placeholder: '••••••••••', value: pwValue }) as HTMLInputElement;
+  pwInput.addEventListener('input', () => { pwValue = pwInput.value; });
+  container.append(h('div', { className: 'form-row' },
+    h('label', {}, 'Password (one-time)'),
+    pwInput,
+  ));
+
+  // Render result-driven error / host-key-mismatch dialog
+  if (step2Result && !step2Result.ok) {
+    const code = step2Result.code ?? 'unknown';
+    if (code === 'auth_failed') {
+      container.append(h('p', { className: 'error' }, 'Authentication failed. Check the password and try again.'));
+    } else if (code === 'unreachable') {
+      container.append(h('p', { className: 'error' }, 'Host unreachable. Check Tailscale and try again.'));
+    } else if (code === 'host_key_mismatch') {
+      container.append(h('div', { className: 'error' },
+        h('p', {}, 'REMOTE HOST IDENTIFICATION HAS CHANGED. The Mac Mini’s SSH key is different from what we have stored.'),
+        h('p', { className: 'note' }, 'This is sometimes legitimate (key rotated) and sometimes a sign of a man-in-the-middle. Trust the new key only if you’re sure.'),
+        step2Result.stderr ? h('pre', { className: 'note' }, step2Result.stderr) : null,
+        h('div', { className: 'actions' },
+          h('button', { className: 'secondary',
+            events: { click: () => {
+              vscode.postMessage({ type: 'step2Submit', user: state.user, password: pwValue, trustNewKey: true });
+            }}}, 'Trust new key'),
+        ),
+      ));
+    } else {
+      container.append(h('p', { className: 'error' }, step2Result.stderr ?? 'Setup failed. Check the output channel for details.'));
+    }
+  }
+
+  if (state.error) container.append(h('p', { className: 'error' }, state.error));
+  if (state.busy) container.append(h('p', { className: 'note' }, h('span', { className: 'spinner' }, '⟳'), ' Installing SSH key…'));
+
+  container.append(h('div', { className: 'actions' },
+    h('button', { className: 'secondary', events: { click: () => vscode.postMessage({ type: 'back' }) } }, 'Back'),
+    h('button', {
+      disabled: state.busy,
+      events: { click: () => {
+        if (!pwValue || !state.user) return;
+        step2Result = undefined;  // clear previous result on retry
+        vscode.postMessage({ type: 'step2Submit', user: state.user, password: pwValue });
+      }},
+    }, 'Install key & continue'),
+  ));
+
+  return container;
 }
 
 function renderStep3(): HTMLElement {
