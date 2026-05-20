@@ -10,15 +10,26 @@ export async function agentRequest(
   method: string,
   path: string,
   body?: unknown,
+  options: { timeoutMs?: number } = {},
 ): Promise<unknown> {
-  const res = await fetch(`${cfg.remote.agentUrl}${path}`, {
-    method,
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${cfg.remote.token}`,
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const timeoutMs = options.timeoutMs ?? 600_000;
+  let res;
+  try {
+    res = await fetch(`${cfg.remote.agentUrl}${path}`, {
+      method,
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${cfg.remote.token}`,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err: unknown) {
+    if ((err as { name?: string }).name === 'TimeoutError') {
+      throw new Error(`Agent ${method} ${path} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  }
   const text = await res.text();
   let data: unknown;
   try {
