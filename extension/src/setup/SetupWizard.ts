@@ -307,10 +307,62 @@ export class SetupWizard {
         this.postState();
         return;
       }
-      case 'step4Finish':
-        // T33 will run doctor and then trigger a workspace reload.
-        this.panel?.dispose();
+      case 'step4Run': {
+        const { localPath } = this.state;
+        if (!localPath) {
+          this.panel?.webview.postMessage({
+            type: 'step4Result',
+            result: { ok: false, stdout: '', stderr: 'No local path set' },
+          });
+          return;
+        }
+        this.state = { ...this.state, busy: true };
+        this.postState();
+
+        const cp = await import('node:child_process');
+        const os = await import('node:os');
+        const path = await import('node:path');
+
+        // Expand a leading "~" in the user-supplied local path so the doctor
+        // cwd is a real path, not a literal "~/...".
+        const expandedLocalPath = localPath.startsWith('~')
+          ? path.join(os.homedir(), localPath.slice(1))
+          : localPath;
+
+        const r = await new Promise<{ ok: boolean; stdout: string; stderr: string }>((resolve) => {
+          const child = cp.spawn('remote-claude', ['doctor'], { cwd: expandedLocalPath });
+          let stdout = '';
+          let stderr = '';
+          child.stdout?.on('data', (c: Buffer) => { stdout += c.toString(); });
+          child.stderr?.on('data', (c: Buffer) => { stderr += c.toString(); });
+          let settled = false;
+          child.on('error', (err: Error) => {
+            if (settled) return;
+            settled = true;
+            resolve({
+              ok: false,
+              stdout: '',
+              stderr: `Failed to spawn remote-claude: ${err.message}. Is it on PATH?`,
+            });
+          });
+          child.on('close', (code) => {
+            if (settled) return;
+            settled = true;
+            resolve({ ok: code === 0, stdout, stderr });
+          });
+        });
+
+        this.state = { ...this.state, busy: false };
+        this.panel?.webview.postMessage({ type: 'step4Result', result: r });
+        this.postState();
         return;
+      }
+      case 'step4Finish': {
+        this.panel?.dispose();
+        // Reload the window so the extension reactivates and picks up the new remote-claude.yml.
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+        return;
+      }
       default:
         this.output.appendLine(`SetupWizard: unknown message type "${msg.type}"`);
     }
