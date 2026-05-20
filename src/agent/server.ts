@@ -16,6 +16,7 @@ import { findClaude, makeClaudeRunner, runClaude } from './claude.ts';
 import { runInit } from './init.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
+import { TurnState } from './turn-state.ts';
 
 export interface AgentOptions {
   token: string;
@@ -57,6 +58,29 @@ export function registerDeleteSession(app: FastifyInstance, store: SessionStore)
   });
 }
 
+/**
+ * Mount the `GET /session/:id/status` route on the given Fastify instance.
+ *
+ * Extracted as an exported registrar (mirroring `registerDeleteSession`) so
+ * tests can mount the route on a fresh Fastify instance with a hand-built
+ * `TurnState` and avoid spinning up the full agent stack.
+ *
+ * Returns the typed `TurnRecord` on hit, 404 `{ code: 'unknown_uuid' }` on
+ * miss. The agent process holds `TurnState` in memory only, so after an agent
+ * restart all previously in-flight turns become `unknown_uuid` — the
+ * extension treats that as "previous turn lost; please retry" (M6 Task 34).
+ */
+export function registerSessionStatus(app: FastifyInstance, turns: TurnState): void {
+  app.get(
+    '/session/:id/status',
+    async (req: FastifyRequest<{ Params: { id: string } }>, reply) => {
+      const record = turns.get(req.params.id);
+      if (!record) return reply.status(404).send({ code: 'unknown_uuid' });
+      return record;
+    },
+  );
+}
+
 export const ChatBody = z.object({
   // Accept canonical UUID v1-5 or a generic hex-ish session id (>=32 hex chars + optional dashes).
   uuid: z
@@ -78,6 +102,11 @@ export function buildServer(opts: AgentOptions) {
   // Mount DELETE /session/:id via the exported registrar so the same route
   // definition is exercised by `test/agent/delete-session.test.ts`.
   registerDeleteSession(app, sessionStore);
+
+  // In-memory record of chat turns, updated by the POST /chat handler and
+  // queried by GET /session/:id/status. Constructed once per server instance.
+  const turns = new TurnState();
+  registerSessionStatus(app, turns);
 
   // Streaming runner configured from AgentOptions (not env). Honors `--claudeCommand`
   // / `--claudeArgs` exactly the same way the `/ask` path does via `runClaude`.
@@ -187,6 +216,7 @@ export function buildServer(opts: AgentOptions) {
     // TODO (M3 Task 24): wire client-disconnect cancellation by listening on
     //   req.raw.on('close') and aborting the spawned claude child via AbortSignal.
     //   Requires plumbing an AbortSignal through claudeRunner.run.
+    turns.start(body.uuid);
     try {
       await runChatTurn({
         uuid: body.uuid,
@@ -195,9 +225,26 @@ export function buildServer(opts: AgentOptions) {
         store: sessionStore,
         claude: claudeRunner,
         git: { diffHead, cleanResetToHead },
-        emit,
+        // Wrap emit to record completion in TurnState. The wrapper MUST forward
+        // every event to the original `emit` — the side effect for `chat_done`
+        // is purely additive so GET /session/:id/status can report final
+        // token counts + duration.
+        emit: (e) => {
+          if (e.type === 'chat_done') {
+            turns.complete(body.uuid, {
+              tokensIn: e.tokensIn,
+              tokensOut: e.tokensOut,
+              durationMs: e.durationMs,
+            });
+          }
+          emit(e);
+        },
       });
     } catch (err) {
+      // Record the error in TurnState BEFORE emitting it on the wire — that
+      // way the status endpoint reflects the error even if the socket write
+      // fails (e.g. client already disconnected).
+      turns.error(body.uuid, (err as Error).message);
       try {
         emit({
           type: 'error',
