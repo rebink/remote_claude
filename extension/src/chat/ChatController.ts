@@ -11,6 +11,15 @@ import { mkdtempSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 
+const ERROR_MESSAGES: Record<string, string> = {
+  cli_stderr:    'The CLI produced an error. Check Output → Remote Claude.',
+  cli_spawn_error: 'Could not start the CLI. Make sure `remote-claude` is on your PATH and that the extension is up to date.',
+  turn_failed:   'The remote couldn’t complete this turn.',
+  timeout:       'Claude took too long. Try splitting the request, or increase RC_TIMEOUT_SEC on the remote.',
+  busy:          'A turn is already in flight. Wait for it to finish.',
+  unknown:       'An unexpected error occurred.',
+};
+
 export class ChatController {
   private inFlight = new Map<string, ReturnType<CliClient['spawn']>>();
   private throttle = new Map<string, {
@@ -71,8 +80,10 @@ export class ChatController {
           this.replaceLastAssistant(chatId, assistantText, patch, files);
           this.onPendingDiffFiles?.(files.map((f) => f.path));
         } else if (ev.type === 'error') {
-          this.output.appendLine(`[error] ${ev.code}: ${ev.message}`);
-          this.store.appendTurn(chatId, { role: 'system', text: `Error: ${ev.message}`, timestamp: Date.now() });
+          const friendly = ERROR_MESSAGES[ev.code] ?? `${ev.code}: ${ev.message}`;
+          this.store.appendTurn(chatId, { role: 'system', text: friendly, timestamp: Date.now() });
+          this.output.appendLine(`[error ${ev.code}] ${ev.message}`);
+          this.panel.postState();
         }
       }
     } finally {
