@@ -1,9 +1,13 @@
 import * as vscode from 'vscode';
 import type { ChatStore } from './chat/ChatStore.ts';
+import type { SyncController } from './sync/SyncController.ts';
+import type { StatusBarController } from './statusbar/StatusBarController.ts';
 
 export interface ExtensionDeps {
   output: vscode.OutputChannel;
   chatStore: ChatStore;
+  sync: SyncController;
+  status: StatusBarController;
 }
 
 export function registerCommands(context: vscode.ExtensionContext, deps: ExtensionDeps): void {
@@ -17,8 +21,6 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Extensi
     vscode.commands.registerCommand('remoteClaude.openSetup', () =>
       vscode.window.showInformationMessage('Setup wizard arrives in Milestone 5.')
     ),
-    vscode.commands.registerCommand('remoteClaude.toggleLiveSync', () =>
-      vscode.window.showInformationMessage('Live sync arrives in Milestone 4.')
-    ),
+    vscode.commands.registerCommand('remoteClaude.toggleLiveSync', () => deps.status.toggle()),
   );
 }

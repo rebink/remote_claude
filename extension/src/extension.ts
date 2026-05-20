@@ -7,6 +7,8 @@ import { CliClient } from './cli/CliClient.ts';
 import { deleteRemoteSession } from './cli/agent-rest.ts';
 import { ChatController } from './chat/ChatController.ts';
 import { registerCommands } from './commands.ts';
+import { SyncController } from './sync/SyncController.ts';
+import { StatusBarController } from './statusbar/StatusBarController.ts';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Remote Claude');
@@ -20,9 +22,13 @@ export function activate(context: vscode.ExtensionContext): void {
   const diff = new DiffContentProvider();
   context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, diff));
 
-  registerCommands(context, { output, chatStore });
-
   const cli = new CliClient('remote-claude', ws);
+  const sync = new SyncController(cli, output);
+  const status = new StatusBarController(ws, sync);
+  context.subscriptions.push({ dispose: () => status.dispose() });
+
+  registerCommands(context, { output, chatStore, sync, status });
+
   const controller = new ChatController(cli, chatStore, output);
 
   const chatPanel = new ChatPanel(context.extensionUri, chatStore, {
