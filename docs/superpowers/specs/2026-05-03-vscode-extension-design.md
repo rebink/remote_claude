@@ -1,7 +1,10 @@
 # Remote Claude — VS Code Extension Design
 
+> **Superseded by [`2026-05-20-vscode-extension-v2-design.md`](2026-05-20-vscode-extension-v2-design.md).**
+> v2 rewrites the UI around a multi-turn chat session, adds password-once onboarding and Git-URL bootstrap for the Flutter use case, and replaces the single-shot `ask` UI with chat + inline diff cards. This v1 spec is kept for reference and history.
+
 **Date:** 2026-05-03
-**Status:** Spec — awaiting plan
+**Status:** Superseded
 **Owner:** rebin
 **Related:** [`2026-04-30-devbridge-design.md`](2026-04-30-devbridge-design.md) (the underlying CLI/agent)
 
