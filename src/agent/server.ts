@@ -21,6 +21,12 @@ const AskBody = z.object({
   project: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
 });
 
+export const InitBody = z.object({
+  gitUrl: z.string().min(1),
+  branch: z.string().min(1).optional(),
+  projectName: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
+});
+
 export function buildServer(opts: AgentOptions) {
   const app = Fastify({ logger: { level: 'info' }, bodyLimit: 5 * 1024 * 1024 });
 
@@ -93,25 +99,18 @@ export function buildServer(opts: AgentOptions) {
   });
 
   app.post('/init', async (req, reply) => {
-    const body = (req.body ?? {}) as {
-      gitUrl?: string;
-      branch?: string;
-      projectName?: string;
-    };
-    if (!body.gitUrl || !body.projectName) {
-      reply.code(400);
-      return { ok: false, code: 'missing_fields' };
+    const parsed = InitBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ ok: false, code: 'missing_fields', errors: parsed.error.format() });
     }
+    const body = parsed.data;
     const result = await runInit({
       projectsRoot: opts.projectsRoot,
       gitUrl: body.gitUrl,
       branch: body.branch ?? 'main',
       projectName: body.projectName,
     });
-    if (!result.ok) {
-      reply.code(409);
-      return result;
-    }
+    if (!result.ok) return reply.status(409).send(result);
     return result;
   });
 
