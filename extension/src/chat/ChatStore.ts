@@ -32,6 +32,10 @@ export class ChatStore {
 
   listChats(): ChatSummary[] { return [...this.index].sort((a, b) => b.lastActivity - a.lastActivity); }
 
+  hasChat(id: string): boolean {
+    return this.index.some((c) => c.id === id);
+  }
+
   createChat(title: string): string {
     const id = randomUUID();
     const now = Date.now();
