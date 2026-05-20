@@ -29,10 +29,24 @@ program
   .option('--token <token>', 'bearer token (default: random 32-byte hex)')
   .option('--list-peers', 'print Tailscale peers and exit')
   .option('--json', 'machine-readable output (for --list-peers)')
+  .option('--password-stdin', 'read SSH password from stdin and run ssh-copy-id (used by the wizard)')
+  .option('--key-path <path>', 'private key path for the per-project key', '')
+  .option('--trust-new-key', 'rewrite known_hosts before attempting (used after a fingerprint mismatch confirmation)')
   .action(async (opts) => {
     if (opts.listPeers) {
       const { runSetupListPeers } = await import('./commands/setup.ts');
       await runSetupListPeers({ json: !!opts.json });
+      return;
+    }
+    if (opts.passwordStdin) {
+      const { runSetupPasswordStdin } = await import('./commands/setup.ts');
+      await runSetupPasswordStdin({
+        host: opts.host,
+        user: opts.user,
+        port: opts.sshPort ?? 22,
+        keyPath: opts.keyPath,
+        trustNewKey: !!opts.trustNewKey,
+      });
       return;
     }
     await runSetup(process.cwd(), {
