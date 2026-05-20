@@ -1,0 +1,20 @@
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--vscode-font-family); color: var(--vscode-foreground); }
+body { background: var(--vscode-editor-background); padding: 20px; max-width: 700px; margin: 0 auto; }
+.step-indicator { display: flex; gap: 8px; margin-bottom: 24px; font-size: 12px; color: var(--vscode-descriptionForeground); }
+.step-indicator .active { color: var(--vscode-foreground); font-weight: 600; }
+.step-indicator .done { color: var(--vscode-charts-green); }
+h1 { font-size: 18px; margin-bottom: 16px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--vscode-descriptionForeground); }
+input[type=text], input[type=password] { width: 100%; padding: 6px 8px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px; font-family: inherit; }
+button { padding: 6px 14px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; }
+button:hover { background: var(--vscode-button-hoverBackground); }
+button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.actions { display: flex; gap: 8px; margin-top: 24px; }
+.error { color: var(--vscode-errorForeground); margin-top: 8px; font-size: 13px; }
+.note { color: var(--vscode-descriptionForeground); margin-top: 8px; font-size: 12px; }
+.peer-list label { display: flex; align-items: center; gap: 8px; padding: 6px; cursor: pointer; border-radius: 2px; }
+.peer-list label:hover { background: var(--vscode-list-hoverBackground); }
+.spinner { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
