@@ -71,6 +71,17 @@ program
   });
 
 program
+  .command('init-remote')
+  .description('Clone the project on the remote Mac Mini (called by the wizard)')
+  .requiredOption('--git-url <url>', 'git URL to clone')
+  .option('--branch <branch>', 'branch to clone', 'main')
+  .requiredOption('--project <name>', 'project directory name on the remote')
+  .action(async (opts: { gitUrl: string; branch: string; project: string }) => {
+    const { runInitRemote } = await import('./commands/init-remote.ts');
+    await runInitRemote({ gitUrl: opts.gitUrl, branch: opts.branch, project: opts.project });
+  });
+
+program
   .command('sync')
   .description('Sync project files to the remote Mac Mini')
   .action(async () => {
