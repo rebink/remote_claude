@@ -140,6 +140,18 @@ program
   });
 
 program
+  .command('session-status')
+  .description('Get the in-memory status of a chat session on the agent')
+  .requiredOption('--session <uuid>', 'extension UUID to check')
+  .action(async (opts: { session: string }) => {
+    const { loadConfig } = await import('./lib/config.ts');
+    const { agentRequest } = await import('./lib/client.ts');
+    const cfg = await loadConfig(process.cwd());
+    const out = await agentRequest<unknown>(cfg, 'GET', `/session/${encodeURIComponent(opts.session)}/status`);
+    process.stdout.write(JSON.stringify(out));
+  });
+
+program
   .command('doctor')
   .description('Verify local tools, config, ssh reachability, and agent health')
   .action(async () => {
