@@ -191,32 +191,41 @@ export class SetupWizard {
           ? path.join(os.homedir(), localPath.slice(1))
           : localPath;
 
+        // Helper: wrap spawn with settled-guard + stdout/stderr capture so we
+        // never block the extension host on long-running commands like git clone.
+        const runAsync = (
+          cmd: string,
+          args: string[],
+          opts: { cwd?: string } = {},
+        ): Promise<{ ok: boolean; status: number | null; stdout: string; stderr: string }> => {
+          return new Promise((resolve) => {
+            let stdout = '';
+            let stderr = '';
+            let settled = false;
+            const child = cp.spawn(cmd, args, { ...opts, stdio: ['ignore', 'pipe', 'pipe'] });
+            child.stdout?.on('data', (c: Buffer) => { stdout += c.toString(); });
+            child.stderr?.on('data', (c: Buffer) => { stderr += c.toString(); });
+            child.on('error', (err: Error) => {
+              if (settled) return;
+              settled = true;
+              resolve({ ok: false, status: null, stdout: '', stderr: `Failed to spawn ${cmd}: ${err.message}. Is it on PATH?` });
+            });
+            child.on('close', (code) => {
+              if (settled) return;
+              settled = true;
+              resolve({ ok: code === 0, status: code, stdout, stderr });
+            });
+          });
+        };
+
         // 1. Local clone
         this.output.appendLine(`Cloning ${gitUrl} into ${expandedLocalPath}…`);
-        let localClone;
-        try {
-          localClone = cp.spawnSync('git', ['clone', '-b', branch, '--', gitUrl, expandedLocalPath], { encoding: 'utf8' });
-        } catch (err) {
+        const localClone = await runAsync('git', ['clone', '-b', branch, '--', gitUrl, expandedLocalPath]);
+        if (!localClone.ok) {
           this.state = { ...this.state, busy: false };
           this.panel?.webview.postMessage({
             type: 'step3Result',
-            result: { ok: false, where: 'local', stderr: `Failed to spawn git: ${(err as Error).message}` },
-          });
-          return this.postState();
-        }
-        if (localClone.error) {
-          this.state = { ...this.state, busy: false };
-          this.panel?.webview.postMessage({
-            type: 'step3Result',
-            result: { ok: false, where: 'local', stderr: `Failed to spawn git: ${localClone.error.message}` },
-          });
-          return this.postState();
-        }
-        if (localClone.status !== 0) {
-          this.state = { ...this.state, busy: false };
-          this.panel?.webview.postMessage({
-            type: 'step3Result',
-            result: { ok: false, where: 'local', stderr: String(localClone.stderr ?? '').slice(0, 500) },
+            result: { ok: false, where: 'local', stderr: localClone.stderr.slice(0, 500) },
           });
           return this.postState();
         }
@@ -269,35 +278,18 @@ export class SetupWizard {
 
         // 4. Remote clone via init-remote (CLI calls the agent's POST /init)
         this.output.appendLine(`Cloning remote into ~/workspace/${projectName}…`);
-        let initRemote;
-        try {
-          initRemote = cp.spawnSync(
-            'remote-claude',
-            ['init-remote', '--git-url', gitUrl, '--branch', branch, '--project', projectName],
-            { cwd: expandedLocalPath, encoding: 'utf8' },
-          );
-        } catch (err) {
-          this.state = { ...this.state, busy: false };
-          this.panel?.webview.postMessage({
-            type: 'step3Result',
-            result: { ok: false, where: 'remote', stderr: `Failed to spawn remote-claude: ${(err as Error).message}. Is it on PATH?` },
-          });
-          return this.postState();
-        }
+        const initRemote = await runAsync(
+          'remote-claude',
+          ['init-remote', '--git-url', gitUrl, '--branch', branch, '--project', projectName],
+          { cwd: expandedLocalPath },
+        );
 
         this.state = { ...this.state, busy: false };
 
-        if (initRemote.error) {
+        if (!initRemote.ok) {
           this.panel?.webview.postMessage({
             type: 'step3Result',
-            result: { ok: false, where: 'remote', stderr: `Failed to spawn remote-claude: ${initRemote.error.message}. Is it on PATH?` },
-          });
-          return this.postState();
-        }
-        if (initRemote.status !== 0) {
-          this.panel?.webview.postMessage({
-            type: 'step3Result',
-            result: { ok: false, where: 'remote', stderr: String(initRemote.stderr ?? '').slice(0, 500) },
+            result: { ok: false, where: 'remote', stderr: initRemote.stderr.slice(0, 500) },
           });
           return this.postState();
         }
