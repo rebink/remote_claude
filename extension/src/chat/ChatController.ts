@@ -3,6 +3,11 @@ import { CliClient } from '../cli/CliClient.ts';
 import type { CliEvent, ChangedFile } from '../cli/events.ts';
 import { ChatStore } from './ChatStore.ts';
 import type { ChatPanel } from './ChatPanel.ts';
+import { applyPatch, filterPatchToFiles } from '../diff/applyPatch.ts';
+import { makeBeforeUri } from '../diff/DiffContentProvider.ts';
+import { mkdtempSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
 
 export class ChatController {
   private inFlight = new Map<string, ReturnType<CliClient['spawn']>>();
@@ -52,6 +57,70 @@ export class ChatController {
   }
 
   cancel(chatId: string): void { this.inFlight.get(chatId)?.cancel(); }
+
+  async handleDiffAction(input: { chatId: string; turn: number; action: 'apply'|'save'|'reject'; fileIndices: number[] }): Promise<void> {
+    const turns = this.store.loadTranscript(input.chatId);
+    const turn = turns[input.turn];
+    if (!turn || !turn.patch || !turn.files) return;
+
+    if (input.action === 'reject') {
+      turn.rejected = true;
+      this.store.rewriteTranscript(input.chatId, turns);
+      this.panel.postState();
+      return;
+    }
+    if (input.action === 'save') {
+      this.store.savePatch(input.chatId, input.turn, turn.patch);
+      turn.saved = true;
+      this.store.rewriteTranscript(input.chatId, turns);
+      this.panel.postState();
+      vscode.window.showInformationMessage('Patch saved.');
+      return;
+    }
+
+    // apply
+    const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!ws) { vscode.window.showErrorMessage('No workspace open.'); return; }
+    const keep = input.fileIndices.map((i) => turn.files![i].path);
+    const subset = filterPatchToFiles(turn.patch, keep);
+    const res = await applyPatch(subset, ws);
+    if (res.ok) {
+      turn.applied = true;
+      vscode.window.showInformationMessage(`Applied ${keep.length} file(s).`);
+    } else if (res.conflicted.length > 0) {
+      turn.applied = true;
+      vscode.window.showWarningMessage(`Conflicts in: ${res.conflicted.join(', ')}. Resolve, then commit.`);
+    } else {
+      vscode.window.showErrorMessage(`git apply failed: ${res.stderr.split('\n')[0]}`);
+      return;
+    }
+    this.store.rewriteTranscript(input.chatId, turns);
+    this.panel.postState();
+  }
+
+  async handleOpenDiff(input: { chatId: string; turn: number; fileIndex: number }): Promise<void> {
+    const turns = this.store.loadTranscript(input.chatId);
+    const turn = turns[input.turn];
+    if (!turn || !turn.files || !turn.patch) return;
+    const file = turn.files[input.fileIndex];
+
+    const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!ws) { vscode.window.showErrorMessage('No workspace open.'); return; }
+    const tmpDir = mkdtempSync(join(tmpdir(), 'rc-diff-'));
+    // Mirror the workspace file structure inside tmpDir so git apply sees the right relative path
+    const targetDir = join(tmpDir, dirname(file.path));
+    await vscode.workspace.fs.createDirectory(vscode.Uri.file(targetDir));
+    const localPath = join(ws, file.path);
+    const current = existsSync(localPath) ? readFileSync(localPath) : Buffer.alloc(0);
+    writeFileSync(join(tmpDir, file.path), current);
+
+    const single = filterPatchToFiles(turn.patch, [file.path]);
+    await applyPatch(single, tmpDir);
+
+    const left = makeBeforeUri(file.path);
+    const right = vscode.Uri.file(join(tmpDir, file.path));
+    await vscode.commands.executeCommand('vscode.diff', left, right, `${file.path} (Claude proposal)`);
+  }
 
   private replaceLastAssistant(chatId: string, text: string, patch: string | null, files: ChangedFile[]): void {
     const turns = this.store.loadTranscript(chatId);
