@@ -49,6 +49,7 @@ export class ChatController {
     }
     this.store.appendTurn(chatId, { role: 'user', text: prompt, timestamp: Date.now() });
     this.store.appendTurn(chatId, { role: 'assistant', text: '', timestamp: Date.now(), patch: null });
+    this.store.setInFlight(chatId, true);
     this.panel.setInFlight(chatId, true);
 
     const run = this.cli.spawn(['chat', '--session', chatId, '--json', prompt]);
@@ -76,6 +77,7 @@ export class ChatController {
       }
     } finally {
       this.inFlight.delete(chatId);
+      this.store.setInFlight(chatId, false);
       this.panel.setInFlight(chatId, false);
       // Flush any pending update for THIS chat so the final state is captured
       const slot = this.throttle.get(chatId);
@@ -95,6 +97,22 @@ export class ChatController {
   }
 
   cancel(chatId: string): void { this.inFlight.get(chatId)?.cancel(); }
+
+  async activateRecovery(): Promise<void> {
+    const stale = this.store.loadInFlight();
+    for (const chatId of stale) {
+      this.store.setInFlight(chatId, false);
+      // We can't reattach to the stream (one-shot), so append a system turn explaining the situation.
+      if (this.store.hasChat(chatId)) {
+        this.store.appendTurn(chatId, {
+          role: 'system',
+          text: 'A previous chat turn was interrupted by a window reload. Re-send the prompt to retry.',
+          timestamp: Date.now(),
+        });
+      }
+    }
+    if (stale.length > 0) this.panel.postState();
+  }
 
   async handleDiffAction(input: { chatId: string; turn: number; action: 'apply'|'save'|'reject'; fileIndices: number[] }): Promise<void> {
     const turns = this.store.loadTranscript(input.chatId);

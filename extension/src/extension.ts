@@ -53,6 +53,7 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   });
   controller.panel = chatPanel;
+  controller.activateRecovery().catch((e) => output.appendLine(`recovery: ${(e as Error).message}`));
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatPanel.viewId, chatPanel));
 
   const configPath = join(ws, 'remote-claude.yml');

@@ -84,6 +84,32 @@ export class ChatStore {
     return p;
   }
 
+  setInFlight(id: string, on: boolean): void {
+    const path = this.statePath();
+    let state: Record<string, unknown> = {};
+    if (existsSync(path)) {
+      try { state = JSON.parse(readFileSync(path, 'utf8')); } catch { /* ignore */ }
+    }
+    const inFlight = new Set<string>((state.inFlight as string[] | undefined) ?? []);
+    if (on) inFlight.add(id); else inFlight.delete(id);
+    state.inFlight = [...inFlight];
+    writeFileSync(path, JSON.stringify(state, null, 2));
+  }
+
+  loadInFlight(): string[] {
+    const path = this.statePath();
+    if (!existsSync(path)) return [];
+    try {
+      const state = JSON.parse(readFileSync(path, 'utf8'));
+      return (state.inFlight as string[] | undefined) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
   transcriptPath(id: string): string { return join(this.root, `${id}.jsonl`); }
   private persistIndex(): void { writeFileSync(this.indexPath, JSON.stringify(this.index, null, 2)); }
+  // Co-located with the sessions: <root>/state.json (NOT the workspace-level state.json
+  // that StatusBarController uses — keep them separate to avoid cross-feature collisions).
+  private statePath(): string { return join(this.root, 'state.json'); }
 }

@@ -45,4 +45,21 @@ describe('ChatStore', () => {
     expect(store.hasChat(id)).toBe(false);
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it('setInFlight / loadInFlight round-trip across reload', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rc-cs-'));
+    const store = new ChatStore(dir);
+    const a = store.createChat('a');
+    const b = store.createChat('b');
+    expect(store.loadInFlight()).toEqual([]);
+    store.setInFlight(a, true);
+    store.setInFlight(b, true);
+    expect(new Set(store.loadInFlight())).toEqual(new Set([a, b]));
+    // Reload from disk via a fresh instance
+    const store2 = new ChatStore(dir);
+    expect(new Set(store2.loadInFlight())).toEqual(new Set([a, b]));
+    store2.setInFlight(a, false);
+    expect(store2.loadInFlight()).toEqual([b]);
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
