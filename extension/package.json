@@ -28,8 +28,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/extension.ts --format cjs --external vscode --out-dir dist",
-    "dev": "tsup src/extension.ts --format cjs --external vscode --out-dir dist --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "package": "vsce package"
