@@ -62,10 +62,15 @@ export async function copyIdWithPassword(input: CopyIdInput): Promise<CopyIdResu
     child.stdin.end();
     pwBuf.fill(0);
 
+    let settled = false;
     child.on('error', (err: Error) => {
+      if (settled) return;
+      settled = true;
       resolve({ ok: false, code: 'unknown', stderr: err.message });
     });
     child.on('close', (code: number | null) => {
+      if (settled) return;
+      settled = true;
       if (code === 0) return resolve({ ok: true });
       if (/Permission denied/i.test(stderr)) return resolve({ ok: false, code: 'auth_failed', stderr });
       if (/Connection refused|Connection timed out|No route to host|Could not resolve/i.test(stderr))

@@ -94,4 +94,26 @@ describe('copyIdWithPassword', () => {
     });
     expect(result).toMatchObject({ ok: false, code: 'unreachable' });
   });
+
+  it('does not double-resolve when error and close both fire', async () => {
+    const closeSpy = vi.fn();
+    vi.spyOn(cp, 'spawn').mockReturnValue({
+      stdin: { write: vi.fn(), end: vi.fn() },
+      stdout: { on: vi.fn() },
+      stderr: { on: vi.fn() },
+      on: (event: string, cb: (arg: unknown) => void) => {
+        if (event === 'error') queueMicrotask(() => cb(new Error('ENOENT')));
+        if (event === 'close') queueMicrotask(() => { closeSpy(); cb(null); });
+      },
+    } as unknown as cp.ChildProcessWithoutNullStreams);
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+
+    const result = await copyIdWithPassword({
+      host: 'h', user: 'u', port: 22, keyPath: '/tmp/k', password: 'p',
+    });
+    // error fires first, so the result is 'unknown' with the spawn error message
+    expect(result).toEqual({ ok: false, code: 'unknown', stderr: 'ENOENT' });
+    // close still fired (it's invoked by Node), but the settled guard kept it from changing the result
+    expect(closeSpy).toHaveBeenCalled();
+  });
 });
