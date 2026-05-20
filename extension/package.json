@@ -34,6 +34,9 @@
     "test": "vitest run",
     "package": "vsce package"
   },
+  "dependencies": {
+    "yaml": "^2.5.1"
+  },
   "devDependencies": {
     "@types/node": "^20.14.10",
     "@types/vscode": "^1.80.0",

@@ -32,8 +32,20 @@ interface Step2Result { ok: boolean; code?: string; stderr?: string }
 let step2Result: Step2Result | undefined;
 let pwValue = '';
 
+interface Step3Result { ok: boolean; where?: 'local' | 'remote'; stderr?: string }
+let step3Result: Step3Result | undefined;
+let gitUrlValue = '';
+let branchValue = 'main';
+let projectNameValue = '';
+let localPathValue = '';
+
 window.addEventListener('message', (event: MessageEvent) => {
-  const msg = event.data as { type: string; state?: Partial<WizardState>; peers?: Peer[]; result?: Step2Result };
+  const msg = event.data as {
+    type: string;
+    state?: Partial<WizardState>;
+    peers?: Peer[];
+    result?: Step2Result | Step3Result;
+  };
   if (msg.type === 'state' && msg.state) {
     state = { ...state, ...msg.state };
     render();
@@ -46,7 +58,10 @@ window.addEventListener('message', (event: MessageEvent) => {
     }
     render();
   } else if (msg.type === 'step2Result' && msg.result) {
-    step2Result = msg.result;
+    step2Result = msg.result as Step2Result;
+    render();
+  } else if (msg.type === 'step3Result' && msg.result) {
+    step3Result = msg.result as Step3Result;
     render();
   }
 });
@@ -222,15 +237,71 @@ function renderStep2(): HTMLElement {
 }
 
 function renderStep3(): HTMLElement {
-  // T32 fills this in with the git URL form.
-  return h('div', {},
+  const container = h('div', {},
     h('h1', {}, 'Step 3 — Project source'),
-    h('p', { className: 'note' }, 'Clone arrives in M5.T32.'),
-    h('div', { className: 'actions' },
-      h('button', { className: 'secondary', events: { click: () => vscode.postMessage({ type: 'back' }) } }, 'Back'),
-      h('button', { events: { click: () => vscode.postMessage({ type: 'step3Submit' }) } }, 'Next'),
-    ),
+    h('p', { className: 'note' }, 'We’ll clone the same repository on your laptop and on the Mac Mini.'),
   );
+
+  // Forward-declare the input refs so the gitUrl listener can safely populate
+  // the projectName + localPath inputs without hitting a TDZ surprise.
+  const gitUrlInput = h('input', { type: 'text', placeholder: 'git@github.com:org/app.git', value: gitUrlValue }) as HTMLInputElement;
+  const branchInput = h('input', { type: 'text', placeholder: 'main', value: branchValue }) as HTMLInputElement;
+  const projectNameInput = h('input', { type: 'text', placeholder: 'app', value: projectNameValue }) as HTMLInputElement;
+  const localPathInput = h('input', { type: 'text', placeholder: '~/code/app', value: localPathValue }) as HTMLInputElement;
+
+  gitUrlInput.addEventListener('input', () => {
+    gitUrlValue = gitUrlInput.value;
+    // Auto-derive projectName from the URL if user hasn't typed one.
+    if (!projectNameValue) {
+      const m = gitUrlValue.match(/\/([^/]+?)(?:\.git)?$/);
+      if (m) {
+        projectNameValue = m[1];
+        projectNameInput.value = projectNameValue;
+        if (!localPathValue) {
+          localPathValue = `~/code/${projectNameValue}`;
+          localPathInput.value = localPathValue;
+        }
+      }
+    }
+  });
+  branchInput.addEventListener('input', () => { branchValue = branchInput.value || 'main'; });
+  projectNameInput.addEventListener('input', () => { projectNameValue = projectNameInput.value; });
+  localPathInput.addEventListener('input', () => { localPathValue = localPathInput.value; });
+
+  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Git URL'), gitUrlInput));
+  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Branch'), branchInput));
+  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Project name (used as remote directory)'), projectNameInput));
+  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Local path'), localPathInput));
+
+  if (step3Result && !step3Result.ok) {
+    container.append(h('div', { className: 'error' },
+      h('p', {}, `Clone failed on ${step3Result.where === 'local' ? 'your laptop' : 'the Mac Mini'}.`),
+      h('pre', { className: 'note', style: { whiteSpace: 'pre-wrap' } as unknown as CSSStyleDeclaration }, step3Result.stderr ?? ''),
+    ));
+  }
+
+  if (state.error) container.append(h('p', { className: 'error' }, state.error));
+  if (state.busy) container.append(h('p', { className: 'note' }, h('span', { className: 'spinner' }, '⟳'), ' Cloning…'));
+
+  container.append(h('div', { className: 'actions' },
+    h('button', { className: 'secondary', events: { click: () => vscode.postMessage({ type: 'back' }) } }, 'Back'),
+    h('button', {
+      disabled: state.busy,
+      events: { click: () => {
+        if (!gitUrlValue || !projectNameValue || !localPathValue) return;
+        step3Result = undefined;
+        vscode.postMessage({
+          type: 'step3Submit',
+          gitUrl: gitUrlValue,
+          branch: branchValue,
+          projectName: projectNameValue,
+          localPath: localPathValue,
+        });
+      } },
+    }, 'Clone & continue'),
+  ));
+
+  return container;
 }
 
 function renderStep4(): HTMLElement {
