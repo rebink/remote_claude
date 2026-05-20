@@ -129,13 +129,29 @@ export class SetupWizard {
         child.stdout.on('data', (c: Buffer) => { stdout += c.toString(); });
         child.stderr.on('data', (c: Buffer) => { stderr += c.toString(); });
 
-        await new Promise<void>((resolve) => child.on('close', () => resolve()));
+        const spawnError = await new Promise<Error | null>((resolve) => {
+          let settled = false;
+          child.on('error', (err: Error) => {
+            if (settled) return;
+            settled = true;
+            resolve(err);
+          });
+          child.on('close', () => {
+            if (settled) return;
+            settled = true;
+            resolve(null);
+          });
+        });
 
         let result: { ok: boolean; code?: string; stderr?: string };
-        try {
-          result = JSON.parse(stdout || '{"ok":false,"code":"unknown"}');
-        } catch {
-          result = { ok: false, code: 'unknown', stderr: stderr || stdout };
+        if (spawnError) {
+          result = { ok: false, code: 'spawn_failed', stderr: `Failed to spawn remote-claude: ${spawnError.message}. Is it on PATH?` };
+        } else {
+          try {
+            result = JSON.parse(stdout || '{"ok":false,"code":"unknown"}');
+          } catch {
+            result = { ok: false, code: 'unknown', stderr: stderr || stdout };
+          }
         }
 
         this.state = { ...this.state, busy: false };
