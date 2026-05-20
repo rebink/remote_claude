@@ -8,11 +8,17 @@ export class FileDecorationProvider implements vscode.FileDecorationProvider {
   private pendingFiles = new Set<string>();
   // Reserved for v2 (per-chat state e.g. latest assistant turn files).
   private readonly _chatStore: ChatStore;
+  private readonly subscription: vscode.Disposable;
 
   constructor(private readonly sync: SyncController, chatStore: ChatStore) {
     this._chatStore = chatStore;
     void this._chatStore;
-    this.sync.stateChanged(() => this.emitter.fire(undefined));
+    this.subscription = this.sync.stateChanged(() => this.emitter.fire(undefined));
+  }
+
+  dispose(): void {
+    this.subscription.dispose();
+    this.emitter.dispose();
   }
 
   setPendingDiffFiles(paths: string[]): void {
