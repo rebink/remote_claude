@@ -192,7 +192,10 @@ export function buildServer(opts: AgentOptions) {
       branch: body.branch ?? 'main',
       projectName: body.projectName,
     });
-    if (!result.ok) return reply.status(409).send(result);
+    if (!result.ok) {
+      const status = result.code === 'target_exists' ? 409 : 500;
+      return reply.status(status).send(result);
+    }
     return result;
   });
 

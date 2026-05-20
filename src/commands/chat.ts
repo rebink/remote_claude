@@ -21,8 +21,10 @@ export async function runChat(opts: ChatOpts): Promise<void> {
   const cfg = await config.loadConfig(opts.cwd);
   if (!opts.skipSync) {
     emit({ type: 'sync_start' });
+    const syncStart = Date.now();
     await runSync(opts.cwd);
-    emit({ type: 'sync_done', filesChanged: 0, durationMs: 0 });
+    // filesChanged is still 0 until rsync --stats parsing lands (M4 follow-up)
+    emit({ type: 'sync_done', filesChanged: 0, durationMs: Date.now() - syncStart });
   }
 
   for await (const evt of client.streamPostNdjson(cfg, '/chat', {
