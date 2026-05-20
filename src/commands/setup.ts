@@ -240,7 +240,14 @@ async function ensureGitignoreEntry(cwd: string, entries: string[]): Promise<voi
  * Goes through the `tailscale` namespace import so tests can mock
  * `getPeers` via `vi.spyOn(ts, 'getPeers')`.
  */
-export async function runSetupListPeers(): Promise<void> {
+export async function runSetupListPeers(opts: { json: boolean }): Promise<void> {
   const peers = await tailscale.getPeers();
-  process.stdout.write(JSON.stringify(peers));
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(peers));
+    return;
+  }
+  for (const p of peers) {
+    const status = p.online ? 'online' : 'offline';
+    process.stdout.write(`${p.hostname}\t${p.host}\t${status}\n`);
+  }
 }
