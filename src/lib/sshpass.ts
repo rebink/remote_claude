@@ -52,7 +52,9 @@ export async function copyIdWithPassword(input: CopyIdInput): Promise<CopyIdResu
     const child = spawn(sshpass, args, { stdio: ['pipe', 'pipe', 'pipe'] });
     let stderr = '';
     child.stderr.on('data', (c: Buffer) => {
-      stderr += c.toString();
+      if (stderr.length < 2048) {
+        stderr += c.toString().slice(0, 2048 - stderr.length);
+      }
     });
 
     const pwBuf = Buffer.from(input.password + '\n', 'utf8');
@@ -60,10 +62,13 @@ export async function copyIdWithPassword(input: CopyIdInput): Promise<CopyIdResu
     child.stdin.end();
     pwBuf.fill(0);
 
+    child.on('error', (err: Error) => {
+      resolve({ ok: false, code: 'unknown', stderr: err.message });
+    });
     child.on('close', (code: number | null) => {
       if (code === 0) return resolve({ ok: true });
       if (/Permission denied/i.test(stderr)) return resolve({ ok: false, code: 'auth_failed', stderr });
-      if (/Connection refused|No route to host|Could not resolve/i.test(stderr))
+      if (/Connection refused|Connection timed out|No route to host|Could not resolve/i.test(stderr))
         return resolve({ ok: false, code: 'unreachable', stderr });
       if (/REMOTE HOST IDENTIFICATION HAS CHANGED|host key/i.test(stderr))
         return resolve({ ok: false, code: 'host_key_mismatch', stderr });

@@ -56,4 +56,42 @@ describe('copyIdWithPassword', () => {
     expect(call[1]).not.toContain('secret');
     expect(call[1]?.join(' ')).toMatch(/-d/);
   });
+
+  it('resolves with unknown when the child emits error', async () => {
+    vi.spyOn(cp, 'spawn').mockReturnValue({
+      stdin: { write: vi.fn(), end: vi.fn() },
+      stdout: { on: vi.fn() },
+      stderr: { on: vi.fn() },
+      on: (event: string, cb: (arg: unknown) => void) => {
+        if (event === 'error') queueMicrotask(() => cb(new Error('ENOENT')));
+      },
+    } as unknown as cp.ChildProcessWithoutNullStreams);
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+
+    const result = await copyIdWithPassword({
+      host: 'h', user: 'u', port: 22, keyPath: '/tmp/k', password: 'p',
+    });
+    expect(result).toEqual({ ok: false, code: 'unknown', stderr: 'ENOENT' });
+  });
+
+  it('classifies connection timed out as unreachable', async () => {
+    vi.spyOn(cp, 'spawn').mockReturnValue({
+      stdin: { write: vi.fn(), end: vi.fn() },
+      stdout: { on: vi.fn() },
+      stderr: {
+        on: (_event: string, cb: (chunk: Buffer) => void) => {
+          queueMicrotask(() => cb(Buffer.from('ssh: Connection timed out\n')));
+        },
+      },
+      on: (event: string, cb: (code: number) => void) => {
+        if (event === 'close') queueMicrotask(() => cb(255));
+      },
+    } as unknown as cp.ChildProcessWithoutNullStreams);
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+
+    const result = await copyIdWithPassword({
+      host: 'h', user: 'u', port: 22, keyPath: '/tmp/k', password: 'p',
+    });
+    expect(result).toMatchObject({ ok: false, code: 'unreachable' });
+  });
 });
