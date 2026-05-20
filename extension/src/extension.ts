@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const decor = new FileDecorationProvider(sync, chatStore);
   context.subscriptions.push(vscode.window.registerFileDecorationProvider(decor));
 
-  const controller = new ChatController(cli, chatStore, output);
+  const controller = new ChatController(cli, chatStore, output, sync);
   controller.onPendingDiffFiles = (paths) => decor.setPendingDiffFiles(paths);
 
   const chatPanel = new ChatPanel(context.extensionUri, chatStore, {
