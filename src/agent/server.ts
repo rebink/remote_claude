@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -39,6 +39,24 @@ export const InitBody = z.object({
   projectName: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
 });
 
+/**
+ * Mount the `DELETE /session/:id` route on the given Fastify instance.
+ *
+ * Extracted as an exported registrar so tests can mount the route on a fresh
+ * Fastify instance without spinning up the full agent stack. The handler is
+ * idempotent: deleting a non-existent uuid still returns 204.
+ *
+ * No Zod validation on `:id` — `SessionStore.delete` only removes a map key
+ * and never constructs a filesystem path from the id, so the param is safe to
+ * pass through unsanitized.
+ */
+export function registerDeleteSession(app: FastifyInstance, store: SessionStore): void {
+  app.delete('/session/:id', async (req: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    await store.delete(req.params.id);
+    reply.status(204).send();
+  });
+}
+
 export const ChatBody = z.object({
   // Accept canonical UUID v1-5 or a generic hex-ish session id (>=32 hex chars + optional dashes).
   uuid: z
@@ -56,6 +74,10 @@ export function buildServer(opts: AgentOptions) {
   const sessionStorePath =
     opts.sessionStorePath ?? join(homedir(), '.remote-claude', 'agent-sessions.json');
   const sessionStore = new SessionStore(sessionStorePath);
+
+  // Mount DELETE /session/:id via the exported registrar so the same route
+  // definition is exercised by `test/agent/delete-session.test.ts`.
+  registerDeleteSession(app, sessionStore);
 
   // Streaming runner configured from AgentOptions (not env). Honors `--claudeCommand`
   // / `--claudeArgs` exactly the same way the `/ask` path does via `runClaude`.
