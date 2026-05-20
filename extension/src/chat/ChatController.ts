@@ -11,8 +11,10 @@ import { join, dirname } from 'node:path';
 
 export class ChatController {
   private inFlight = new Map<string, ReturnType<CliClient['spawn']>>();
-  private pendingUpdate?: NodeJS.Timeout;
-  private latestUpdate?: { chatId: string; text: string; patch: string | null; files: ChangedFile[] };
+  private throttle = new Map<string, {
+    timeout: NodeJS.Timeout;
+    latest: { text: string; patch: string | null; files: ChangedFile[] };
+  }>();
   panel!: ChatPanel;
 
   constructor(
@@ -55,17 +57,15 @@ export class ChatController {
     } finally {
       this.inFlight.delete(chatId);
       this.panel.setInFlight(chatId, false);
-      // Flush any pending update so the final state is captured
-      if (this.pendingUpdate) {
-        clearTimeout(this.pendingUpdate);
-        this.pendingUpdate = undefined;
-        const u = this.latestUpdate;
-        if (u) {
-          const turns = this.store.loadTranscript(u.chatId);
-          turns[turns.length - 1] = { role: 'assistant', text: u.text, timestamp: Date.now(), patch: u.patch, files: u.files };
-          this.store.rewriteTranscript(u.chatId, turns);
-          this.panel.postState();
-        }
+      // Flush any pending update for THIS chat so the final state is captured
+      const slot = this.throttle.get(chatId);
+      if (slot) {
+        clearTimeout(slot.timeout);
+        this.throttle.delete(chatId);
+        const turns = this.store.loadTranscript(chatId);
+        turns[turns.length - 1] = { role: 'assistant', text: slot.latest.text, timestamp: Date.now(), patch: slot.latest.patch, files: slot.latest.files };
+        this.store.rewriteTranscript(chatId, turns);
+        this.panel.postState();
       }
     }
   }
@@ -142,15 +142,23 @@ export class ChatController {
   }
 
   private replaceLastAssistant(chatId: string, text: string, patch: string | null, files: ChangedFile[]): void {
-    this.latestUpdate = { chatId, text, patch, files };
-    if (this.pendingUpdate) return;
-    this.pendingUpdate = setTimeout(() => {
-      const u = this.latestUpdate!;
-      const turns = this.store.loadTranscript(u.chatId);
-      turns[turns.length - 1] = { role: 'assistant', text: u.text, timestamp: Date.now(), patch: u.patch, files: u.files };
-      this.store.rewriteTranscript(u.chatId, turns);
-      this.panel.postState();
-      this.pendingUpdate = undefined;
-    }, 100);
+    const existing = this.throttle.get(chatId);
+    if (existing) {
+      existing.latest = { text, patch, files };
+      return;
+    }
+    const slot = {
+      latest: { text, patch, files },
+      timeout: setTimeout(() => {
+        const s = this.throttle.get(chatId);
+        if (!s) return;
+        const turns = this.store.loadTranscript(chatId);
+        turns[turns.length - 1] = { role: 'assistant', text: s.latest.text, timestamp: Date.now(), patch: s.latest.patch, files: s.latest.files };
+        this.store.rewriteTranscript(chatId, turns);
+        this.panel.postState();
+        this.throttle.delete(chatId);
+      }, 100),
+    };
+    this.throttle.set(chatId, slot);
   }
 }
