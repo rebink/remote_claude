@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 interface RunResult {
   stdout: string;
@@ -52,4 +52,51 @@ export async function resetClean(cwd: string): Promise<void> {
   if (r2.code !== 0) throw new Error(`git checkout -- . failed: ${r2.stderr}`);
   const r3 = await run('git', ['clean', '-fd'], cwd);
   if (r3.code !== 0) throw new Error(`git clean failed: ${r3.stderr}`);
+}
+
+/**
+ * Hard-reset the working tree to HEAD and remove untracked files/dirs.
+ * Best-effort: errors are swallowed so cleanup never throws over a failing turn.
+ */
+export async function cleanResetToHead(cwd: string): Promise<void> {
+  spawnSync('git', ['reset', '--hard', 'HEAD'], { cwd });
+  spawnSync('git', ['clean', '-fd'], { cwd });
+}
+
+/**
+ * Capture `git diff HEAD` (tracked changes) plus a structured list of changed files
+ * with per-file additions/deletions. Returns empty patch + files when tree is clean.
+ */
+export async function diffHead(
+  cwd: string,
+): Promise<{
+  patch: string;
+  files: { path: string; status: 'A' | 'M' | 'D' | 'R'; additions: number; deletions: number }[];
+}> {
+  const patchRes = spawnSync('git', ['diff', 'HEAD'], { cwd, encoding: 'utf8' });
+  const numstatRes = spawnSync('git', ['diff', '--name-status', 'HEAD'], { cwd, encoding: 'utf8' });
+  const statRes = spawnSync('git', ['diff', '--numstat', 'HEAD'], { cwd, encoding: 'utf8' });
+
+  const additions: Record<string, number> = {};
+  const deletions: Record<string, number> = {};
+  for (const line of (statRes.stdout ?? '').trim().split('\n').filter(Boolean)) {
+    const [a, d, path] = line.split('\t');
+    if (!path) continue;
+    additions[path] = Number(a) || 0;
+    deletions[path] = Number(d) || 0;
+  }
+
+  const files: { path: string; status: 'A' | 'M' | 'D' | 'R'; additions: number; deletions: number }[] = [];
+  for (const l of (numstatRes.stdout ?? '').trim().split('\n').filter(Boolean)) {
+    const [code, path] = l.split('\t');
+    if (!code || !path) continue;
+    files.push({
+      path,
+      status: code[0] as 'A' | 'M' | 'D' | 'R',
+      additions: additions[path] ?? 0,
+      deletions: deletions[path] ?? 0,
+    });
+  }
+
+  return { patch: patchRes.stdout ?? '', files };
 }

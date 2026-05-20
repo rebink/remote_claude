@@ -1,11 +1,21 @@
 import Fastify from 'fastify';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
 import { z } from 'zod';
 import { verifyToken } from './auth.ts';
-import { captureDiff, isClean, isGitRepo, resetClean } from './git.ts';
-import { findClaude, runClaude } from './claude.ts';
+import {
+  captureDiff,
+  cleanResetToHead,
+  diffHead,
+  isClean,
+  isGitRepo,
+  resetClean,
+} from './git.ts';
+import { claudeRunner, findClaude, runClaude } from './claude.ts';
 import { runInit } from './init.ts';
+import { runChatTurn } from './chat.ts';
+import { SessionStore } from './session-store.ts';
 
 export interface AgentOptions {
   token: string;
@@ -14,6 +24,8 @@ export interface AgentOptions {
   claudeArgs: string[];
   timeoutSec: number;
   version: string;
+  /** Path to the persistent session-store JSON. Defaults to `~/.remote-claude/agent-sessions.json`. */
+  sessionStorePath?: string;
 }
 
 const AskBody = z.object({
@@ -27,8 +39,23 @@ export const InitBody = z.object({
   projectName: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
 });
 
+export const ChatBody = z.object({
+  // Accept canonical UUID v1-5 or a generic hex-ish session id (>=32 hex chars + optional dashes).
+  uuid: z
+    .string()
+    .uuid()
+    .or(z.string().regex(/^[a-f0-9-]{32,}$/i, 'invalid uuid')),
+  prompt: z.string().min(1),
+  projectName: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
+});
+
 export function buildServer(opts: AgentOptions) {
   const app = Fastify({ logger: { level: 'info' }, bodyLimit: 5 * 1024 * 1024 });
+
+  // Single SessionStore per server instance — persists uuid → claudeSessionId mapping.
+  const sessionStorePath =
+    opts.sessionStorePath ?? join(homedir(), '.remote-claude', 'agent-sessions.json');
+  const sessionStore = new SessionStore(sessionStorePath);
 
   app.addHook('onRequest', async (req, reply) => {
     if (req.url === '/health') return;
@@ -112,6 +139,44 @@ export function buildServer(opts: AgentOptions) {
     });
     if (!result.ok) return reply.status(409).send(result);
     return result;
+  });
+
+  app.post('/chat', async (req, reply) => {
+    const parsed = ChatBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply
+        .status(400)
+        .send({ ok: false, code: 'missing_fields', errors: parsed.error.format() });
+    }
+    const body = parsed.data;
+    const cwd = resolve(opts.projectsRoot, body.projectName);
+    if (!existsSync(cwd)) {
+      return reply.status(404).send({ ok: false, code: 'project_not_found', path: cwd });
+    }
+
+    reply.raw.setHeader('content-type', 'application/x-ndjson');
+    reply.hijack();
+    const emit = (e: unknown) => reply.raw.write(JSON.stringify(e) + '\n');
+
+    try {
+      await runChatTurn({
+        uuid: body.uuid,
+        prompt: body.prompt,
+        cwd,
+        store: sessionStore,
+        claude: claudeRunner,
+        git: { diffHead, cleanResetToHead },
+        emit,
+      });
+    } catch (err) {
+      emit({
+        type: 'error',
+        code: 'turn_failed',
+        message: (err as Error).message,
+        recoverable: true,
+      });
+    }
+    reply.raw.end();
   });
 
   return app;
