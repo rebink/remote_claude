@@ -111,6 +111,23 @@ program
   });
 
 program
+  .command('chat')
+  .description('Multi-turn chat with Claude on the remote (used by the VS Code extension)')
+  .argument('<prompt...>', 'prompt text')
+  .requiredOption('--session <uuid>', 'extension-side session UUID')
+  .option('--json', 'JSONL output (default in this command)', true)
+  .option('--no-sync', 'skip pre-sync')
+  .action(async (promptParts: string[], opts: { session: string; sync?: boolean }) => {
+    const { runChat } = await import('./commands/chat.ts');
+    await runChat({
+      cwd: process.cwd(),
+      prompt: promptParts.join(' '),
+      sessionUuid: opts.session,
+      skipSync: opts.sync === false,
+    });
+  });
+
+program
   .command('doctor')
   .description('Verify local tools, config, ssh reachability, and agent health')
   .action(async () => {
