@@ -9,6 +9,7 @@ import { ChatController } from './chat/ChatController.ts';
 import { registerCommands } from './commands.ts';
 import { SyncController } from './sync/SyncController.ts';
 import { StatusBarController } from './statusbar/StatusBarController.ts';
+import { FileDecorationProvider } from './sync/FileDecorationProvider.ts';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Remote Claude');
@@ -29,7 +30,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
   registerCommands(context, { output, chatStore, sync, status });
 
+  const decor = new FileDecorationProvider(sync, chatStore);
+  context.subscriptions.push(vscode.window.registerFileDecorationProvider(decor));
+
   const controller = new ChatController(cli, chatStore, output);
+  controller.onPendingDiffFiles = (paths) => decor.setPendingDiffFiles(paths);
 
   const chatPanel = new ChatPanel(context.extensionUri, chatStore, {
     output,

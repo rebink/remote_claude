@@ -1,0 +1,33 @@
+import * as vscode from 'vscode';
+import type { SyncController } from './SyncController.ts';
+import type { ChatStore } from '../chat/ChatStore.ts';
+
+export class FileDecorationProvider implements vscode.FileDecorationProvider {
+  private emitter = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
+  readonly onDidChangeFileDecorations = this.emitter.event;
+  private pendingFiles = new Set<string>();
+  // Reserved for v2 (per-chat state e.g. latest assistant turn files).
+  private readonly _chatStore: ChatStore;
+
+  constructor(private readonly sync: SyncController, chatStore: ChatStore) {
+    this._chatStore = chatStore;
+    void this._chatStore;
+    this.sync.stateChanged(() => this.emitter.fire(undefined));
+  }
+
+  setPendingDiffFiles(paths: string[]): void {
+    this.pendingFiles = new Set(paths);
+    this.emitter.fire(undefined);
+  }
+
+  provideFileDecoration(uri: vscode.Uri): vscode.FileDecoration | undefined {
+    const rel = vscode.workspace.asRelativePath(uri);
+    if (this.pendingFiles.has(rel)) {
+      return { badge: '▼', tooltip: 'Pending Claude diff', color: new vscode.ThemeColor('charts.blue') };
+    }
+    if (this.sync.getOutOfSyncFiles().includes(rel)) {
+      return { badge: '●', tooltip: 'Not synced to remote', color: new vscode.ThemeColor('charts.orange') };
+    }
+    return undefined;
+  }
+}
