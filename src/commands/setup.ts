@@ -273,6 +273,11 @@ export interface PasswordStdinInput {
  * `fs.existsSync` and `sshpass.copyIdWithPassword`.
  */
 export async function runSetupPasswordStdin(input: PasswordStdinInput): Promise<void> {
+  if (!input.keyPath) {
+    process.stdout.write(JSON.stringify({ ok: false, code: 'unknown', stderr: '--key-path is required' }));
+    return;
+  }
+
   if (input.trustNewKey) {
     spawnSync('ssh-keygen', ['-R', input.host]);
     spawnSync('ssh-keygen', ['-R', `[${input.host}]:${input.port}`]);
@@ -324,6 +329,6 @@ function readPasswordFromStdin(): Promise<string> {
     process.stdin.on('data', (c: string) => {
       buf += c;
     });
-    process.stdin.on('end', () => resolve(buf.replace(/\n$/, '')));
+    process.stdin.on('end', () => resolve(buf.replace(/\r?\n$/, '')));
   });
 }
