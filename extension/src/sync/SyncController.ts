@@ -95,10 +95,16 @@ export class SyncController {
 
   private async runRsync(): Promise<void> {
     const run = this.cli.spawn(['sync', '--json']);
-    for await (const _e of run.events) {
-      /* ignore for now; could route progress to status bar */
+    let errored = false;
+    for await (const e of run.events) {
+      if (e.type === 'error') {
+        errored = true;
+        this.output.appendLine(`sync error: ${e.code}: ${e.message}`);
+      }
     }
-    this.outOfSync.clear();
+    if (!errored) {
+      this.outOfSync.clear();
+    }
     this.onChange.fire();
   }
 }

@@ -35,6 +35,18 @@ export function runClaude(opts: {
   timeoutMs: number;
 }): Promise<ClaudeResult> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settleResolve = (v: ClaudeResult) => {
+      if (settled) return;
+      settled = true;
+      resolve(v);
+    };
+    const settleReject = (e: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(e);
+    };
+
     const child = spawn(opts.command, opts.args, {
       cwd: opts.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -48,16 +60,21 @@ export function runClaude(opts: {
 
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      reject(new Error(`claude execution timed out after ${opts.timeoutMs}ms`));
+      settleReject(new Error(`claude execution timed out after ${opts.timeoutMs}ms`));
     }, opts.timeoutMs);
 
+    child.stdin.on('error', (err: Error) => {
+      // EPIPE if claude exits before we finish writing — surface as a process-level failure.
+      clearTimeout(timer);
+      settleReject(new Error(`claude stdin error: ${err.message}`));
+    });
     child.on('error', (err) => {
       clearTimeout(timer);
-      reject(err);
+      settleReject(err);
     });
     child.on('close', (code) => {
       clearTimeout(timer);
-      resolve({ stdout, stderr, exitCode: code ?? -1 });
+      settleResolve({ stdout, stderr, exitCode: code ?? -1 });
     });
 
     child.stdin.end(opts.prompt);
@@ -89,8 +106,24 @@ export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
       onText: (chunk: string) => void,
     ): Promise<{ tokensIn: number; tokensOut: number }> {
       return new Promise<{ tokensIn: number; tokensOut: number }>((resolve, reject) => {
+        let settled = false;
+        const settleResolve = (v: { tokensIn: number; tokensOut: number }) => {
+          if (settled) return;
+          settled = true;
+          resolve(v);
+        };
+        const settleReject = (e: Error) => {
+          if (settled) return;
+          settled = true;
+          reject(e);
+        };
+
         const args = [...opts.args, '--resume', sessionId];
         const child = spawn(opts.bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+        child.stdin.on('error', (err: Error) =>
+          settleReject(new Error(`claude stdin error: ${err.message}`)),
+        );
 
         let out = '';
         child.stdout.on('data', (c: Buffer) => {
@@ -98,10 +131,10 @@ export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
           out += s;
           onText(s);
         });
-        child.on('error', reject);
+        child.on('error', (err: Error) => settleReject(err));
         child.on('close', (code) => {
-          if (code === 0) resolve({ tokensIn: 0, tokensOut: out.length });
-          else reject(new Error(`claude exited ${code}`));
+          if (code === 0) settleResolve({ tokensIn: 0, tokensOut: out.length });
+          else settleReject(new Error(`claude exited ${code}`));
         });
 
         child.stdin.write(prompt);
