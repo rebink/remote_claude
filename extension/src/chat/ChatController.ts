@@ -34,14 +34,16 @@ export class ChatController {
     // Ask-time guard: warn when live-sync is off and the workspace is dirty.
     const dirty = this.syncCtrl.getOutOfSyncFiles();
     if (!this.syncCtrl.isLiveSync() && dirty.length > 0) {
-      const choice = await vscode.window.showInformationMessage(
+      const choice = await vscode.window.showWarningMessage(
         `${dirty.length} files changed since last sync.`,
+        { modal: true },
         'Sync first', 'Turn on live sync', 'Send anyway'
       );
       if (choice === undefined) return;             // user dismissed; abort
       if (choice === 'Sync first') await this.syncCtrl.syncOnce();
       if (choice === 'Turn on live sync') this.syncCtrl.setLiveSync(true);
-      // 'Send anyway' falls through to the spawn below
+      // 'Send anyway' falls through. Note: the CLI's chat command syncs by default,
+      // so this still pushes; differs from 'Sync first' only in that we don't wait for it.
     }
     this.store.appendTurn(chatId, { role: 'user', text: prompt, timestamp: Date.now() });
     this.store.appendTurn(chatId, { role: 'assistant', text: '', timestamp: Date.now(), patch: null });
