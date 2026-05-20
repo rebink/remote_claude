@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { DiffContentProvider, SCHEME } from './diff/DiffContentProvider.ts';
 import { ChatStore } from './chat/ChatStore.ts';
 import { ChatPanel } from './chat/ChatPanel.ts';
+import { CliClient } from './cli/CliClient.ts';
+import { ChatController } from './chat/ChatController.ts';
 import { registerCommands } from './commands.ts';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -19,14 +21,18 @@ export function activate(context: vscode.ExtensionContext): void {
 
   registerCommands(context, { output, chatStore });
 
+  const cli = new CliClient('remote-claude', ws);
+  const controller = new ChatController(cli, chatStore, output);
+
   const chatPanel = new ChatPanel(context.extensionUri, chatStore, {
     output,
-    onSend: (id, p) => output.appendLine(`[stub] send ${id}: ${p}`),
-    onDiffAction: (a) => output.appendLine(`[stub] diff: ${JSON.stringify(a)}`),
-    onOpenDiff: (a) => output.appendLine(`[stub] open: ${JSON.stringify(a)}`),
-    onCancel: (id) => output.appendLine(`[stub] cancel ${id}`),
-    onDeleteRemote: async (id) => output.appendLine(`[stub] delete remote ${id}`),
+    onSend: (id, p) => controller.send(id, p),
+    onDiffAction: (a) => output.appendLine(`[diff] ${JSON.stringify(a)}`),
+    onOpenDiff: (a) => output.appendLine(`[open] ${JSON.stringify(a)}`),
+    onCancel: (id) => controller.cancel(id),
+    onDeleteRemote: async (_id) => { /* wired in Task 23 */ },
   });
+  controller.panel = chatPanel;
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatPanel.viewId, chatPanel));
 }
 
