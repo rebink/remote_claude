@@ -50,5 +50,10 @@ describe('runChat', () => {
 
     expect(out[0]).toMatchObject({ type: 'protocol' });
     expect(out.find((e) => e.type === 'chat_done')).toBeDefined();
+    expect(client.streamPostNdjson).toHaveBeenCalledWith(
+      expect.anything(),
+      '/chat',
+      expect.objectContaining({ uuid: 'u1', prompt: 'hi' }),
+    );
   });
 });

@@ -52,15 +52,26 @@ export async function* streamPostNdjson(
   cfg: Config,
   path: string,
   body: unknown,
+  options: { timeoutMs?: number } = {},
 ): AsyncGenerator<unknown> {
-  const res = await fetch(`${cfg.remote.agentUrl}${path}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${cfg.remote.token}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const timeoutMs = options.timeoutMs ?? 1_800_000;
+  let res: Awaited<ReturnType<typeof fetch>>;
+  try {
+    res = await fetch(`${cfg.remote.agentUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${cfg.remote.token}`,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err: unknown) {
+    if ((err as { name?: string }).name === 'TimeoutError') {
+      throw new Error(`Agent POST ${path} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  }
   if (!res.body) throw new Error(`No response body from ${path}`);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
