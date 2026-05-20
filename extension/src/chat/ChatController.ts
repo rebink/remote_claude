@@ -62,10 +62,14 @@ export class ChatController {
       if (slot) {
         clearTimeout(slot.timeout);
         this.throttle.delete(chatId);
-        const turns = this.store.loadTranscript(chatId);
-        turns[turns.length - 1] = { role: 'assistant', text: slot.latest.text, timestamp: Date.now(), patch: slot.latest.patch, files: slot.latest.files };
-        this.store.rewriteTranscript(chatId, turns);
-        this.panel.postState();
+        if (this.store.hasChat(chatId)) {
+          const turns = this.store.loadTranscript(chatId);
+          if (turns.length > 0) {
+            turns[turns.length - 1] = { role: 'assistant', text: slot.latest.text, timestamp: Date.now(), patch: slot.latest.patch, files: slot.latest.files };
+            this.store.rewriteTranscript(chatId, turns);
+            this.panel.postState();
+          }
+        }
       }
     }
   }
@@ -152,7 +156,15 @@ export class ChatController {
       timeout: setTimeout(() => {
         const s = this.throttle.get(chatId);
         if (!s) return;
+        if (!this.store.hasChat(chatId)) {
+          this.throttle.delete(chatId);
+          return;
+        }
         const turns = this.store.loadTranscript(chatId);
+        if (turns.length === 0) {
+          this.throttle.delete(chatId);
+          return;
+        }
         turns[turns.length - 1] = { role: 'assistant', text: s.latest.text, timestamp: Date.now(), patch: s.latest.patch, files: s.latest.files };
         this.store.rewriteTranscript(chatId, turns);
         this.panel.postState();

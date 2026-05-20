@@ -35,4 +35,14 @@ describe('ChatStore', () => {
     expect(t[0].text).toBe('a');
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it('hasChat returns false after delete', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rc-cs-'));
+    const store = new ChatStore(dir);
+    const id = store.createChat('temp');
+    expect(store.hasChat(id)).toBe(true);
+    store.deleteChat(id);
+    expect(store.hasChat(id)).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
