@@ -43,6 +43,39 @@ export async function agentRequest<T = unknown>(
   return data as T;
 }
 
+/**
+ * Streams an NDJSON response from a POST to the agent. Each line is parsed as JSON
+ * and yielded individually. Handles split lines across chunks and yields any final
+ * non-newline-terminated line.
+ */
+export async function* streamPostNdjson(
+  cfg: Config,
+  path: string,
+  body: unknown,
+): AsyncGenerator<unknown> {
+  const res = await fetch(`${cfg.remote.agentUrl}${path}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${cfg.remote.token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.body) throw new Error(`No response body from ${path}`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) if (line) yield JSON.parse(line);
+  }
+  if (buf.trim()) yield JSON.parse(buf);
+}
+
 export interface AskRequest {
   prompt: string;
   project: string;
