@@ -6,6 +6,7 @@ body { background: var(--vscode-sideBar-background); padding: 8px; }
 .chat-item.active { background: var(--vscode-list-activeSelectionBackground); }
 .chat-del { background: transparent; opacity: 0.5; border: none; padding: 0 6px; cursor: pointer; color: var(--vscode-foreground); }
 .chat-del:hover { opacity: 1; }
+#turns { max-height: calc(100vh - 280px); overflow-y: auto; }
 .turn { padding: 8px 0; border-bottom: 1px solid var(--vscode-panel-border); white-space: pre-wrap; }
 .turn.user { color: var(--vscode-textPreformat-foreground); }
 .diff-card { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 8px; margin-top: 8px; }
