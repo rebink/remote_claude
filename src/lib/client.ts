@@ -5,13 +5,13 @@ import type { Config } from './config.ts';
  * Low-level helper that POSTs/GETs JSON to the agent.
  * Used by commands like `init-remote` that don't fit the AgentClient class shape.
  */
-export async function agentRequest(
+export async function agentRequest<T = unknown>(
   cfg: Config,
   method: string,
   path: string,
   body?: unknown,
   options: { timeoutMs?: number } = {},
-): Promise<unknown> {
+): Promise<T> {
   const timeoutMs = options.timeoutMs ?? 600_000;
   let res;
   try {
@@ -40,7 +40,7 @@ export async function agentRequest(
   if (!res.ok) {
     throw new Error(`Agent ${method} ${path} failed: ${res.status} ${text}`);
   }
-  return data;
+  return data as T;
 }
 
 export interface AskRequest {
