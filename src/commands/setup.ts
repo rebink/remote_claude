@@ -6,6 +6,7 @@ import { basename, join } from 'node:path';
 import chalk from 'chalk';
 import prompts from 'prompts';
 import { log } from '../lib/log.ts';
+import * as tailscale from '../lib/tailscale.ts';
 import { tailscaleStatus, type TailscalePeer } from '../lib/tailscale.ts';
 
 interface SetupAnswers {
@@ -230,4 +231,16 @@ async function ensureGitignoreEntry(cwd: string, entries: string[]): Promise<voi
   if (changed) {
     await writeFile(path, Array.from(lines).join('\n') + '\n', 'utf8');
   }
+}
+
+/**
+ * One-shot, non-interactive: print the Tailscale peer list as JSON and exit.
+ * Consumed by the VS Code extension setup wizard (M5).
+ *
+ * Goes through the `tailscale` namespace import so tests can mock
+ * `getPeers` via `vi.spyOn(ts, 'getPeers')`.
+ */
+export async function runSetupListPeers(): Promise<void> {
+  const peers = await tailscale.getPeers();
+  process.stdout.write(JSON.stringify(peers));
 }

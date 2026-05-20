@@ -27,7 +27,14 @@ program
   .option('--ssh-port <n>', 'SSH port', (v: string) => Number(v))
   .option('--agent-port <n>', 'agent HTTP port', (v: string) => Number(v))
   .option('--token <token>', 'bearer token (default: random 32-byte hex)')
+  .option('--list-peers', 'print Tailscale peers and exit')
+  .option('--json', 'machine-readable output (for --list-peers)')
   .action(async (opts) => {
+    if (opts.listPeers) {
+      const { runSetupListPeers } = await import('./commands/setup.ts');
+      await runSetupListPeers();
+      return;
+    }
     await runSetup(process.cwd(), {
       force: opts.force,
       noTailscale: opts.tailscale === false,
