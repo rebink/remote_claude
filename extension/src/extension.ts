@@ -27,8 +27,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const chatPanel = new ChatPanel(context.extensionUri, chatStore, {
     output,
     onSend: (id, p) => controller.send(id, p),
-    onDiffAction: (a) => output.appendLine(`[diff] ${JSON.stringify(a)}`),
-    onOpenDiff: (a) => output.appendLine(`[open] ${JSON.stringify(a)}`),
+    onDiffAction: (a) => controller.handleDiffAction(a),
+    onOpenDiff: (a) => controller.handleOpenDiff(a),
     onCancel: (id) => controller.cancel(id),
     onDeleteRemote: async (_id) => { /* wired in Task 23 */ },
   });
