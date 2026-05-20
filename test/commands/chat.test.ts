@@ -56,4 +56,18 @@ describe('runChat', () => {
       expect.objectContaining({ uuid: 'u1', prompt: 'hi' }),
     );
   });
+
+  it('propagates streamPostNdjson errors (non-2xx response)', async () => {
+    vi.spyOn(client, 'streamPostNdjson').mockImplementation(async function* () {
+      throw new Error('Agent POST /chat failed: 401 unauthorized');
+    } as any);
+    vi.spyOn(config, 'loadConfig').mockResolvedValue({
+      project: 'p',
+      remote: { agentUrl: 'http://x', token: 't' },
+    } as any);
+
+    await expect(
+      runChat({ cwd: process.cwd(), prompt: 'hi', sessionUuid: 'u1', skipSync: true }),
+    ).rejects.toThrow(/401/);
+  });
 });

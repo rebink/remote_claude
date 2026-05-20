@@ -72,6 +72,11 @@ export async function* streamPostNdjson(
     }
     throw err;
   }
+  if (!res.ok) {
+    let bodyText = '';
+    try { bodyText = await res.text(); } catch { /* ignore */ }
+    throw new Error(`Agent POST ${path} failed: ${res.status} ${bodyText.slice(0, 500)}`);
+  }
   if (!res.body) throw new Error(`No response body from ${path}`);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
