@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 import { DiffContentProvider, SCHEME } from './diff/DiffContentProvider.ts';
 import { ChatStore } from './chat/ChatStore.ts';
+import { ChatPanel } from './chat/ChatPanel.ts';
 import { registerCommands } from './commands.ts';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -17,6 +18,15 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, diff));
 
   registerCommands(context, { output, chatStore });
+
+  const chatPanel = new ChatPanel(context.extensionUri, chatStore, {
+    onSend: (id, p) => output.appendLine(`[stub] send ${id}: ${p}`),
+    onDiffAction: (a) => output.appendLine(`[stub] diff: ${JSON.stringify(a)}`),
+    onOpenDiff: (a) => output.appendLine(`[stub] open: ${JSON.stringify(a)}`),
+    onCancel: (id) => output.appendLine(`[stub] cancel ${id}`),
+    onDeleteRemote: async (id) => output.appendLine(`[stub] delete remote ${id}`),
+  });
+  context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatPanel.viewId, chatPanel));
 }
 
 export function deactivate(): void {}
