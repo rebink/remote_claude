@@ -1,5 +1,4 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { EventEmitter } from 'node:events';
 import type { CliEvent } from './events.ts';
 
 export function parseJsonl(onEvent: (e: CliEvent) => void): (chunk: string) => void {
@@ -33,46 +32,68 @@ export class CliClient {
 
   spawn(args: string[]): SpawnResult {
     const child: ChildProcess = spawn(this.cliPath, args, { cwd: this.cwd });
-    const emitter = new EventEmitter();
-    const consume = parseJsonl((e) => emitter.emit('event', e));
 
-    child.stdout!.on('data', (c: Buffer) => consume(c.toString()));
+    // Eager buffering: events accumulate even before the consumer iterates.
+    const queue: CliEvent[] = [];
+    let ended = false;
+    let waker: (() => void) | null = null;
+    const wake = () => {
+      const w = waker;
+      waker = null;
+      w?.();
+    };
+
+    const enqueue = (e: CliEvent) => {
+      queue.push(e);
+      wake();
+    };
+    const finish = () => {
+      ended = true;
+      wake();
+    };
+
+    const consume = parseJsonl(enqueue);
     let stderr = '';
-    child.stderr!.on('data', (c: Buffer) => {
+
+    child.stdout?.on('data', (c: Buffer) => consume(c.toString()));
+    child.stderr?.on('data', (c: Buffer) => {
       stderr += c.toString();
+    });
+
+    child.on('error', (err: Error) => {
+      enqueue({
+        type: 'error',
+        code: 'cli_spawn_error',
+        message: err.message,
+        recoverable: false,
+      });
+      finish();
     });
 
     const done = new Promise<number>((resolve) => {
       child.on('close', (code) => {
         if (stderr.trim()) {
-          emitter.emit('event', {
+          enqueue({
             type: 'error',
             code: 'cli_stderr',
             message: stderr.trim(),
             recoverable: false,
           });
         }
-        emitter.emit('end');
+        finish();
         resolve(code ?? -1);
       });
     });
 
     const events: AsyncIterable<CliEvent> = {
       [Symbol.asyncIterator]: async function* () {
-        const queue: CliEvent[] = [];
-        let ended = false;
-        let waiter: (() => void) | null = null;
-        emitter.on('event', (e) => {
-          queue.push(e);
-          waiter?.();
-        });
-        emitter.on('end', () => {
-          ended = true;
-          waiter?.();
-        });
-        while (!ended || queue.length) {
-          if (queue.length) yield queue.shift()!;
-          else await new Promise<void>((r) => (waiter = r));
+        while (true) {
+          if (queue.length) {
+            yield queue.shift()!;
+            continue;
+          }
+          if (ended) return;
+          await new Promise<void>((r) => (waker = r));
         }
       },
     };
