@@ -14,11 +14,12 @@ export type InitRemoteResult =
 
 export async function runInitRemote(opts: InitRemoteOpts): Promise<InitRemoteResult> {
   const cfg = await config.loadConfig(process.cwd());
-  const result = (await client.agentRequest(cfg, 'POST', '/init', {
+  // Trust the agent's documented response shape. Wire-level validation lives on the agent side.
+  const result = await client.agentRequest<InitRemoteResult>(cfg, 'POST', '/init', {
     gitUrl: opts.gitUrl,
     branch: opts.branch,
     projectName: opts.project,
-  })) as InitRemoteResult;
+  });
 
   if (result.ok) {
     log.info(`Remote initialized at ${result.path} @ ${result.sha}`);
