@@ -16,6 +16,7 @@ export class ChatController {
     latest: { text: string; patch: string | null; files: ChangedFile[] };
   }>();
   panel!: ChatPanel;
+  onPendingDiffFiles?: (paths: string[]) => void;
 
   constructor(
     private readonly cli: CliClient,
@@ -49,6 +50,7 @@ export class ChatController {
           patch = ev.patch;
           files = ev.files;
           this.replaceLastAssistant(chatId, assistantText, patch, files);
+          this.onPendingDiffFiles?.(files.map((f) => f.path));
         } else if (ev.type === 'error') {
           this.output.appendLine(`[error] ${ev.code}: ${ev.message}`);
           this.store.appendTurn(chatId, { role: 'system', text: `Error: ${ev.message}`, timestamp: Date.now() });
@@ -85,6 +87,7 @@ export class ChatController {
       turn.rejected = true;
       this.store.rewriteTranscript(input.chatId, turns);
       this.panel.postState();
+      this.onPendingDiffFiles?.([]);
       return;
     }
     if (input.action === 'save') {
@@ -92,6 +95,7 @@ export class ChatController {
       turn.saved = true;
       this.store.rewriteTranscript(input.chatId, turns);
       this.panel.postState();
+      this.onPendingDiffFiles?.([]);
       vscode.window.showInformationMessage('Patch saved.');
       return;
     }
@@ -114,6 +118,7 @@ export class ChatController {
     }
     this.store.rewriteTranscript(input.chatId, turns);
     this.panel.postState();
+    this.onPendingDiffFiles?.([]);
   }
 
   async handleOpenDiff(input: { chatId: string; turn: number; fileIndex: number }): Promise<void> {
