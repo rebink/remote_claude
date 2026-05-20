@@ -39,12 +39,16 @@ let branchValue = 'main';
 let projectNameValue = '';
 let localPathValue = '';
 
+interface Step4Result { ok: boolean; stdout: string; stderr: string }
+let step4Result: Step4Result | undefined;
+let step4Requested = false;
+
 window.addEventListener('message', (event: MessageEvent) => {
   const msg = event.data as {
     type: string;
     state?: Partial<WizardState>;
     peers?: Peer[];
-    result?: Step2Result | Step3Result;
+    result?: Step2Result | Step3Result | Step4Result;
   };
   if (msg.type === 'state' && msg.state) {
     state = { ...state, ...msg.state };
@@ -62,6 +66,9 @@ window.addEventListener('message', (event: MessageEvent) => {
     render();
   } else if (msg.type === 'step3Result' && msg.result) {
     step3Result = msg.result as Step3Result;
+    render();
+  } else if (msg.type === 'step4Result' && msg.result) {
+    step4Result = msg.result as Step4Result;
     render();
   }
 });
@@ -305,15 +312,61 @@ function renderStep3(): HTMLElement {
 }
 
 function renderStep4(): HTMLElement {
-  // T33 fills this in with doctor output + finish.
-  return h('div', {},
+  // Trigger doctor once on first render of step 4.
+  if (!step4Requested) {
+    step4Requested = true;
+    vscode.postMessage({ type: 'step4Run' });
+  }
+
+  const container = h('div', {},
     h('h1', {}, 'Step 4 — Verify'),
-    h('p', { className: 'note' }, 'Doctor checks arrive in M5.T33.'),
-    h('div', { className: 'actions' },
+  );
+
+  if (state.busy || !step4Result) {
+    container.append(h('p', { className: 'note' }, h('span', { className: 'spinner' }, '⟳'), ' Running checks…'));
+    return container;
+  }
+
+  // Render doctor stdout line-by-line (preserves any check/X marks the CLI emits).
+  const lines = step4Result.stdout.split('\n').filter(Boolean);
+  const list = h('div', { className: 'form-row' });
+  for (const line of lines) {
+    list.append(h('div', {
+      style: {
+        fontFamily: 'var(--vscode-editor-font-family)',
+        fontSize: '12px',
+        padding: '2px 0',
+      } as unknown as CSSStyleDeclaration,
+    }, line));
+  }
+  container.append(list);
+
+  if (!step4Result.ok) {
+    container.append(h('div', { className: 'error' },
+      h('p', {}, 'Doctor reported issues.'),
+      h('pre', { className: 'note', style: { whiteSpace: 'pre-wrap' } as unknown as CSSStyleDeclaration }, step4Result.stderr || ''),
+      h('div', { className: 'actions' },
+        h('button', { className: 'secondary',
+          events: { click: () => {
+            step4Result = undefined;
+            step4Requested = false;
+            render();   // will re-trigger doctor
+          }},
+        }, 'Retry'),
+      ),
+    ));
+  } else {
+    container.append(h('p', {
+      className: 'note',
+      style: { color: 'var(--vscode-charts-green)' } as unknown as CSSStyleDeclaration,
+    }, '✓ All checks passed.'));
+    container.append(h('div', { className: 'actions' },
       h('button', { className: 'secondary', events: { click: () => vscode.postMessage({ type: 'back' }) } }, 'Back'),
       h('button', { events: { click: () => vscode.postMessage({ type: 'step4Finish' }) } }, 'Finish'),
-    ),
-  );
+    ));
+  }
+
+  return container;
 }
 
 render();
