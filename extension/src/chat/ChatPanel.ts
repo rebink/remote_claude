@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import type { ChatStore, Turn } from './ChatStore.ts';
 
 export type DiffActionMsg = { chatId: string; turn: number; action: 'apply'|'save'|'reject'; fileIndices: number[] };
 export type OpenDiffMsg = { chatId: string; turn: number; fileIndex: number };
 
 export interface ChatPanelDeps {
+  output: vscode.OutputChannel;
   onSend(chatId: string, prompt: string): void;
   onDiffAction(msg: DiffActionMsg): void;
   onOpenDiff(msg: OpenDiffMsg): void;
@@ -52,6 +54,9 @@ export class ChatPanel implements vscode.WebviewViewProvider {
           await this.deps.onDeleteRemote(id);
           return this.postState();
         }
+        default:
+          this.deps.output.appendLine(`ChatPanel: unknown message type "${(msg as { type?: string }).type}"`);
+          return;
       }
     });
   }
@@ -74,7 +79,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     const dist = vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview');
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'main.js'));
     const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'styles.css'));
-    const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const nonce = randomBytes(16).toString('base64');
     const html = readFileSync(join(this.extensionUri.fsPath, 'dist', 'webview', 'index.html'), 'utf8');
     return html
       .replace(/\$\{cspSource\}/g, webview.cspSource)
