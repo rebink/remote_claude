@@ -11,6 +11,8 @@ import { join, dirname } from 'node:path';
 
 export class ChatController {
   private inFlight = new Map<string, ReturnType<CliClient['spawn']>>();
+  private pendingUpdate?: NodeJS.Timeout;
+  private latestUpdate?: { chatId: string; text: string; patch: string | null; files: ChangedFile[] };
   panel!: ChatPanel;
 
   constructor(
@@ -53,6 +55,18 @@ export class ChatController {
     } finally {
       this.inFlight.delete(chatId);
       this.panel.setInFlight(chatId, false);
+      // Flush any pending update so the final state is captured
+      if (this.pendingUpdate) {
+        clearTimeout(this.pendingUpdate);
+        this.pendingUpdate = undefined;
+        const u = this.latestUpdate;
+        if (u) {
+          const turns = this.store.loadTranscript(u.chatId);
+          turns[turns.length - 1] = { role: 'assistant', text: u.text, timestamp: Date.now(), patch: u.patch, files: u.files };
+          this.store.rewriteTranscript(u.chatId, turns);
+          this.panel.postState();
+        }
+      }
     }
   }
 
@@ -128,9 +142,15 @@ export class ChatController {
   }
 
   private replaceLastAssistant(chatId: string, text: string, patch: string | null, files: ChangedFile[]): void {
-    const turns = this.store.loadTranscript(chatId);
-    turns[turns.length - 1] = { role: 'assistant', text, timestamp: Date.now(), patch, files };
-    this.store.rewriteTranscript(chatId, turns);
-    this.panel.postState();
+    this.latestUpdate = { chatId, text, patch, files };
+    if (this.pendingUpdate) return;
+    this.pendingUpdate = setTimeout(() => {
+      const u = this.latestUpdate!;
+      const turns = this.store.loadTranscript(u.chatId);
+      turns[turns.length - 1] = { role: 'assistant', text: u.text, timestamp: Date.now(), patch: u.patch, files: u.files };
+      this.store.rewriteTranscript(u.chatId, turns);
+      this.panel.postState();
+      this.pendingUpdate = undefined;
+    }, 100);
   }
 }

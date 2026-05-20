@@ -63,6 +63,7 @@ function renderChatList(state: State): void {
 function renderTurns(state: State): void {
   clear(turnsEl);
   state.turns.forEach((t, i) => turnsEl.append(renderTurn(t, i, state.activeChatId!)));
+  turnsEl.scrollTop = turnsEl.scrollHeight;
 }
 
 function renderTurn(turn: Turn, index: number, chatId: string): HTMLElement {
