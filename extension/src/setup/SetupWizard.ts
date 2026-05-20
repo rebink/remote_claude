@@ -87,10 +87,67 @@ export class SetupWizard {
         this.state = { ...this.state, host, user, sshPort: port, step: 2, error: undefined };
         return this.postState();
       }
-      case 'step2Submit':
-        // T31 will run the ssh-copy-id flow.
-        this.state = { ...this.state, step: 3 };
-        return this.postState();
+      case 'step2Submit': {
+        const { host, sshPort = 22 } = this.state;
+        const user = (msg.user as string) || this.state.user;
+        const password = msg.password as string;
+        const trustNewKey = !!msg.trustNewKey;
+
+        if (!host || !user || !password) {
+          this.state = { ...this.state, error: 'Username and password are required' };
+          return this.postState();
+        }
+
+        // Derive a per-project SSH key path: ~/.remote-claude/keys/<host>-<user>
+        const os = await import('node:os');
+        const path = await import('node:path');
+        const keyPath = path.join(os.homedir(), '.remote-claude', 'keys', `${host}-${user}`);
+
+        this.state = { ...this.state, busy: true, error: undefined, user, keyPath };
+        this.postState();
+
+        // Spawn `remote-claude setup --password-stdin --host ... --user ... --ssh-port ... --key-path ... [--trust-new-key]`
+        const cp = await import('node:child_process');
+        const args = [
+          'setup', '--password-stdin',
+          '--host', host,
+          '--user', user,
+          '--ssh-port', String(sshPort),
+          '--key-path', keyPath,
+        ];
+        if (trustNewKey) args.push('--trust-new-key');
+
+        const child = cp.spawn('remote-claude', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+        const pwBuf = Buffer.from(password + '\n');
+        child.stdin.write(pwBuf);
+        child.stdin.end();
+        pwBuf.fill(0);
+
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (c: Buffer) => { stdout += c.toString(); });
+        child.stderr.on('data', (c: Buffer) => { stderr += c.toString(); });
+
+        await new Promise<void>((resolve) => child.on('close', () => resolve()));
+
+        let result: { ok: boolean; code?: string; stderr?: string };
+        try {
+          result = JSON.parse(stdout || '{"ok":false,"code":"unknown"}');
+        } catch {
+          result = { ok: false, code: 'unknown', stderr: stderr || stdout };
+        }
+
+        this.state = { ...this.state, busy: false };
+        if (result.ok) {
+          this.state = { ...this.state, step: 3, error: undefined };
+        } else {
+          this.state = { ...this.state, error: undefined };  // clear; webview will show structured error
+        }
+        this.panel?.webview.postMessage({ type: 'step2Result', result });
+        this.postState();
+        return;
+      }
       case 'step3Submit':
         // T32 will run the git clone flow.
         this.state = { ...this.state, step: 4 };
