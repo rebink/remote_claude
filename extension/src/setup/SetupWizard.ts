@@ -164,10 +164,149 @@ export class SetupWizard {
         this.postState();
         return;
       }
-      case 'step3Submit':
-        // T32 will run the git clone flow.
-        this.state = { ...this.state, step: 4 };
-        return this.postState();
+      case 'step3Submit': {
+        const gitUrl = msg.gitUrl as string;
+        const branch = (msg.branch as string) || 'main';
+        const projectName = msg.projectName as string;
+        const localPath = msg.localPath as string;
+        const { host, user, sshPort = 22 } = this.state;
+
+        if (!gitUrl || !projectName || !localPath || !host || !user) {
+          this.state = { ...this.state, error: 'Git URL, project name, and local path are required' };
+          return this.postState();
+        }
+
+        this.state = { ...this.state, busy: true, error: undefined, gitUrl, branch, projectName, localPath };
+        this.postState();
+
+        const cp = await import('node:child_process');
+        const fs = await import('node:fs');
+        const path = await import('node:path');
+        const os = await import('node:os');
+        const crypto = await import('node:crypto');
+        const { stringify } = await import('yaml');
+
+        // Expand a leading "~" in the user-supplied local path.
+        const expandedLocalPath = localPath.startsWith('~')
+          ? path.join(os.homedir(), localPath.slice(1))
+          : localPath;
+
+        // 1. Local clone
+        this.output.appendLine(`Cloning ${gitUrl} into ${expandedLocalPath}…`);
+        let localClone;
+        try {
+          localClone = cp.spawnSync('git', ['clone', '-b', branch, '--', gitUrl, expandedLocalPath], { encoding: 'utf8' });
+        } catch (err) {
+          this.state = { ...this.state, busy: false };
+          this.panel?.webview.postMessage({
+            type: 'step3Result',
+            result: { ok: false, where: 'local', stderr: `Failed to spawn git: ${(err as Error).message}` },
+          });
+          return this.postState();
+        }
+        if (localClone.error) {
+          this.state = { ...this.state, busy: false };
+          this.panel?.webview.postMessage({
+            type: 'step3Result',
+            result: { ok: false, where: 'local', stderr: `Failed to spawn git: ${localClone.error.message}` },
+          });
+          return this.postState();
+        }
+        if (localClone.status !== 0) {
+          this.state = { ...this.state, busy: false };
+          this.panel?.webview.postMessage({
+            type: 'step3Result',
+            result: { ok: false, where: 'local', stderr: String(localClone.stderr ?? '').slice(0, 500) },
+          });
+          return this.postState();
+        }
+
+        // 2. Generate (or reuse) an agent token and write it to ~/.remote-claude/env.
+        // The dev must set RC_AGENT_TOKEN on the remote agent to this same value.
+        const envPath = path.join(os.homedir(), '.remote-claude', 'env');
+        let token: string;
+        if (fs.existsSync(envPath)) {
+          const envText = fs.readFileSync(envPath, 'utf8');
+          const match = envText.match(/^RC_TOKEN=(.+)$/m);
+          token = match ? match[1] : crypto.randomBytes(32).toString('hex');
+        } else {
+          token = crypto.randomBytes(32).toString('hex');
+          fs.mkdirSync(path.dirname(envPath), { recursive: true });
+          fs.writeFileSync(envPath, `RC_TOKEN=${token}\n`, { mode: 0o600 });
+          this.output.appendLine(
+            `Generated agent token at ${envPath} (mode 0600). ` +
+              `Set RC_AGENT_TOKEN=${token} on the Mac Mini's launchd agent for it to take effect.`,
+          );
+        }
+
+        // 3. Write remote-claude.yml in the local path
+        const yamlPath = path.join(expandedLocalPath, 'remote-claude.yml');
+        try {
+          fs.writeFileSync(
+            yamlPath,
+            stringify({
+              project: projectName,
+              remote: {
+                host,
+                user,
+                sshPort,
+                path: `~/workspace/${projectName}`,
+                agentUrl: `http://${host}:7878`,
+                token: '${RC_TOKEN}',
+              },
+              sync: { exclude: ['build/', '.dart_tool/', 'ios/Pods/', 'node_modules/', '.git/'] },
+              ai: { command: 'claude', args: ['--print'], timeoutSec: 600 },
+            }),
+          );
+        } catch (err) {
+          this.state = { ...this.state, busy: false };
+          this.panel?.webview.postMessage({
+            type: 'step3Result',
+            result: { ok: false, where: 'local', stderr: `Failed to write remote-claude.yml: ${(err as Error).message}` },
+          });
+          return this.postState();
+        }
+
+        // 4. Remote clone via init-remote (CLI calls the agent's POST /init)
+        this.output.appendLine(`Cloning remote into ~/workspace/${projectName}…`);
+        let initRemote;
+        try {
+          initRemote = cp.spawnSync(
+            'remote-claude',
+            ['init-remote', '--git-url', gitUrl, '--branch', branch, '--project', projectName],
+            { cwd: expandedLocalPath, encoding: 'utf8' },
+          );
+        } catch (err) {
+          this.state = { ...this.state, busy: false };
+          this.panel?.webview.postMessage({
+            type: 'step3Result',
+            result: { ok: false, where: 'remote', stderr: `Failed to spawn remote-claude: ${(err as Error).message}. Is it on PATH?` },
+          });
+          return this.postState();
+        }
+
+        this.state = { ...this.state, busy: false };
+
+        if (initRemote.error) {
+          this.panel?.webview.postMessage({
+            type: 'step3Result',
+            result: { ok: false, where: 'remote', stderr: `Failed to spawn remote-claude: ${initRemote.error.message}. Is it on PATH?` },
+          });
+          return this.postState();
+        }
+        if (initRemote.status !== 0) {
+          this.panel?.webview.postMessage({
+            type: 'step3Result',
+            result: { ok: false, where: 'remote', stderr: String(initRemote.stderr ?? '').slice(0, 500) },
+          });
+          return this.postState();
+        }
+
+        this.state = { ...this.state, step: 4, error: undefined };
+        this.panel?.webview.postMessage({ type: 'step3Result', result: { ok: true } });
+        this.postState();
+        return;
+      }
       case 'step4Finish':
         // T33 will run doctor and then trigger a workspace reload.
         this.panel?.dispose();
