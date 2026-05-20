@@ -12,7 +12,7 @@ import {
   isGitRepo,
   resetClean,
 } from './git.ts';
-import { claudeRunner, findClaude, runClaude } from './claude.ts';
+import { findClaude, makeClaudeRunner, runClaude } from './claude.ts';
 import { runInit } from './init.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
@@ -56,6 +56,10 @@ export function buildServer(opts: AgentOptions) {
   const sessionStorePath =
     opts.sessionStorePath ?? join(homedir(), '.remote-claude', 'agent-sessions.json');
   const sessionStore = new SessionStore(sessionStorePath);
+
+  // Streaming runner configured from AgentOptions (not env). Honors `--claudeCommand`
+  // / `--claudeArgs` exactly the same way the `/ask` path does via `runClaude`.
+  const claudeRunner = makeClaudeRunner({ bin: opts.claudeCommand, args: opts.claudeArgs });
 
   app.addHook('onRequest', async (req, reply) => {
     if (req.url === '/health') return;
@@ -158,6 +162,9 @@ export function buildServer(opts: AgentOptions) {
     reply.hijack();
     const emit = (e: unknown) => reply.raw.write(JSON.stringify(e) + '\n');
 
+    // TODO (M3 Task 24): wire client-disconnect cancellation by listening on
+    //   req.raw.on('close') and aborting the spawned claude child via AbortSignal.
+    //   Requires plumbing an AbortSignal through claudeRunner.run.
     try {
       await runChatTurn({
         uuid: body.uuid,
@@ -169,14 +176,23 @@ export function buildServer(opts: AgentOptions) {
         emit,
       });
     } catch (err) {
-      emit({
-        type: 'error',
-        code: 'turn_failed',
-        message: (err as Error).message,
-        recoverable: true,
-      });
+      try {
+        emit({
+          type: 'error',
+          code: 'turn_failed',
+          message: (err as Error).message,
+          recoverable: true,
+        });
+      } catch {
+        /* socket already destroyed — nothing more we can do */
+      }
+    } finally {
+      try {
+        reply.raw.end();
+      } catch {
+        /* same */
+      }
     }
-    reply.raw.end();
   });
 
   return app;
