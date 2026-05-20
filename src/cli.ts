@@ -129,6 +129,17 @@ program
   });
 
 program
+  .command('delete-session')
+  .description('Remove a chat session from the agent (used by the extension)')
+  .requiredOption('--session <uuid>', 'extension UUID to remove')
+  .action(async (opts: { session: string }) => {
+    const { loadConfig } = await import('./lib/config.ts');
+    const { agentRequest } = await import('./lib/client.ts');
+    const cfg = await loadConfig(process.cwd());
+    await agentRequest(cfg, 'DELETE', `/session/${encodeURIComponent(opts.session)}`);
+  });
+
+program
   .command('doctor')
   .description('Verify local tools, config, ssh reachability, and agent health')
   .action(async () => {

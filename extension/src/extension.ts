@@ -4,6 +4,7 @@ import { DiffContentProvider, SCHEME } from './diff/DiffContentProvider.ts';
 import { ChatStore } from './chat/ChatStore.ts';
 import { ChatPanel } from './chat/ChatPanel.ts';
 import { CliClient } from './cli/CliClient.ts';
+import { deleteRemoteSession } from './cli/agent-rest.ts';
 import { ChatController } from './chat/ChatController.ts';
 import { registerCommands } from './commands.ts';
 
@@ -30,7 +31,10 @@ export function activate(context: vscode.ExtensionContext): void {
     onDiffAction: (a) => controller.handleDiffAction(a),
     onOpenDiff: (a) => controller.handleOpenDiff(a),
     onCancel: (id) => controller.cancel(id),
-    onDeleteRemote: async (_id) => { /* wired in Task 23 */ },
+    onDeleteRemote: async (id) => {
+      try { await deleteRemoteSession(cli, id); }
+      catch (e) { output.appendLine(`Failed to delete remote session: ${(e as Error).message}`); }
+    },
   });
   controller.panel = chatPanel;
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatPanel.viewId, chatPanel));
