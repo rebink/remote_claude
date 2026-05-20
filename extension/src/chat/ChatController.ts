@@ -4,6 +4,7 @@ import type { CliEvent, ChangedFile } from '../cli/events.ts';
 import { ChatStore } from './ChatStore.ts';
 import type { ChatPanel } from './ChatPanel.ts';
 import type { SyncController } from '../sync/SyncController.ts';
+import type { StatusBarController } from '../statusbar/StatusBarController.ts';
 import { applyPatch, filterPatchToFiles } from '../diff/applyPatch.ts';
 import { makeBeforeUri } from '../diff/DiffContentProvider.ts';
 import { mkdtempSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
@@ -24,6 +25,7 @@ export class ChatController {
     private readonly store: ChatStore,
     private readonly output: vscode.OutputChannel,
     private readonly syncCtrl: SyncController,
+    private readonly status: StatusBarController,
   ) {}
 
   async send(chatId: string, prompt: string): Promise<void> {
@@ -41,7 +43,7 @@ export class ChatController {
       );
       if (choice === undefined) return;             // user dismissed; abort
       if (choice === 'Sync first') await this.syncCtrl.syncOnce();
-      if (choice === 'Turn on live sync') this.syncCtrl.setLiveSync(true);
+      if (choice === 'Turn on live sync') this.status.setLiveSyncPersisted(true);
       // 'Send anyway' falls through. Note: the CLI's chat command syncs by default,
       // so this still pushes; differs from 'Sync first' only in that we don't wait for it.
     }
