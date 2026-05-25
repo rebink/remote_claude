@@ -72,41 +72,55 @@ program
 
 program
   .command('init-remote')
-  .description('Push the local folder to the remote Mac Mini and initialise a bare git repo')
-  .requiredOption('--project <name>', 'project directory name on the remote')
-  .option('--host <host>', 'remote hostname (overrides remote-claude.yml)')
-  .option('--user <user>', 'remote SSH user (overrides remote-claude.yml)')
-  .option('--ssh-port <port>', 'SSH port', (v: string) => parseInt(v, 10), 22)
-  .option('--key-path <path>', 'path to SSH private key')
-  .option('--local-path <path>', 'local folder to push (default: cwd)')
-  .option('--overwrite', 'wipe and re-create the remote folder if it exists')
-  .option('--use-existing', 'skip mkdir/rsync if remote folder already exists')
-  .option('--json', 'NDJSON event output (for the VS Code extension)')
+  .description('Bootstrap a project on the remote Mac Mini by pushing the local working directory')
+  .requiredOption('--from-local', 'push the current working directory (the only supported mode)')
+  .requiredOption('--project <name>', 'project directory name on the remote ([a-zA-Z0-9._-]+)')
+  .option('--host <host>', 'override host from remote-claude.yml')
+  .option('--user <user>', 'override user from remote-claude.yml')
+  .option('--ssh-port <n>', 'override SSH port', (v) => Number(v))
+  .option('--key-path <path>', 'per-project SSH key (default: ~/.remote-claude/keys/<host>-<user>)')
+  .option('--overwrite', 'if ~/workspace/<project> exists on the remote, rm -rf it first', false)
+  .option('--use-existing', 'if ~/workspace/<project> exists, skip mkdir + rsync (config-only bootstrap)', false)
+  .option('--json', 'machine-readable progress stream (used by the extension wizard)', false)
   .action(async (opts: {
+    fromLocal: boolean;
     project: string;
     host?: string;
     user?: string;
     sshPort?: number;
     keyPath?: string;
-    localPath?: string;
     overwrite?: boolean;
     useExisting?: boolean;
     json?: boolean;
   }) => {
     const { runInitRemote } = await import('./commands/init-remote.ts');
-    const result = await runInitRemote({
+    const r = await runInitRemote({
       fromLocal: true,
       project: opts.project,
       host: opts.host,
       user: opts.user,
       sshPort: opts.sshPort,
       keyPath: opts.keyPath,
-      localPath: opts.localPath,
       overwrite: opts.overwrite,
       useExisting: opts.useExisting,
       json: opts.json,
     });
-    if (!result.ok) process.exit(1);
+    if (!r.ok) {
+      const exitMap: Record<string, number> = {
+        invalid_project_name: 2,
+        missing_config: 3,
+        missing_key: 3,
+        target_exists: 4,
+        wipe_failed: 5,
+        mkdir_failed: 5,
+        rsync_failed: 5,
+        ssh_unreachable: 5,
+        ssh_auth_failed: 5,
+        git_init_failed: 5,
+        unsafe_state: 6,
+      };
+      process.exit(exitMap[r.code] ?? 1);
+    }
   });
 
 program
