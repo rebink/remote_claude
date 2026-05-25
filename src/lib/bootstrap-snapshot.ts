@@ -20,9 +20,10 @@ export type BootstrapEvent =
   | { type: 'progress'; stage: 'rsync'; files: number; bytes: number; pct: number; current?: string }
   | { type: 'done'; ok: boolean; projectName?: string; remotePath?: string };
 
-export type StepName = 'key' | 'probe' | 'wipe' | 'mkdir' | 'rsync' | 'git_init' | 'safety';
+export type StepName = 'validate' | 'key' | 'probe' | 'wipe' | 'mkdir' | 'rsync' | 'git_init' | 'safety';
 
 export type FailureCode =
+  | 'invalid_project_name'
   | 'missing_key'
   | 'target_exists'
   | 'wipe_failed'
@@ -63,7 +64,7 @@ const SANDBOX_NAME = 'Remote Claude (sandbox)';
 export const gitInitScript = (project: string): string => {
   const remote = `${REMOTE_BASE}/${project}`;
   return [
-    `cd ${quoteForShell(remote)}`,
+    `cd ${remote}`,
     `git init -q`,
     `git config --local user.email ${quoteForShell(SANDBOX_EMAIL)}`,
     `git config --local user.name ${quoteForShell(SANDBOX_NAME)}`,
@@ -91,7 +92,21 @@ export async function* bootstrapSnapshot(
     keyPath: opts.keyPath,
   } satisfies Omit<SshOpts, 'command'>;
   const remotePath = `${REMOTE_BASE}/${opts.project}`;
-  const quotedRemote = quoteForShell(remotePath);
+
+  // Step 0: validate project name
+  yield { type: 'step', name: 'validate', status: 'start' };
+  if (!/^[a-zA-Z0-9._-]+$/.test(opts.project) || /^\.+$/.test(opts.project)) {
+    yield {
+      type: 'step',
+      name: 'validate',
+      status: 'fail',
+      code: 'invalid_project_name',
+      stderr: `Project name must match [a-zA-Z0-9._-]+ and cannot be "." or "..": got "${opts.project}"`,
+    };
+    yield { type: 'done', ok: false };
+    return;
+  }
+  yield { type: 'step', name: 'validate', status: 'ok' };
 
   // Step 1: key file present
   yield { type: 'step', name: 'key', status: 'start' };
@@ -104,7 +119,7 @@ export async function* bootstrapSnapshot(
 
   // Step 2: probe remote dir
   yield { type: 'step', name: 'probe', status: 'start' };
-  const probe = await deps.runSsh(sshBase, `test -d ${quotedRemote}`);
+  const probe = await deps.runSsh(sshBase, `test -d ${remotePath}`);
   if (probe.code === null) {
     const cls = classifySshError(probe.stderr) ?? 'ssh_error';
     yield { type: 'step', name: 'probe', status: 'fail', code: cls, stderr: probe.stderr };
@@ -128,7 +143,7 @@ export async function* bootstrapSnapshot(
   // Step 3 (optional): wipe
   if (exists && opts.overwrite) {
     yield { type: 'step', name: 'wipe', status: 'start' };
-    const wipe = await deps.runSsh(sshBase, `rm -rf ${quotedRemote}`);
+    const wipe = await deps.runSsh(sshBase, `rm -rf ${remotePath}`);
     if (wipe.code !== 0) {
       yield { type: 'step', name: 'wipe', status: 'fail', code: 'wipe_failed', stderr: wipe.stderr, exit: wipe.code };
       yield { type: 'done', ok: false };
@@ -140,7 +155,7 @@ export async function* bootstrapSnapshot(
   // Step 4 + 5: mkdir + rsync (skipped under --use-existing)
   if (!opts.useExisting) {
     yield { type: 'step', name: 'mkdir', status: 'start' };
-    const mk = await deps.runSsh(sshBase, `mkdir -p ${quotedRemote}`);
+    const mk = await deps.runSsh(sshBase, `mkdir -p ${remotePath}`);
     if (mk.code !== 0) {
       yield { type: 'step', name: 'mkdir', status: 'fail', code: 'mkdir_failed', stderr: mk.stderr, exit: mk.code };
       yield { type: 'done', ok: false };
@@ -198,7 +213,7 @@ export async function* bootstrapSnapshot(
 
   // Step 7: safety check
   yield { type: 'step', name: 'safety', status: 'start' };
-  const safety = await deps.runSsh(sshBase, `cd ${quotedRemote} && git remote -v`);
+  const safety = await deps.runSsh(sshBase, `cd ${remotePath} && git remote -v`);
   if (safety.code !== 0) {
     yield {
       type: 'step',
