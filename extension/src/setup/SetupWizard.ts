@@ -13,6 +13,7 @@ export interface WizardState {
   branch?: string;
   projectName?: string;
   localPath?: string;
+  workspaceFolder?: string;
   error?: string;
   busy?: boolean;
 }
@@ -45,6 +46,8 @@ export class SetupWizard {
     panel.onDidDispose(() => { this.panel = undefined; });
     panel.webview.html = this.renderHtml(panel.webview);
     panel.webview.onDidReceiveMessage((m) => this.handleMessage(m));
+    const wsFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    this.state = { ...this.state, workspaceFolder: wsFolder };
     return panel;
   }
 
