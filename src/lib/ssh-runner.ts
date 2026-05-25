@@ -5,6 +5,12 @@ export interface SshOpts {
   user: string;
   port: number;
   keyPath: string;
+  /**
+   * The full remote shell command line, interpreted by the remote shell.
+   * Shell metacharacters (&&, ;, $, `, |, etc.) are intentionally preserved
+   * — callers MUST pre-quote any user-controlled values using `quoteForShell()`
+   * before interpolating them into `command`. Do NOT pass raw user input.
+   */
   command: string;
 }
 
@@ -16,10 +22,10 @@ export interface SpawnResult {
 
 export type SpawnAdapter = (cmd: string, args: string[]) => Promise<SpawnResult>;
 
-/** Single-quote a value for safe interpolation into a remote shell. Rejects newlines. */
+/** Single-quote a value for safe interpolation into a remote shell. Rejects newlines and carriage returns. */
 export function quoteForShell(value: string): string {
-  if (value.includes('\n')) {
-    throw new Error('quoteForShell: newline in value not allowed');
+  if (/[\r\n]/.test(value)) {
+    throw new Error('quoteForShell: newline or carriage return in value not allowed');
   }
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
