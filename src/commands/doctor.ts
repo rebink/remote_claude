@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import { loadConfig } from '../lib/config.ts';
@@ -62,6 +63,45 @@ export async function runDoctor(cwd: string): Promise<void> {
         });
       } catch (err) {
         checks.push({ name: 'agent /health', pass: false, detail: (err as Error).message });
+      }
+
+      // Safety: remote project has no git remotes configured.
+      try {
+        const { runSsh } = await import('../lib/ssh-runner.ts');
+        const keyPath = join(homedir(), '.remote-claude', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+        const remotePath = cfg.remote.path;
+        const r = await runSsh({
+          host: cfg.remote.host,
+          user: cfg.remote.user,
+          port: cfg.remote.sshPort ?? 22,
+          keyPath,
+          command: `cd ${remotePath} && git remote -v`,
+        });
+        if (r.code !== 0) {
+          checks.push({
+            name: 'remote project has no git remotes',
+            pass: true,
+            detail: `could not verify remote git state (ssh exit ${r.code}) — skipping`,
+          });
+        } else if (r.stdout.trim() !== '') {
+          checks.push({
+            name: 'remote project has no git remotes',
+            pass: false,
+            detail: `remotes found: ${r.stdout.trim().split('\n')[0]} — remove with: ssh ${cfg.remote.user}@${cfg.remote.host} "cd ${remotePath} && git remote remove <name>"`,
+          });
+        } else {
+          checks.push({
+            name: 'remote project has no git remotes',
+            pass: true,
+            detail: 'sandbox safety guarantee intact',
+          });
+        }
+      } catch (err) {
+        checks.push({
+          name: 'remote project has no git remotes',
+          pass: true,
+          detail: `safety check skipped: ${(err as Error).message}`,
+        });
       }
     } catch (err) {
       checks.push({ name: 'remote-claude.yml valid', pass: false, detail: (err as Error).message });
