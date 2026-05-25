@@ -72,13 +72,41 @@ program
 
 program
   .command('init-remote')
-  .description('Clone the project on the remote Mac Mini (called by the wizard)')
-  .requiredOption('--git-url <url>', 'git URL to clone')
-  .option('--branch <branch>', 'branch to clone', 'main')
+  .description('Push the local folder to the remote Mac Mini and initialise a bare git repo')
   .requiredOption('--project <name>', 'project directory name on the remote')
-  .action(async (opts: { gitUrl: string; branch: string; project: string }) => {
+  .option('--host <host>', 'remote hostname (overrides remote-claude.yml)')
+  .option('--user <user>', 'remote SSH user (overrides remote-claude.yml)')
+  .option('--ssh-port <port>', 'SSH port', (v: string) => parseInt(v, 10), 22)
+  .option('--key-path <path>', 'path to SSH private key')
+  .option('--local-path <path>', 'local folder to push (default: cwd)')
+  .option('--overwrite', 'wipe and re-create the remote folder if it exists')
+  .option('--use-existing', 'skip mkdir/rsync if remote folder already exists')
+  .option('--json', 'NDJSON event output (for the VS Code extension)')
+  .action(async (opts: {
+    project: string;
+    host?: string;
+    user?: string;
+    sshPort?: number;
+    keyPath?: string;
+    localPath?: string;
+    overwrite?: boolean;
+    useExisting?: boolean;
+    json?: boolean;
+  }) => {
     const { runInitRemote } = await import('./commands/init-remote.ts');
-    await runInitRemote({ gitUrl: opts.gitUrl, branch: opts.branch, project: opts.project });
+    const result = await runInitRemote({
+      fromLocal: true,
+      project: opts.project,
+      host: opts.host,
+      user: opts.user,
+      sshPort: opts.sshPort,
+      keyPath: opts.keyPath,
+      localPath: opts.localPath,
+      overwrite: opts.overwrite,
+      useExisting: opts.useExisting,
+      json: opts.json,
+    });
+    if (!result.ok) process.exit(1);
   });
 
 program
