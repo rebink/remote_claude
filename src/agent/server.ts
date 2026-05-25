@@ -13,7 +13,6 @@ import {
   resetClean,
 } from './git.ts';
 import { findClaude, makeClaudeRunner, runClaude } from './claude.ts';
-import { runInit } from './init.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
 import { TurnState } from './turn-state.ts';
@@ -32,12 +31,6 @@ export interface AgentOptions {
 const AskBody = z.object({
   prompt: z.string().min(1),
   project: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
-});
-
-export const InitBody = z.object({
-  gitUrl: z.string().min(1),
-  branch: z.string().min(1).regex(/^[a-zA-Z0-9_][a-zA-Z0-9/_.-]*$/, 'invalid branch name').optional(),
-  projectName: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
 });
 
 /**
@@ -178,25 +171,6 @@ export function buildServer(opts: AgentOptions) {
       stderr: claudeResult.stderr,
       exitCode: claudeResult.exitCode,
     };
-  });
-
-  app.post('/init', async (req, reply) => {
-    const parsed = InitBody.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ ok: false, code: 'missing_fields', errors: parsed.error.format() });
-    }
-    const body = parsed.data;
-    const result = await runInit({
-      projectsRoot: opts.projectsRoot,
-      gitUrl: body.gitUrl,
-      branch: body.branch ?? 'main',
-      projectName: body.projectName,
-    });
-    if (!result.ok) {
-      const status = result.code === 'target_exists' ? 409 : 500;
-      return reply.status(status).send(result);
-    }
-    return result;
   });
 
   app.post('/chat', async (req, reply) => {
