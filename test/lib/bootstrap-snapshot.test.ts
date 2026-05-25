@@ -100,6 +100,8 @@ describe('bootstrapSnapshot', () => {
     );
     expect(rsyncCalled).toBe(false);
     expect(commandsSeen.some((c) => c.startsWith('mkdir -p'))).toBe(false);
+    expect(commandsSeen.some((c) => c.includes('git init -q'))).toBe(true);
+    expect(commandsSeen.some((c) => c.includes('git remote -v'))).toBe(true);
   });
 
   it('fails with missing_key when key file is absent', async () => {

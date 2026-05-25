@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
-import { quoteForShell, runSsh, type SshOpts, type SpawnAdapter } from './ssh-runner.ts';
+import { quoteForShell, runSsh, type SshOpts } from './ssh-runner.ts';
 
 export interface BootstrapOpts {
   host: string;
@@ -31,7 +31,8 @@ export type FailureCode =
   | 'git_init_failed'
   | 'unsafe_state'
   | 'ssh_unreachable'
-  | 'ssh_auth_failed';
+  | 'ssh_auth_failed'
+  | 'ssh_error';
 
 export interface RsyncProgress {
   type: 'progress';
@@ -105,7 +106,7 @@ export async function* bootstrapSnapshot(
   yield { type: 'step', name: 'probe', status: 'start' };
   const probe = await deps.runSsh(sshBase, `test -d ${quotedRemote}`);
   if (probe.code === null) {
-    const cls = classifySshError(probe.stderr) ?? 'ssh_unreachable';
+    const cls = classifySshError(probe.stderr) ?? 'ssh_error';
     yield { type: 'step', name: 'probe', status: 'fail', code: cls, stderr: probe.stderr };
     yield { type: 'done', ok: false };
     return;
@@ -235,7 +236,7 @@ export const defaultRsync: RsyncRunner = async function* ({ src, dest, port, key
     '--filter=:- .gitignore',
     '--info=progress2,stats1',
     '-e',
-    `ssh -i ${keyPath} -p ${port} -o StrictHostKeyChecking=accept-new -o BatchMode=yes`,
+    `ssh -i ${quoteForShell(keyPath)} -p ${port} -o StrictHostKeyChecking=accept-new -o BatchMode=yes`,
     src,
     dest,
   ];
@@ -251,12 +252,14 @@ export const defaultRsync: RsyncRunner = async function* ({ src, dest, port, key
       // Progress line: "  1,234,567  78%   12.34MB/s    0:00:23 (xfr#42, to-chk=12/345)"
       const m = line.match(/^\s*([\d,]+)\s+(\d+)%/);
       if (m) {
+        const xfr = line.match(/xfr#(\d+)/);
+        const filesCount = xfr ? Number(xfr[1]) : 0;
         events.push({
           type: 'progress',
           stage: 'rsync',
           bytes: Number(m[1]!.replace(/,/g, '')),
           pct: Number(m[2]!),
-          files: events.length ? events[events.length - 1]!.files : 0,
+          files: filesCount,
           current: currentFile,
         });
         continue;
@@ -298,5 +301,3 @@ export const defaultRsync: RsyncRunner = async function* ({ src, dest, port, key
 export const defaultRunSsh = (opts: SshOpts, command: string) =>
   runSsh({ ...opts, command });
 
-// Allow callers to override the spawn adapter for tests of the default rsync runner (not used here).
-export type _DepInjection = { adapter?: SpawnAdapter };
