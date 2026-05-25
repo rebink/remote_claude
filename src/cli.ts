@@ -116,8 +116,10 @@ program
         rsync_failed: 5,
         ssh_unreachable: 5,
         ssh_auth_failed: 5,
+        ssh_error: 5,
         git_init_failed: 5,
         unsafe_state: 6,
+        unknown_error: 1,
       };
       process.exit(exitMap[r.code] ?? 1);
     }
