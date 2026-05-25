@@ -40,7 +40,8 @@ export type InitRemoteResult =
         | 'unsafe_state'
         | 'ssh_unreachable'
         | 'ssh_auth_failed'
-        | 'ssh_error';
+        | 'ssh_error'
+        | 'unknown_error';
       stderr?: string;
     };
 
@@ -77,6 +78,7 @@ export async function runInitRemote(
       const cfg = await config.loadConfig(process.cwd());
       host = host ?? cfg.remote.host;
       user = user ?? cfg.remote.user;
+      // re-evaluate so cfg.remote.sshPort is consulted when opts.sshPort is undefined
       port = opts.sshPort ?? cfg.remote.sshPort ?? 22;
     } catch (err) {
       return { ok: false, code: 'missing_config', stderr: (err as Error).message };
@@ -86,7 +88,6 @@ export async function runInitRemote(
   const keyPath = opts.keyPath ?? join(homedir(), '.remote-claude', 'keys', `${host}-${user}`);
   const localPath = opts.localPath ?? process.cwd();
 
-  const events: BootstrapEvent[] = [];
   let lastFailure: Extract<BootstrapEvent, { type: 'step'; status: 'fail' }> | undefined;
   let doneOk = false;
   let remotePath: string | undefined;
@@ -95,7 +96,6 @@ export async function runInitRemote(
     { host: host!, user: user!, port, keyPath, project: opts.project, localPath, overwrite: opts.overwrite, useExisting: opts.useExisting },
     deps,
   )) {
-    events.push(e);
     if (opts.json) {
       process.stdout.write(JSON.stringify(e) + '\n');
     } else {
@@ -114,5 +114,5 @@ export async function runInitRemote(
   if (doneOk && remotePath) {
     return { ok: true, projectName: opts.project, remotePath };
   }
-  return { ok: false, code: lastFailure?.code ?? 'rsync_failed', stderr: lastFailure?.stderr };
+  return { ok: false, code: lastFailure?.code ?? 'unknown_error', stderr: lastFailure?.stderr };
 }
