@@ -13,6 +13,10 @@ describe('quoteForShell', () => {
   it('rejects newlines (no legitimate use case for ssh payloads)', () => {
     expect(() => quoteForShell('a\nb')).toThrow(/newline/);
   });
+
+  it('rejects carriage returns', () => {
+    expect(() => quoteForShell('a\rb')).toThrow(/newline or carriage return/);
+  });
 });
 
 describe('buildSshArgv', () => {
@@ -34,7 +38,7 @@ describe('buildSshArgv', () => {
     ]);
   });
 
-  it('omits -p when port is 22 only via default; explicit 22 still appears', () => {
+  it('always includes -p flag, even for port 22', () => {
     const argv = buildSshArgv({
       host: 'h', user: 'u', port: 22, keyPath: '/k', command: 'ls',
     });
@@ -67,5 +71,17 @@ describe('runSsh', () => {
       adapter,
     );
     expect(r).toEqual({ code: 5, stdout: '', stderr: 'boom' });
+  });
+
+  it('defaultAdapter: returns code:null and stderr containing "spawn error" when ssh cannot be found', async () => {
+    const origPath = process.env.PATH;
+    process.env.PATH = '';
+    try {
+      const r = await runSsh({ host: 'h', user: 'u', port: 22, keyPath: '/k', command: 'true' });
+      expect(r.code).toBeNull();
+      expect(r.stderr).toMatch(/spawn error/);
+    } finally {
+      process.env.PATH = origPath;
+    }
   });
 });
