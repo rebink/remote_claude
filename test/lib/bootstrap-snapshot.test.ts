@@ -115,6 +115,28 @@ describe('bootstrapSnapshot', () => {
     expect(failed).toMatchObject({ name: 'key', code: 'missing_key' });
   });
 
+  it('fails with invalid_project_name when project contains unsafe characters', async () => {
+    const events = await collect(
+      bootstrapSnapshot(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', project: '../etc', localPath: '/tmp/x' },
+        happyDeps(),
+      ),
+    );
+    const failed = events.find((e) => e.type === 'step' && e.status === 'fail');
+    expect(failed).toMatchObject({ name: 'validate', code: 'invalid_project_name' });
+  });
+
+  it('fails with invalid_project_name for ".."', async () => {
+    const events = await collect(
+      bootstrapSnapshot(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', project: '..', localPath: '/tmp/x' },
+        happyDeps(),
+      ),
+    );
+    const failed = events.find((e) => e.type === 'step' && e.status === 'fail');
+    expect(failed).toMatchObject({ name: 'validate', code: 'invalid_project_name' });
+  });
+
   it('fails with unsafe_state if git remote -v returns non-empty', async () => {
     const events = await collect(
       bootstrapSnapshot(
