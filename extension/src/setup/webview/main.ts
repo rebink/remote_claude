@@ -21,10 +21,6 @@ interface WizardState {
 const root = document.getElementById('app')!;
 let state: WizardState = { step: 1 };
 
-interface Peer { hostname: string; host: string; online: boolean; lastSeen: string }
-let peers: Peer[] | undefined = undefined;
-let peersRequested = false;
-let manualMode = false;
 let selectedHost = '';
 let userValue = '';
 let portValue = 22;
@@ -44,19 +40,10 @@ window.addEventListener('message', (event: MessageEvent) => {
   const msg = event.data as {
     type: string;
     state?: Partial<WizardState>;
-    peers?: Peer[];
     result?: Step2Result | Step3Result | Step4Result;
   };
   if (msg.type === 'state' && msg.state) {
     state = { ...state, ...msg.state };
-    render();
-  } else if (msg.type === 'step1Peers' && msg.peers) {
-    peers = msg.peers;
-    // Default selection: first online peer
-    if (!selectedHost) {
-      const firstOnline = peers.find((p) => p.online);
-      if (firstOnline) selectedHost = firstOnline.host;
-    }
     render();
   } else if (msg.type === 'step2Result' && msg.result) {
     step2Result = msg.result as Step2Result;
@@ -113,66 +100,29 @@ function renderStep(): HTMLElement {
 }
 
 function renderStep1(): HTMLElement {
-  if (!peersRequested) {
-    peersRequested = true;
-    vscode.postMessage({ type: 'step1ListPeers' });
-  }
-
+  // Manual entry only — Tailscale peer auto-detection removed per user request
   const container = h('div', {},
-    h('h1', {}, 'Step 1 — Pick your Mac Mini'),
+    h('h1', {}, 'Step 1 — Connect to your Mac Mini'),
+    h('p', { className: 'note' }, 'Enter the SSH details for your remote Mac Mini.'),
   );
 
-  if (peers === undefined) {
-    container.append(h('p', { className: 'note' }, h('span', { className: 'spinner' }, '⟳'), ' Loading Tailscale peers…'));
-    return container;
-  }
+  // Host (IP or hostname)
+  const hostInput = h('input', { type: 'text', placeholder: '192.168.1.10 or mac-mini.local', value: selectedHost }) as HTMLInputElement;
+  hostInput.addEventListener('input', () => { selectedHost = hostInput.value; });
+  container.append(h('div', { className: 'form-row' },
+    h('label', {}, 'Host (IP or hostname)'),
+    hostInput,
+  ));
 
-  const peerList = h('div', { className: 'peer-list form-row' });
-  if (peers.length === 0) {
-    peerList.append(h('p', { className: 'note' }, 'No Tailscale peers detected. Enter the host manually below.'));
-  } else {
-    // Online peers first
-    const sorted = [...peers].sort((a, b) => (a.online === b.online ? 0 : a.online ? -1 : 1));
-    for (const p of sorted) {
-      const radio = h('input', { type: 'radio', name: 'peer', checked: !manualMode && p.host === selectedHost }) as HTMLInputElement;
-      radio.addEventListener('change', () => {
-        manualMode = false;
-        selectedHost = p.host;
-        render();
-      });
-      peerList.append(h('label', {},
-        radio,
-        h('span', {}, `${p.online ? '●' : '○'} `),
-        h('span', {}, `${p.hostname}  `),
-        h('span', { className: 'note', style: { fontSize: '11px' } as unknown as CSSStyleDeclaration }, p.host),
-      ));
-    }
-  }
-
-  // Manual entry option
-  const manualRadio = h('input', { type: 'radio', name: 'peer', checked: manualMode }) as HTMLInputElement;
-  manualRadio.addEventListener('change', () => { manualMode = true; render(); });
-  peerList.append(h('label', {}, manualRadio, h('span', {}, ' Enter host manually')));
-  container.append(peerList);
-
-  if (manualMode) {
-    const manualHostInput = h('input', { type: 'text', placeholder: 'mac-mini.local or 192.168.1.10', value: selectedHost }) as HTMLInputElement;
-    manualHostInput.addEventListener('input', () => { selectedHost = manualHostInput.value; });
-    container.append(h('div', { className: 'form-row' },
-      h('label', {}, 'Host'),
-      manualHostInput,
-    ));
-  }
-
-  // SSH user input
-  const userInput = h('input', { type: 'text', placeholder: 'rebin', value: userValue }) as HTMLInputElement;
+  // SSH user
+  const userInput = h('input', { type: 'text', placeholder: 'admin', value: userValue }) as HTMLInputElement;
   userInput.addEventListener('input', () => { userValue = userInput.value; });
   container.append(h('div', { className: 'form-row' },
     h('label', {}, 'SSH username'),
     userInput,
   ));
 
-  // SSH port input
+  // SSH port
   const portInput = h('input', { type: 'text', placeholder: '22', value: String(portValue) }) as HTMLInputElement;
   portInput.addEventListener('input', () => { portValue = Number(portInput.value) || 22; });
   container.append(h('div', { className: 'form-row' },
