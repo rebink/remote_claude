@@ -1,6 +1,26 @@
 import { existsSync } from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { quoteForShell, runSsh, type SshOpts } from './ssh-runner.ts';
+
+/**
+ * Parse rsync's `--version` first line, e.g.:
+ *   "rsync  version 3.2.7  protocol version 31"
+ *   "rsync version 2.6.9  protocol version 29"
+ * Returns null if the line doesn't match the expected shape.
+ */
+export function parseRsyncVersion(stdout: string): { major: number; minor: number; patch: number } | null {
+  const m = stdout.match(/rsync\s+version\s+(\d+)\.(\d+)(?:\.(\d+))?/i);
+  if (!m) return null;
+  return { major: Number(m[1]), minor: Number(m[2]), patch: m[3] ? Number(m[3]) : 0 };
+}
+
+const MIN_RSYNC = { major: 3, minor: 1, patch: 0 };
+
+function isRsyncSupported(v: { major: number; minor: number; patch: number }): boolean {
+  if (v.major !== MIN_RSYNC.major) return v.major > MIN_RSYNC.major;
+  if (v.minor !== MIN_RSYNC.minor) return v.minor > MIN_RSYNC.minor;
+  return v.patch >= MIN_RSYNC.patch;
+}
 
 export interface BootstrapOpts {
   host: string;
@@ -245,6 +265,24 @@ export async function* bootstrapSnapshot(
 // ---- Default real-world adapter for runRsync, exported for the CLI wiring ----
 
 export const defaultRsync: RsyncRunner = async function* ({ src, dest, port, keyPath }) {
+  // Pre-flight: rsync 3.1+ is required (we use --info=progress2,stats1).
+  // macOS ships 2.6.9 by default — refuse early with an actionable message.
+  const probe = spawnSync('rsync', ['--version'], { encoding: 'utf8' });
+  if (probe.error || probe.status !== 0) {
+    return {
+      code: 1,
+      stderr: `rsync probe failed: ${probe.error?.message ?? probe.stderr ?? 'unknown error'}. Install rsync and try again.`,
+    };
+  }
+  const v = parseRsyncVersion(probe.stdout);
+  if (!v || !isRsyncSupported(v)) {
+    const found = v ? `${v.major}.${v.minor}.${v.patch}` : '(unparseable)';
+    return {
+      code: 1,
+      stderr: `rsync ${MIN_RSYNC.major}.${MIN_RSYNC.minor}+ required (found: ${found}). On macOS install with: brew install rsync`,
+    };
+  }
+
   const args = [
     '-a',
     '--delete',
