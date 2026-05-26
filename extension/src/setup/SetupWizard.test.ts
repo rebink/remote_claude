@@ -60,7 +60,18 @@ vi.mock('node:child_process', () => ({
     spawnCalls.push({ cmd, args, opts });
     return stubChild;
   }),
-  spawnSync: vi.fn(() => ({ status: 0, stdout: '[]' })),
+  spawnSync: vi.fn((cmd: string, args: readonly string[]) => {
+    // rsync --version: pretend we have a modern version so pre-flight passes
+    if (cmd === 'rsync' && args[0] === '--version') {
+      return { status: 0, stdout: 'rsync  version 3.2.7  protocol version 31\n', stderr: '' };
+    }
+    // which brew: pretend brew is installed (irrelevant when rsync probe passes)
+    if (cmd === 'which' && args[0] === 'brew') {
+      return { status: 0, stdout: '/opt/homebrew/bin/brew\n', stderr: '' };
+    }
+    // Default: empty JSON array (matches step1ListPeers expectation)
+    return { status: 0, stdout: '[]', stderr: '' };
+  }),
 }));
 
 beforeEach(() => {
