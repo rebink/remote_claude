@@ -1,7 +1,4 @@
 import * as vscode from 'vscode';
-import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 
 const TERMINAL_NAME_PREFIX = 'Claude →';
 
@@ -37,17 +34,23 @@ export function openSessionTerminal(target: SessionTarget): vscode.Terminal {
     return existing;
   }
 
-  // Session terminal uses the per-project key for silent auth. The Mini's
-  // login keychain must already be unlocked (claude reads OAuth credentials
-  // from it). Users do this once by SSH-ing in interactively and running:
-  //   security set-keychain-settings ~/Library/Keychains/login.keychain-db
-  // which disables idle auto-lock until reboot. After that, key-based SSH
-  // from this extension finds the keychain unlocked and claude "just works".
-  const keyPath = join(homedir(), '.remote-claude', 'keys', `${target.host}-${target.user}`);
+  // Session terminal uses PASSWORD auth (not the per-project key) so that
+  // sshd's PAM stack triggers the macOS keychain unlock prompts on the Mini.
+  // claude reads its OAuth credentials from the login keychain — without
+  // those prompts, the keychain stays locked and claude reports "Not logged
+  // in". This deliberately mirrors what the user gets when they type
+  // `ssh admin@host` themselves in a normal terminal. Other SSH callers
+  // (rsync push, pullChanges, doctor /health) keep using the per-project
+  // key since they need non-interactive auth.
   const sshArgs: string[] = [];
-  if (existsSync(keyPath)) sshArgs.push('-i', keyPath);
   if (target.sshPort && target.sshPort !== 22) sshArgs.push('-p', String(target.sshPort));
-  sshArgs.push('-t', '-o', 'ServerAliveInterval=30', `${target.user}@${target.host}`);
+  sshArgs.push(
+    '-t',
+    '-o', 'ServerAliveInterval=30',
+    '-o', 'PreferredAuthentications=password,keyboard-interactive',
+    '-o', 'PubkeyAuthentication=no',
+    `${target.user}@${target.host}`,
+  );
   // Remote command: cd into the project, print a banner, then exec a
   // login+interactive zsh that runs `claude`. The `-i` flag is critical —
   // it makes zsh source ~/.zshrc, which is where most users set up PATH and
@@ -56,8 +59,12 @@ export function openSessionTerminal(target: SessionTarget): vscode.Terminal {
   // skips .zshrc, which is why the same claude binary reports different
   // auth state in an interactive ssh vs ours. `exec` chains so Ctrl+D /
   // claude exit closes the SSH session cleanly.
+  // Note: leave ${remotePath} UNQUOTED so a leading ~ expands. Quoting (single
+  // OR double) would make bash treat ~ as a literal character. Project name
+  // is regex-validated upstream (^[a-zA-Z0-9._-]+$) so no shell metachars
+  // can sneak in.
   const remoteCmd = [
-    `cd "${target.remotePath}"`,
+    `cd ${target.remotePath}`,
     `printf '\\033[36m── Remote Claude · %s:%s\\033[0m\\n' "$(hostname)" "$(pwd)"`,
     `exec zsh -lic claude`,
   ].join(' && ');
