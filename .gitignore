@@ -8,6 +8,7 @@ dist/
 .env
 .env.local
 vendor/sshpass/sshpass-*
+*.vsix
 
 # Override the user's global gitignore for files that ARE part of this project
 !README.md

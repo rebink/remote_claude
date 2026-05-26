@@ -1,32 +1,63 @@
 import * as vscode from 'vscode';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { ChatStore, Turn } from './ChatStore.ts';
+import { parse as parseYaml } from 'yaml';
+import {
+  openSessionTerminal,
+  findExistingSessionTerminal,
+  type SessionTarget,
+} from '../session/sessionTerminal.ts';
+import { pullRemoteDiff, type ChangedFile } from '../session/pullChanges.ts';
+import { applyPatch } from '../diff/applyPatch.ts';
 
-export type DiffActionMsg = { chatId: string; turn: number; action: 'apply'|'save'|'reject'; fileIndices: number[] };
-export type OpenDiffMsg = { chatId: string; turn: number; fileIndex: number };
+interface SessionState {
+  configured: boolean;
+  project?: string;
+  host?: string;
+  user?: string;
+  sshPort?: number;
+  remotePath?: string;
+  sessionRunning: boolean;
+  pulling: boolean;
+  applying: boolean;
+  pendingFiles: ChangedFile[];
+  lastError?: string;
+}
 
 export interface ChatPanelDeps {
   output: vscode.OutputChannel;
-  onSend(chatId: string, prompt: string): void;
-  onDiffAction(msg: DiffActionMsg): void;
-  onOpenDiff(msg: OpenDiffMsg): void;
-  onCancel(chatId: string): void;
-  onDeleteRemote(chatId: string): Promise<void>;
 }
 
+/**
+ * Sidebar panel for the terminal-based Remote Claude session. Replaces the
+ * previous chat-bubble UI. Surfaces two primary actions:
+ *   1. Open Claude session — spawns a VS Code terminal SSH'd to the Mac Mini
+ *      in the synced project dir, running the real `claude` REPL.
+ *   2. Pull remote changes — fetches `git diff HEAD` from the Mini, shows
+ *      changed files with checkboxes, applies selected ones to the laptop.
+ * Internal name kept as ChatPanel for now to avoid touching the registration
+ * id and the file decoration provider that imports the type.
+ */
 export class ChatPanel implements vscode.WebviewViewProvider {
   static readonly viewId = 'remoteClaude.chatPanel';
   private view?: vscode.WebviewView;
-  private activeChatId?: string;
-  private inFlightChats = new Set<string>();
+  private pendingFiles: ChangedFile[] = [];
+  private pendingPatch = '';
+  private pulling = false;
+  private applying = false;
+  private lastError?: string;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly chatStore: ChatStore,
+    private readonly workspaceFolder: string,
     private readonly deps: ChatPanelDeps,
-  ) {}
+  ) {
+    // Refresh on terminal close/open so the "Focus session" / "Open session"
+    // label tracks reality.
+    vscode.window.onDidCloseTerminal(() => this.postState());
+    vscode.window.onDidOpenTerminal(() => this.postState());
+  }
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
@@ -38,30 +69,14 @@ export class ChatPanel implements vscode.WebviewViewProvider {
 
     view.webview.onDidReceiveMessage(async (msg: { type: string; [k: string]: unknown }) => {
       switch (msg.type) {
-        case 'ready':       return this.postState();
-        case 'send': {
-          // Auto-create a chat if there's no active one — Send must never be a no-op
-          if (!this.activeChatId) {
-            this.activeChatId = this.chatStore.createChat(`Chat ${this.chatStore.listChats().length + 1}`);
-            this.postState();
-          }
-          this.deps.onSend(this.activeChatId, msg.prompt as string);
-          return;
-        }
-        case 'newChat':     this.activeChatId = this.chatStore.createChat(`Chat ${this.chatStore.listChats().length + 1}`); return this.postState();
-        case 'switch':      this.activeChatId = msg.id as string; return this.postState();
-        case 'diffAction':  return this.deps.onDiffAction(msg as unknown as DiffActionMsg);
-        case 'openDiff':    return this.deps.onOpenDiff(msg as unknown as OpenDiffMsg);
-        case 'cancel':      if (this.activeChatId) this.deps.onCancel(this.activeChatId); return;
-        case 'deleteChat': {
-          const confirm = await vscode.window.showWarningMessage('Delete this chat?', { modal: true }, 'Delete');
-          if (confirm !== 'Delete') return;
-          const id = msg.id as string;
-          this.chatStore.deleteChat(id);
-          if (this.activeChatId === id) this.activeChatId = undefined;
-          await this.deps.onDeleteRemote(id);
-          return this.postState();
-        }
+        case 'ready':           return this.postState();
+        case 'openSetup':       return vscode.commands.executeCommand('remoteClaude.openSetup');
+        case 'openSession':     return this.handleOpenSession();
+        case 'pullChanges':     return this.handlePullChanges();
+        case 'openDiff':        return this.handleOpenDiff(msg.path as string);
+        case 'applySelected':   return this.handleApplySelected(msg.paths as string[]);
+        case 'savePatch':       return this.handleSavePatch();
+        case 'dismissPending':  return this.dismissPending();
         default:
           this.deps.output.appendLine(`ChatPanel: unknown message type "${(msg as { type?: string }).type}"`);
           return;
@@ -69,18 +84,145 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     });
   }
 
-  setInFlight(chatId: string, on: boolean): void {
-    if (on) this.inFlightChats.add(chatId); else this.inFlightChats.delete(chatId);
+  refresh(): void {
     this.postState();
+  }
+
+  private loadConfig(): SessionTarget | null {
+    const yamlPath = join(this.workspaceFolder, 'remote-claude.yml');
+    if (!existsSync(yamlPath)) return null;
+    try {
+      const raw = readFileSync(yamlPath, 'utf8');
+      const parsed = parseYaml(raw) as Record<string, unknown>;
+      const project = parsed.project as string | undefined;
+      const remote = parsed.remote as Record<string, unknown> | undefined;
+      if (!project || !remote || !remote.host || !remote.user || !remote.path) return null;
+      return {
+        project,
+        host: remote.host as string,
+        user: remote.user as string,
+        sshPort: remote.sshPort as number | undefined,
+        remotePath: remote.path as string,
+      };
+    } catch (err) {
+      this.deps.output.appendLine(`Failed to read remote-claude.yml: ${(err as Error).message}`);
+      return null;
+    }
   }
 
   postState(): void {
     if (!this.view) return;
-    const chats = this.chatStore.listChats();
-    if (!this.activeChatId && chats[0]) this.activeChatId = chats[0].id;
-    const turns: Turn[] = this.activeChatId ? this.chatStore.loadTranscript(this.activeChatId) : [];
-    const inFlight = this.activeChatId ? this.inFlightChats.has(this.activeChatId) : false;
-    this.view.webview.postMessage({ type: 'state', state: { chats, activeChatId: this.activeChatId, turns, inFlight } });
+    const cfg = this.loadConfig();
+    const state: SessionState = cfg
+      ? {
+          configured: true,
+          project: cfg.project,
+          host: cfg.host,
+          user: cfg.user,
+          sshPort: cfg.sshPort,
+          remotePath: cfg.remotePath,
+          sessionRunning: !!findExistingSessionTerminal(cfg.project),
+          pulling: this.pulling,
+          applying: this.applying,
+          pendingFiles: this.pendingFiles,
+          lastError: this.lastError,
+        }
+      : {
+          configured: false,
+          sessionRunning: false,
+          pulling: false,
+          applying: false,
+          pendingFiles: [],
+        };
+    this.view.webview.postMessage({ type: 'state', state });
+  }
+
+  private handleOpenSession(): void {
+    const cfg = this.loadConfig();
+    if (!cfg) {
+      vscode.window.showErrorMessage('No remote-claude.yml found — run Remote Claude: Setup first.');
+      return;
+    }
+    openSessionTerminal(cfg);
+    this.postState();
+  }
+
+  private async handlePullChanges(): Promise<void> {
+    const cfg = this.loadConfig();
+    if (!cfg) return;
+    this.pulling = true;
+    this.lastError = undefined;
+    this.postState();
+    const r = pullRemoteDiff(cfg);
+    this.pulling = false;
+    if (!r.ok) {
+      this.lastError = r.error;
+      this.deps.output.appendLine(`[pull-changes] ${r.error}`);
+      this.postState();
+      return;
+    }
+    this.pendingFiles = r.result.files;
+    this.pendingPatch = r.result.patch;
+    if (!this.pendingFiles.length) {
+      vscode.window.showInformationMessage('No changes on the remote.');
+    } else {
+      this.deps.output.appendLine(`[pull-changes] ${this.pendingFiles.length} file(s) changed`);
+    }
+    this.postState();
+  }
+
+  private async handleOpenDiff(filePath: string): Promise<void> {
+    // Save the full patch to a temp file then open VS Code's native diff editor
+    // between the local file and a synthetic "remote" version constructed by
+    // applying just this file's hunks. For v1 simplicity, just open the local
+    // file alongside the patch text. (Native scoped diff is a v1.1 polish.)
+    const local = vscode.Uri.file(join(this.workspaceFolder, filePath));
+    try {
+      const doc = await vscode.workspace.openTextDocument(local);
+      await vscode.window.showTextDocument(doc, { preview: true });
+    } catch {
+      vscode.window.showWarningMessage(`Could not open ${filePath} (file may not exist locally yet).`);
+    }
+  }
+
+  private async handleApplySelected(paths: string[]): Promise<void> {
+    if (!paths.length || !this.pendingPatch) return;
+    this.applying = true;
+    this.lastError = undefined;
+    this.postState();
+    // v1: apply the full patch. Per-file filtering is a v1.1 polish — would
+    // require parsing the unified diff into per-file hunks and applying only
+    // the selected file's sections.
+    const result = await applyPatch(this.pendingPatch, this.workspaceFolder);
+    this.applying = false;
+    if (result.ok) {
+      vscode.window.showInformationMessage(`Applied ${this.pendingFiles.length} file(s).`);
+      this.pendingFiles = [];
+      this.pendingPatch = '';
+    } else {
+      const conflicts = result.conflicted.length ? ` (conflicts: ${result.conflicted.join(', ')})` : '';
+      this.lastError = `Apply failed: ${result.stderr}${conflicts}`;
+      this.deps.output.appendLine(`[apply] ${result.stderr}`);
+    }
+    this.postState();
+  }
+
+  private handleSavePatch(): void {
+    if (!this.pendingPatch) return;
+    const target = join(this.workspaceFolder, '.remote-claude', `pull-${Date.now()}.patch`);
+    try {
+      writeFileSync(target, this.pendingPatch, 'utf8');
+      vscode.window.showInformationMessage(`Patch saved: ${target}`);
+    } catch (err) {
+      vscode.window.showErrorMessage(`Failed to save patch: ${(err as Error).message}`);
+    }
+  }
+
+  private dismissPending(): void {
+    this.pendingFiles = [];
+    this.pendingPatch = '';
+    this.lastError = undefined;
+    this.postState();
   }
 
   private renderHtml(webview: vscode.Webview): string {

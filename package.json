@@ -46,6 +46,8 @@
     "dev:agent": "tsx src/agent.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "smoke": "bash scripts/smoke.sh",
+    "verify": "pnpm typecheck && pnpm test && pnpm build && pnpm smoke",
     "lint": "tsc --noEmit",
     "prepare": "[ -f tsup.config.ts ] && tsup || echo 'no source — skipping build'",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build",

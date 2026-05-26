@@ -1,5 +1,10 @@
 src/**
 tsconfig.json
+tsup.config.ts
+tsup.webview.config.ts
+tsup.setup-webview.config.ts
+vitest.config.ts
 node_modules/**
 .vscode-test/**
 **/*.test.ts
+*.vsix

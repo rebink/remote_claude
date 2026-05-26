@@ -1,0 +1,20 @@
+project: dev_sync_cli
+remote:
+  host: 100.100.100.100
+  user: admin
+  sshPort: 22
+  path: ~/workspace/dev_sync_cli
+  agentUrl: http://100.100.100.100:7878
+  token: ${RC_TOKEN}
+sync:
+  exclude:
+    - build/
+    - .dart_tool/
+    - ios/Pods/
+    - node_modules/
+    - .git/
+ai:
+  command: claude
+  args:
+    - --print
+  timeoutSec: 600
