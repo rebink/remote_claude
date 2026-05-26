@@ -36,9 +36,11 @@ export async function runDoctor(cwd: string): Promise<void> {
       const cfg = await loadConfig(cwd);
       checks.push({ name: 'remote-claude.yml valid', pass: true });
 
+      const sshKeyPath = join(homedir(), '.remote-claude', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
       const ssh = spawnSync(
         'ssh',
         [
+          ...(existsSync(sshKeyPath) ? ['-i', sshKeyPath] : []),
           '-o', 'BatchMode=yes',
           '-o', 'ConnectTimeout=5',
           ...(cfg.remote.sshPort ? ['-p', String(cfg.remote.sshPort)] : []),
