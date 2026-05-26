@@ -10,6 +10,7 @@ import {
 } from '../session/sessionTerminal.ts';
 import { pullRemoteDiff, type ChangedFile } from '../session/pullChanges.ts';
 import { applyPatch } from '../diff/applyPatch.ts';
+import { filterPatchByPaths } from '../diff/filterPatch.ts';
 
 interface SessionState {
   configured: boolean;
@@ -190,15 +191,27 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     this.applying = true;
     this.lastError = undefined;
     this.postState();
-    // v1: apply the full patch. Per-file filtering is a v1.1 polish — would
-    // require parsing the unified diff into per-file hunks and applying only
-    // the selected file's sections.
-    const result = await applyPatch(this.pendingPatch, this.workspaceFolder);
+    const filtered = filterPatchByPaths(this.pendingPatch, paths);
+    if (!filtered) {
+      this.applying = false;
+      this.lastError = 'No patch sections matched the selected files (the diff format may differ from `git diff --git` shape).';
+      this.postState();
+      return;
+    }
+    const result = await applyPatch(filtered, this.workspaceFolder);
     this.applying = false;
     if (result.ok) {
-      vscode.window.showInformationMessage(`Applied ${this.pendingFiles.length} file(s).`);
-      this.pendingFiles = [];
-      this.pendingPatch = '';
+      vscode.window.showInformationMessage(`Applied ${paths.length} file(s).`);
+      // Drop the applied files from the pending list; keep the rest so the
+      // user can iterate. Patch is regenerated from remaining files.
+      const appliedSet = new Set(paths);
+      this.pendingFiles = this.pendingFiles.filter((f) => !appliedSet.has(f.path));
+      if (this.pendingFiles.length === 0) {
+        this.pendingPatch = '';
+      } else {
+        const remaining = this.pendingFiles.map((f) => f.path);
+        this.pendingPatch = filterPatchByPaths(this.pendingPatch, remaining);
+      }
     } else {
       const conflicts = result.conflicted.length ? ` (conflicts: ${result.conflicted.join(', ')})` : '';
       this.lastError = `Apply failed: ${result.stderr}${conflicts}`;
