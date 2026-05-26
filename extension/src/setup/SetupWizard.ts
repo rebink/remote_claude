@@ -189,34 +189,6 @@ export class SetupWizard {
         this.state = { ...this.state, busy: true, error: undefined, projectName, localPath };
         this.postState();
 
-        // Pre-flight: ensure rsync 3.1+ is available (macOS ships 2.6.9).
-        // Will prompt + auto-install via brew on user consent.
-        const { ensureRsync } = await import('./rsync-preflight.ts');
-        const rsyncCheck = await ensureRsync(this.output, (line) => {
-          this.panel?.webview.postMessage({
-            type: 'step3Event',
-            event: { type: 'progress', stage: 'rsync_install', current: line, files: 0, bytes: 0, pct: 0 },
-          });
-        });
-        if (!rsyncCheck.ok) {
-          this.state = { ...this.state, busy: false };
-          const friendly =
-            rsyncCheck.reason === 'cancelled'
-              ? 'rsync install was cancelled. Run `brew install rsync` manually, then retry setup.'
-              : rsyncCheck.reason === 'brew_missing'
-                ? 'Homebrew is not installed. Install it from https://brew.sh, then run `brew install rsync` and retry.'
-                : rsyncCheck.reason === 'openrsync_conflict'
-                  ? `openrsync owns the \`rsync\` symlink and rejects --info= flags. ${rsyncCheck.detail ?? 'Run: brew uninstall openrsync && brew link --overwrite rsync'}`
-                  : rsyncCheck.reason === 'install_failed'
-                    ? `brew install rsync failed: ${rsyncCheck.detail ?? 'unknown error'}. Check the Remote Claude output channel.`
-                    : `rsync is still not 3.1+ after install (${rsyncCheck.detail ?? 'unknown'}). Check PATH.`;
-          this.panel?.webview.postMessage({
-            type: 'step3Result',
-            result: { ok: false, where: 'local', stderr: friendly },
-          });
-          return this.postState();
-        }
-
         const cp = await import('node:child_process');
         const fs = await import('node:fs');
         const path = await import('node:path');
