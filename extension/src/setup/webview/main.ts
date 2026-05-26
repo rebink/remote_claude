@@ -13,6 +13,7 @@ interface WizardState {
   branch?: string;
   projectName?: string;
   localPath?: string;
+  workspaceFolder?: string;
   error?: string;
   busy?: boolean;
 }
@@ -34,10 +35,6 @@ let pwValue = '';
 
 interface Step3Result { ok: boolean; where?: 'local' | 'remote'; stderr?: string }
 let step3Result: Step3Result | undefined;
-let gitUrlValue = '';
-let branchValue = 'main';
-let projectNameValue = '';
-let localPathValue = '';
 
 interface Step4Result { ok: boolean; stdout: string; stderr: string }
 let step4Result: Step4Result | undefined;
@@ -67,6 +64,23 @@ window.addEventListener('message', (event: MessageEvent) => {
   } else if (msg.type === 'step3Result' && msg.result) {
     step3Result = msg.result as Step3Result;
     render();
+  } else if (msg.type === 'step3Event' && (msg as { event?: unknown }).event) {
+    const evt = ((msg as unknown) as { event: { type: string; [k: string]: unknown } }).event;
+    const progressEl = document.querySelector('.progress') as HTMLElement | null;
+    if (progressEl) {
+      if (evt.type === 'step' && evt.status === 'start') {
+        progressEl.textContent = `→ ${evt.name}…`;
+      } else if (evt.type === 'progress' && evt.stage === 'rsync') {
+        const pct = evt.pct as number;
+        const cur = (evt.current as string | undefined) ?? '';
+        const files = evt.files as number;
+        progressEl.textContent = `Pushing files… ${files} files (rsync ${pct}% — ${cur})`;
+      } else if (evt.type === 'step' && evt.status === 'ok') {
+        progressEl.textContent = `✓ ${evt.name}`;
+      } else if (evt.type === 'step' && evt.status === 'fail') {
+        progressEl.textContent = `✗ ${evt.name}: ${(evt.code as string) ?? 'failed'}`;
+      }
+    }
   } else if (msg.type === 'step4Result' && msg.result) {
     step4Result = msg.result as Step4Result;
     render();
@@ -182,7 +196,7 @@ function renderStep1(): HTMLElement {
 function renderStep2(): HTMLElement {
   const container = h('div', {},
     h('h1', {}, 'Step 2 — Sign in to the Mac Mini'),
-    h('p', { className: 'note' }, 'We use your password once to install an SSH key, then discard it. You won’t be asked again.'),
+    h('p', { className: 'note' }, "We use your password once to install an SSH key, then discard it. You won't be asked again."),
   );
 
   // Username (pre-filled from step 1; allow editing for typos)
@@ -210,8 +224,8 @@ function renderStep2(): HTMLElement {
       container.append(h('p', { className: 'error' }, 'Host unreachable. Check Tailscale and try again.'));
     } else if (code === 'host_key_mismatch') {
       container.append(h('div', { className: 'error' },
-        h('p', {}, 'REMOTE HOST IDENTIFICATION HAS CHANGED. The Mac Mini’s SSH key is different from what we have stored.'),
-        h('p', { className: 'note' }, 'This is sometimes legitimate (key rotated) and sometimes a sign of a man-in-the-middle. Trust the new key only if you’re sure.'),
+        h('p', {}, "REMOTE HOST IDENTIFICATION HAS CHANGED. The Mac Mini's SSH key is different from what we have stored."),
+        h('p', { className: 'note' }, "This is sometimes legitimate (key rotated) and sometimes a sign of a man-in-the-middle. Trust the new key only if you're sure."),
         step2Result.stderr ? h('pre', { className: 'note' }, step2Result.stderr) : null,
         h('div', { className: 'actions' },
           h('button', { className: 'secondary',
@@ -244,71 +258,85 @@ function renderStep2(): HTMLElement {
 }
 
 function renderStep3(): HTMLElement {
-  const container = h('div', {},
-    h('h1', {}, 'Step 3 — Project source'),
-    h('p', { className: 'note' }, 'We’ll clone the same repository on your laptop and on the Mac Mini.'),
-  );
+  const container = h('div', {});
 
-  // Forward-declare the input refs so the gitUrl listener can safely populate
-  // the projectName + localPath inputs without hitting a TDZ surprise.
-  const gitUrlInput = h('input', { type: 'text', placeholder: 'git@github.com:org/app.git', value: gitUrlValue }) as HTMLInputElement;
-  const branchInput = h('input', { type: 'text', placeholder: 'main', value: branchValue }) as HTMLInputElement;
-  const projectNameInput = h('input', { type: 'text', placeholder: 'app', value: projectNameValue }) as HTMLInputElement;
-  const localPathInput = h('input', { type: 'text', placeholder: '~/code/app', value: localPathValue }) as HTMLInputElement;
+  let localPathValue = state.localPath ?? state.workspaceFolder ?? '';
+  let projectNameValue = state.projectName ?? (localPathValue ? basename(localPathValue) : '');
 
-  gitUrlInput.addEventListener('input', () => {
-    gitUrlValue = gitUrlInput.value;
-    // Auto-derive projectName from the URL if user hasn't typed one.
-    if (!projectNameValue) {
-      const m = gitUrlValue.match(/\/([^/]+?)(?:\.git)?$/);
-      if (m) {
-        projectNameValue = m[1];
-        projectNameInput.value = projectNameValue;
-        if (!localPathValue) {
-          localPathValue = `~/code/${projectNameValue}`;
-          localPathInput.value = localPathValue;
-        }
-      }
+  const localPathInput = h('input', { type: 'text', value: localPathValue }) as HTMLInputElement;
+  const projectNameInput = h('input', { type: 'text', value: projectNameValue }) as HTMLInputElement;
+  const submitBtn = h('button', { className: 'primary' }, 'Push & continue →');
+  const progressEl = h('div', { className: 'progress' }, '');
+
+  localPathInput.addEventListener('input', () => {
+    localPathValue = localPathInput.value;
+    if (!projectNameInput.dataset.userEdited) {
+      const b = basename(localPathValue);
+      projectNameInput.value = b;
+      projectNameValue = b;
     }
   });
-  branchInput.addEventListener('input', () => { branchValue = branchInput.value || 'main'; });
-  projectNameInput.addEventListener('input', () => { projectNameValue = projectNameInput.value; });
-  localPathInput.addEventListener('input', () => { localPathValue = localPathInput.value; });
+  projectNameInput.addEventListener('input', () => {
+    projectNameInput.dataset.userEdited = '1';
+    projectNameValue = projectNameInput.value;
+  });
 
-  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Git URL'), gitUrlInput));
-  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Branch'), branchInput));
-  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Project name (used as remote directory)'), projectNameInput));
-  container.append(h('div', { className: 'form-row' }, h('label', {}, 'Local path'), localPathInput));
+  container.append(
+    h('h2', {}, 'Step 3 — Push your project to the Mac Mini'),
+    h('div', { className: 'form-row' },
+      h('label', {}, 'Local folder'),
+      localPathInput,
+      h('p', { className: 'hint' }, 'Defaults to your current VS Code workspace folder.'),
+    ),
+    h('div', { className: 'form-row' },
+      h('label', {}, 'Project name (folder on the Mac Mini)'),
+      projectNameInput,
+      h('p', { className: 'hint' }, `Will be created at ~/workspace/<name>`),
+    ),
+    h('p', { className: 'warn-banner' },
+      'The Mac Mini copy stays isolated from git — no remotes, no pushes, no leaked identity. ' +
+      'You commit only on the laptop with your own git identity.',
+    ),
+    progressEl,
+  );
 
+  if (state.error) {
+    container.append(h('p', { className: 'error' }, state.error));
+  }
   if (step3Result && !step3Result.ok) {
-    container.append(h('div', { className: 'error' },
-      h('p', {}, `Clone failed on ${step3Result.where === 'local' ? 'your laptop' : 'the Mac Mini'}.`),
-      h('pre', { className: 'note', style: { whiteSpace: 'pre-wrap' } as unknown as CSSStyleDeclaration }, step3Result.stderr ?? ''),
-    ));
+    container.append(
+      h('div', { className: 'error-block' },
+        h('p', {}, 'Push failed:'),
+        h('pre', { className: 'note', style: { whiteSpace: 'pre-wrap' } as unknown as CSSStyleDeclaration }, step3Result.stderr ?? ''),
+      ),
+    );
   }
 
-  if (state.error) container.append(h('p', { className: 'error' }, state.error));
-  if (state.busy) container.append(h('p', { className: 'note' }, h('span', { className: 'spinner' }, '⟳'), ' Cloning…'));
+  container.append(
+    h('div', { className: 'actions' },
+      h('button', { onclick: () => vscode.postMessage({ type: 'back', to: 2 }) }, 'Back'),
+      submitBtn,
+    ),
+  );
 
-  container.append(h('div', { className: 'actions' },
-    h('button', { className: 'secondary', events: { click: () => vscode.postMessage({ type: 'back' }) } }, 'Back'),
-    h('button', {
-      disabled: state.busy,
-      events: { click: () => {
-        if (!gitUrlValue || !projectNameValue || !localPathValue) return;
-        step3Result = undefined;
-        vscode.postMessage({
-          type: 'step3Submit',
-          gitUrl: gitUrlValue,
-          branch: branchValue,
-          projectName: projectNameValue,
-          localPath: localPathValue,
-        });
-      } },
-    }, 'Clone & continue'),
-  ));
+  submitBtn.addEventListener('click', () => {
+    if (!localPathValue || !projectNameValue) return;
+    step3Result = undefined;
+    progressEl.textContent = 'Starting…';
+    vscode.postMessage({
+      type: 'step3Submit',
+      localPath: localPathValue,
+      projectName: projectNameValue,
+    });
+  });
 
   return container;
+}
+
+function basename(p: string): string {
+  const norm = p.replace(/\/+$/, '');
+  const i = norm.lastIndexOf('/');
+  return i === -1 ? norm : norm.slice(i + 1);
 }
 
 function renderStep4(): HTMLElement {
