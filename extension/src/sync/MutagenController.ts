@@ -63,9 +63,17 @@ export class MutagenController {
     private readonly output: vscode.OutputChannel,
   ) {}
 
-  /** Stable session name derived from project + host so multiple projects coexist. */
+  /**
+   * Stable session name. Mutagen names must match `[a-z0-9](-?[a-z0-9])*` —
+   * lowercase alphanumeric with single dashes. No underscores, dots,
+   * uppercase, or consecutive dashes allowed.
+   */
   private get sessionName(): string {
-    return `rc-${this.target.project}-${this.target.host}`.replace(/[^a-zA-Z0-9._-]/g, '-');
+    const raw = `rc-${this.target.project}-${this.target.host}`.toLowerCase();
+    return raw
+      .replace(/[^a-z0-9-]/g, '-')   // anything else → dash
+      .replace(/-+/g, '-')           // collapse consecutive dashes
+      .replace(/^-+|-+$/g, '');      // trim leading/trailing dashes
   }
 
   /**
