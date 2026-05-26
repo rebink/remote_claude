@@ -37,21 +37,17 @@ export function openSessionTerminal(target: SessionTarget): vscode.Terminal {
     return existing;
   }
 
-  // Session terminal deliberately uses PASSWORD auth (not the per-project key)
-  // because the password prompt is what unlocks the Mini's login keychain.
-  // claude reads its OAuth credentials from that keychain, so without an
-  // unlock, every session would say "Not logged in". The other SSH callers
-  // (rsync, pullChanges, doctor) still use the key — they need to be
-  // non-interactive and don't care about keychain access.
+  // Session terminal uses the per-project key for silent auth. The Mini's
+  // login keychain must already be unlocked (claude reads OAuth credentials
+  // from it). Users do this once by SSH-ing in interactively and running:
+  //   security set-keychain-settings ~/Library/Keychains/login.keychain-db
+  // which disables idle auto-lock until reboot. After that, key-based SSH
+  // from this extension finds the keychain unlocked and claude "just works".
+  const keyPath = join(homedir(), '.remote-claude', 'keys', `${target.host}-${target.user}`);
   const sshArgs: string[] = [];
+  if (existsSync(keyPath)) sshArgs.push('-i', keyPath);
   if (target.sshPort && target.sshPort !== 22) sshArgs.push('-p', String(target.sshPort));
-  sshArgs.push(
-    '-t',
-    '-o', 'ServerAliveInterval=30',
-    '-o', 'PreferredAuthentications=password,keyboard-interactive',
-    '-o', 'PubkeyAuthentication=no',
-    `${target.user}@${target.host}`,
-  );
+  sshArgs.push('-t', '-o', 'ServerAliveInterval=30', `${target.user}@${target.host}`);
   // Remote command: cd into the project, print a banner so the user can SEE
   // they're on the remote, then exec the first claude binary we find. SSH
   // non-interactive doesn't source .zshrc, so we can't rely on PATH alone —
