@@ -79,8 +79,9 @@ program
   .option('--user <user>', 'override user from remote-claude.yml')
   .option('--ssh-port <n>', 'override SSH port', (v) => Number(v))
   .option('--key-path <path>', 'per-project SSH key (default: ~/.remote-claude/keys/<host>-<user>)')
-  .option('--overwrite', 'if ~/workspace/<project> exists on the remote, rm -rf it first', false)
-  .option('--use-existing', 'if ~/workspace/<project> exists, skip mkdir + rsync (config-only bootstrap)', false)
+  .option('--remote-path <path>', 'override remote project path (default: ~/workspace/<project>)')
+  .option('--overwrite', 'if the remote path exists, rm -rf it first', false)
+  .option('--use-existing', 'if the remote path exists, skip mkdir + rsync (config-only bootstrap)', false)
   .option('--json', 'machine-readable progress stream (used by the extension wizard)', false)
   .action(async (opts: {
     fromLocal: boolean;
@@ -89,6 +90,7 @@ program
     user?: string;
     sshPort?: number;
     keyPath?: string;
+    remotePath?: string;
     overwrite?: boolean;
     useExisting?: boolean;
     json?: boolean;
@@ -101,6 +103,7 @@ program
       user: opts.user,
       sshPort: opts.sshPort,
       keyPath: opts.keyPath,
+      remotePath: opts.remotePath,
       overwrite: opts.overwrite,
       useExisting: opts.useExisting,
       json: opts.json,
