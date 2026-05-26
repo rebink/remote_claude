@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
+import { isNotLoggedIn, NOT_LOGGED_IN_REMEDIATION, tryDisableKeychainAutoLock } from './keychain.ts';
 
 export interface ClaudeResult {
   stdout: string;
@@ -118,7 +119,11 @@ export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
           reject(e);
         };
 
-        const args = [...opts.args, '--resume', sessionId];
+        // --session-id creates the session if it doesn't exist OR resumes it
+        // if it does. --resume by contrast requires an EXISTING session and
+        // fails for first-turn calls. Both flags require UUID format ids
+        // (8-4-4-4-12 with dashes) — see lib/session-id.ts.
+        const args = [...opts.args, '--session-id', sessionId];
         const child = spawn(opts.bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
         child.stdin.on('error', (err: Error) =>
@@ -133,8 +138,19 @@ export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
         });
         child.on('error', (err: Error) => settleReject(err));
         child.on('close', (code) => {
-          if (code === 0) settleResolve({ tokensIn: 0, tokensOut: out.length });
-          else settleReject(new Error(`claude exited ${code}`));
+          if (code === 0) {
+            settleResolve({ tokensIn: 0, tokensOut: out.length });
+            return;
+          }
+          // Auth-locked? Best-effort fix the keychain auto-lock setting (only
+          // helps NEXT call — can't unlock a locked keychain without password)
+          // and propagate a remediation message.
+          if (isNotLoggedIn(out)) {
+            tryDisableKeychainAutoLock();
+            settleReject(new Error(`claude exited ${code} (auth-locked).\n${NOT_LOGGED_IN_REMEDIATION}`));
+            return;
+          }
+          settleReject(new Error(`claude exited ${code}`));
         });
 
         child.stdin.write(prompt);

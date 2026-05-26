@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { buildServer } from './agent/server.ts';
+import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 
 const VERSION = '0.1.0';
@@ -30,6 +31,18 @@ async function runServe(): Promise<void> {
     timeoutSec,
     version: VERSION,
   });
+
+  // Best-effort: keep the macOS login keychain from auto-locking so `claude`
+  // can read its OAuth credentials. Only takes effect if the keychain is
+  // currently unlocked (e.g., admin just logged in or SSH'd). No-op on
+  // non-macOS. Failures are non-fatal — chat turns surface a clearer error
+  // if claude still hits "Not logged in" later.
+  const kc = tryDisableKeychainAutoLock();
+  if (kc.ok && process.platform === 'darwin') {
+    app.log.info('login keychain auto-lock disabled');
+  } else if (!kc.ok) {
+    app.log.warn(`could not adjust login keychain settings: ${kc.reason ?? 'unknown'}`);
+  }
 
   try {
     const addr = await app.listen({ host, port });
