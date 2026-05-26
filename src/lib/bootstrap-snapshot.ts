@@ -9,6 +9,12 @@ export interface BootstrapOpts {
   keyPath: string;
   project: string;
   localPath: string;
+  /**
+   * Override the remote project path. Defaults to `~/workspace/<project>`.
+   * The wizard sets this to `~/workspace/<localUser>/<project>` so multiple
+   * developers sharing one SSH account on the Mini don't collide.
+   */
+  remotePath?: string;
   overwrite?: boolean;
   useExisting?: boolean;
 }
@@ -61,8 +67,8 @@ const REMOTE_BASE = '~/workspace';
 const SANDBOX_EMAIL = 'remote-claude@local';
 const SANDBOX_NAME = 'Remote Claude (sandbox)';
 
-export const gitInitScript = (project: string): string => {
-  const remote = `${REMOTE_BASE}/${project}`;
+export const gitInitScript = (project: string, remotePath?: string): string => {
+  const remote = remotePath ?? `${REMOTE_BASE}/${project}`;
   return [
     `cd ${remote}`,
     `git init -q`,
@@ -91,7 +97,7 @@ export async function* bootstrapSnapshot(
     port: opts.port,
     keyPath: opts.keyPath,
   } satisfies Omit<SshOpts, 'command'>;
-  const remotePath = `${REMOTE_BASE}/${opts.project}`;
+  const remotePath = opts.remotePath ?? `${REMOTE_BASE}/${opts.project}`;
 
   // Step 0: validate project name
   yield { type: 'step', name: 'validate', status: 'start' };
@@ -196,7 +202,7 @@ export async function* bootstrapSnapshot(
 
   // Step 6: git init + sandbox identity + initial commit (idempotent)
   yield { type: 'step', name: 'git_init', status: 'start' };
-  const gi = await deps.runSsh(sshBase, gitInitScript(opts.project));
+  const gi = await deps.runSsh(sshBase, gitInitScript(opts.project, remotePath));
   if (gi.code !== 0) {
     yield {
       type: 'step',

@@ -19,6 +19,8 @@ export interface InitRemoteOpts {
   sshPort?: number;
   keyPath?: string;
   localPath?: string;
+  /** Override the default `~/workspace/<project>` path on the remote. */
+  remotePath?: string;
   overwrite?: boolean;
   useExisting?: boolean;
   json?: boolean;
@@ -93,7 +95,7 @@ export async function runInitRemote(
   let remotePath: string | undefined;
 
   for await (const e of bootstrapSnapshot(
-    { host: host!, user: user!, port, keyPath, project: opts.project, localPath, overwrite: opts.overwrite, useExisting: opts.useExisting },
+    { host: host!, user: user!, port, keyPath, project: opts.project, localPath, remotePath: opts.remotePath, overwrite: opts.overwrite, useExisting: opts.useExisting },
     deps,
   )) {
     if (opts.json) {

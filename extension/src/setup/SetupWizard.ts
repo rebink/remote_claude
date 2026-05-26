@@ -223,6 +223,14 @@ export class SetupWizard {
           );
         }
 
+        // Namespace the remote path under the LAPTOP's username so multiple
+        // developers sharing one SSH account on the Mini don't collide on
+        // project names. Fallback to "shared" if local username is unusable
+        // (e.g., contains weird chars). Example: ~/workspace/apple/dev_sync_cli.
+        const rawLocalUser = (os.userInfo().username || 'shared').toLowerCase();
+        const localUser = rawLocalUser.replace(/[^a-z0-9._-]/g, '-').replace(/^-+|-+$/g, '') || 'shared';
+        const remotePathOnMini = `~/workspace/${localUser}/${projectName}`;
+
         // 3. Write remote-claude.yml in the local folder
         const yamlPath = path.join(expandedLocalPath, 'remote-claude.yml');
         try {
@@ -234,7 +242,7 @@ export class SetupWizard {
                 host,
                 user,
                 sshPort,
-                path: `~/workspace/${projectName}`,
+                path: remotePathOnMini,
                 agentUrl: `http://${host}:7878`,
                 token: '${RC_TOKEN}',
               },
@@ -252,8 +260,8 @@ export class SetupWizard {
         }
 
         // 4. Spawn `remote-claude init-remote --from-local --json` and stream NDJSON
-        this.output.appendLine(`Pushing ${expandedLocalPath} → ~/workspace/${projectName}…`);
-        const args = ['init-remote', '--from-local', '--project', projectName, '--host', host, '--user', user, '--ssh-port', String(sshPort), '--json'];
+        this.output.appendLine(`Pushing ${expandedLocalPath} → ${remotePathOnMini}…`);
+        const args = ['init-remote', '--from-local', '--project', projectName, '--host', host, '--user', user, '--ssh-port', String(sshPort), '--remote-path', remotePathOnMini, '--json'];
         if (overwrite) args.push('--overwrite');
         if (useExisting) args.push('--use-existing');
 
@@ -315,7 +323,7 @@ export class SetupWizard {
         // Handle target_exists with a modal asking overwrite / use-existing / cancel
         if (lastFailure?.code === 'target_exists') {
           const choice = await vscode.window.showWarningMessage(
-            `~/workspace/${projectName} already exists on the Mac Mini.`,
+            `${remotePathOnMini} already exists on the Mac Mini.`,
             { modal: true },
             'Overwrite (rm -rf + re-push)',
             'Use existing (skip rsync)',
