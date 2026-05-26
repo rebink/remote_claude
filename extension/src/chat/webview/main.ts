@@ -67,13 +67,34 @@ function renderTurns(state: State): void {
 }
 
 function renderTurn(turn: Turn, index: number, chatId: string): HTMLElement {
-  if (turn.role === 'user') return h('div', { className: 'turn user' }, '▶ ' + turn.text);
-  const wrap = h('div', { className: 'turn assistant' }, turn.text);
-  if (turn.applied)     wrap.append(h('div', { className: 'diff-card' }, '✓ Applied'));
-  else if (turn.rejected) wrap.append(h('div', { className: 'diff-card' }, '✗ Rejected'));
-  else if (turn.saved)    wrap.append(h('div', { className: 'diff-card' }, '💾 Saved'));
-  else if (turn.patch && turn.files?.length) wrap.append(renderDiffCard(turn, index, chatId));
-  return wrap;
+  if (turn.role === 'user') {
+    return h('div', { className: 'turn user' },
+      h('div', { className: 'bubble' },
+        h('div', { className: 'role' }, 'You'),
+        h('div', {}, turn.text),
+      ),
+    );
+  }
+  if (turn.role === 'system') {
+    return h('div', { className: 'turn system' },
+      h('div', { className: 'bubble' }, turn.text),
+    );
+  }
+  // assistant
+  const bubble = h('div', { className: 'bubble' },
+    h('div', { className: 'role' }, 'Claude'),
+  );
+  if (turn.text) {
+    bubble.append(h('div', {}, turn.text));
+  } else {
+    // Empty assistant turn — show animated "Thinking…" so the user knows something is happening
+    bubble.append(h('div', { className: 'thinking' }, 'Thinking'));
+  }
+  if (turn.applied)        bubble.append(h('div', { className: 'diff-card' }, '✓ Applied'));
+  else if (turn.rejected)  bubble.append(h('div', { className: 'diff-card' }, '✗ Rejected'));
+  else if (turn.saved)     bubble.append(h('div', { className: 'diff-card' }, '💾 Saved'));
+  else if (turn.patch && turn.files?.length) bubble.append(renderDiffCard(turn, index, chatId));
+  return h('div', { className: 'turn assistant' }, bubble);
 }
 
 function renderDiffCard(turn: Turn, index: number, chatId: string): HTMLElement {
