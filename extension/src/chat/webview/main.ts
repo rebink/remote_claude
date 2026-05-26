@@ -3,155 +3,144 @@ import { h, clear } from './h.ts';
 declare const acquireVsCodeApi: () => { postMessage: (m: unknown) => void };
 const vscode = acquireVsCodeApi();
 
-interface ChatSummary { id: string; title: string }
-interface ChangedFile { path: string; status: string; additions: number; deletions: number }
-interface Turn {
-  role: 'user' | 'assistant' | 'system';
-  text: string;
-  patch?: string | null;
-  files?: ChangedFile[];
-  applied?: boolean;
-  rejected?: boolean;
-  saved?: boolean;
+interface ChangedFile { path: string; status: 'modified' | 'added' | 'deleted' | 'renamed'; additions: number; deletions: number }
+
+interface State {
+  configured: boolean;
+  project?: string;
+  host?: string;
+  user?: string;
+  remotePath?: string;
+  sessionRunning: boolean;
+  pulling: boolean;
+  applying: boolean;
+  pendingFiles: ChangedFile[];
+  lastError?: string;
 }
-interface State { chats: ChatSummary[]; activeChatId?: string; turns: Turn[]; inFlight: boolean }
 
 const root = document.getElementById('app')!;
-const chatsEl = h('div', { className: 'chat-list', id: 'chats' });
-const turnsEl = h('div', { id: 'turns' });
-const composerEl = h('div', { id: 'composer' });
-root.append(chatsEl, turnsEl, composerEl);
-
-let currentState: State = { chats: [], activeChatId: undefined, turns: [], inFlight: false };
+let currentState: State = { configured: false, sessionRunning: false, pulling: false, applying: false, pendingFiles: [] };
+let selectedFiles = new Set<string>();
 
 window.addEventListener('message', (event: MessageEvent) => {
   const msg = event.data as { type: string; state?: State };
   if (msg.type === 'state' && msg.state) {
     currentState = msg.state;
-    render(currentState);
+    // Default-select all pending files on each refresh
+    selectedFiles = new Set(currentState.pendingFiles.map((f) => f.path));
+    render();
   }
 });
 
-function render(state: State): void {
-  renderChatList(state);
-  renderTurns(state);
-  renderComposer(state);
-}
+function render(): void {
+  clear(root);
 
-function renderChatList(state: State): void {
-  clear(chatsEl);
-  for (const c of state.chats) {
-    const row = h('div', {
-      className: 'chat-item' + (c.id === state.activeChatId ? ' active' : ''),
-      events: { click: () => vscode.postMessage({ type: 'switch', id: c.id }) },
-    },
-      h('span', { className: 'chat-title' }, c.title),
-      h('button', {
-        className: 'chat-del',
-        title: 'Delete chat',
-        events: { click: (e: Event) => { e.stopPropagation(); vscode.postMessage({ type: 'deleteChat', id: c.id }); } },
-      }, '×'),
-    );
-    chatsEl.append(row);
-  }
-  chatsEl.append(h('button', {
-    id: 'new-chat',
-    events: { click: () => vscode.postMessage({ type: 'newChat' }) },
-  }, '+ New chat'));
-}
-
-function renderTurns(state: State): void {
-  clear(turnsEl);
-  state.turns.forEach((t, i) => turnsEl.append(renderTurn(t, i, state.activeChatId!)));
-  turnsEl.scrollTop = turnsEl.scrollHeight;
-}
-
-function renderTurn(turn: Turn, index: number, chatId: string): HTMLElement {
-  if (turn.role === 'user') {
-    return h('div', { className: 'turn user' },
-      h('div', { className: 'bubble' },
-        h('div', { className: 'role' }, 'You'),
-        h('div', {}, turn.text),
+  if (!currentState.configured) {
+    root.append(
+      h('div', { className: 'header' },
+        h('h2', {}, 'Remote Claude'),
       ),
+      h('p', { className: 'empty' }, 'No remote-claude.yml in this workspace yet.'),
+      h('button', {
+        className: 'primary',
+        events: { click: () => vscode.postMessage({ type: 'openSetup' }) },
+      }, 'Run Setup Wizard'),
     );
+    return;
   }
-  if (turn.role === 'system') {
-    return h('div', { className: 'turn system' },
-      h('div', { className: 'bubble' }, turn.text),
-    );
-  }
-  // assistant
-  const bubble = h('div', { className: 'bubble' },
-    h('div', { className: 'role' }, 'Claude'),
-  );
-  if (turn.text) {
-    bubble.append(h('div', {}, turn.text));
-  } else {
-    // Empty assistant turn — show animated "Thinking…" so the user knows something is happening
-    bubble.append(h('div', { className: 'thinking' }, 'Thinking'));
-  }
-  if (turn.applied)        bubble.append(h('div', { className: 'diff-card' }, '✓ Applied'));
-  else if (turn.rejected)  bubble.append(h('div', { className: 'diff-card' }, '✗ Rejected'));
-  else if (turn.saved)     bubble.append(h('div', { className: 'diff-card' }, '💾 Saved'));
-  else if (turn.patch && turn.files?.length) bubble.append(renderDiffCard(turn, index, chatId));
-  return h('div', { className: 'turn assistant' }, bubble);
+
+  root.append(renderHeader(), renderActions(), renderPending());
 }
 
-function renderDiffCard(turn: Turn, index: number, chatId: string): HTMLElement {
-  const card = h('div', { className: 'diff-card' });
-  const checkboxes: HTMLInputElement[] = [];
+function renderHeader(): HTMLElement {
+  return h('div', { className: 'header' },
+    h('h2', {}, currentState.project ?? 'Remote Claude'),
+    h('div', { className: 'subtitle' }, `${currentState.user}@${currentState.host} · ${currentState.remotePath}`),
+  );
+}
 
-  for (const f of turn.files!) {
-    const cb = h('input', { type: 'checkbox', checked: true }) as HTMLInputElement;
-    checkboxes.push(cb);
+function renderActions(): HTMLElement {
+  const wrap = h('div', { className: 'actions' });
+
+  const sessionBtn = h('button', {
+    className: 'primary',
+    events: { click: () => vscode.postMessage({ type: 'openSession' }) },
+  }, currentState.sessionRunning ? '⎈ Focus Claude session' : '⎈ Open Claude session');
+  wrap.append(sessionBtn);
+
+  const pullBtn = h('button', {
+    events: { click: () => vscode.postMessage({ type: 'pullChanges' }) },
+  }, currentState.pulling ? 'Fetching…' : '⇣ Pull remote changes');
+  if (currentState.pulling) (pullBtn as HTMLButtonElement).disabled = true;
+  wrap.append(pullBtn);
+
+  return wrap;
+}
+
+function renderPending(): HTMLElement {
+  if (currentState.pulling) {
+    return h('p', { className: 'empty' }, 'Checking remote for changes…');
+  }
+  if (!currentState.pendingFiles.length) {
+    return h('p', { className: 'empty' },
+      'No remote changes pending.',
+      h('br', {}),
+      h('span', { className: 'hint' }, 'Open the Claude session and make edits, then come back and Pull.'),
+    );
+  }
+
+  const list = h('div', { className: 'file-list' });
+  for (const f of currentState.pendingFiles) {
+    const cb = h('input', { type: 'checkbox', checked: selectedFiles.has(f.path) }) as HTMLInputElement;
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedFiles.add(f.path);
+      else selectedFiles.delete(f.path);
+    });
     const row = h('label', {
-      className: 'diff-file',
+      className: 'file-row',
       events: { click: (e: Event) => {
         if ((e.target as HTMLElement).tagName === 'INPUT') return;
-        const fileIndex = turn.files!.indexOf(f);
-        vscode.postMessage({ type: 'openDiff', chatId, turn: index, fileIndex });
+        vscode.postMessage({ type: 'openDiff', path: f.path });
       }},
     },
       cb,
-      h('span', {}, f.status),
-      h('span', {}, f.path),
-      h('span', {}, `+${f.additions} -${f.deletions}`),
+      h('span', { className: 'badge ' + f.status }, f.status[0].toUpperCase()),
+      h('span', { className: 'path' }, f.path),
+      h('span', { className: 'stat' }, `+${f.additions} −${f.deletions}`),
     );
-    card.append(row);
+    list.append(row);
   }
 
-  const dispatch = (action: 'apply'|'save'|'reject') => {
-    const fileIndices = checkboxes.map((cb, i) => ({ i, on: cb.checked })).filter((x) => x.on).map((x) => x.i);
-    vscode.postMessage({ type: 'diffAction', chatId, turn: index, action, fileIndices });
-  };
+  const actionBar = h('div', { className: 'pending-actions' },
+    h('button', {
+      className: 'primary',
+      events: { click: () => {
+        const paths = Array.from(selectedFiles);
+        if (!paths.length) return;
+        vscode.postMessage({ type: 'applySelected', paths });
+      }},
+    }, currentState.applying ? 'Applying…' : 'Apply selected'),
+    h('button', {
+      className: 'secondary',
+      events: { click: () => vscode.postMessage({ type: 'savePatch' }) },
+    }, 'Save patch file'),
+    h('button', {
+      className: 'secondary',
+      events: { click: () => vscode.postMessage({ type: 'dismissPending' }) },
+    }, 'Dismiss'),
+  );
 
-  card.append(h('div', { className: 'diff-actions' },
-    h('button', { events: { click: () => dispatch('apply') } }, 'Apply selected'),
-    h('button', { className: 'secondary', events: { click: () => dispatch('save') } }, 'Save patch'),
-    h('button', { className: 'secondary', events: { click: () => dispatch('reject') } }, 'Reject'),
-  ));
-  return card;
-}
+  const wrap = h('div', { className: 'pending' },
+    h('div', { className: 'pending-header' }, `${currentState.pendingFiles.length} file${currentState.pendingFiles.length === 1 ? '' : 's'} changed on remote`),
+    list,
+    actionBar,
+  );
 
-function renderComposer(state: State): void {
-  clear(composerEl);
-  if (state.inFlight) {
-    composerEl.append(h('button', { events: { click: () => vscode.postMessage({ type: 'cancel' }) } }, 'Stop'));
-    return;
+  if (currentState.lastError) {
+    wrap.append(h('p', { className: 'error' }, currentState.lastError));
   }
-  const ta = h('textarea', { placeholder: 'Ask Claude…' }) as HTMLTextAreaElement;
-  const btn = h('button', {
-    events: { click: () => {
-      const v = ta.value.trim();
-      if (!v) return;
-      vscode.postMessage({ type: 'send', prompt: v });
-      ta.value = '';
-    }},
-  }, 'Send');
-  composerEl.append(ta, btn);
+  return wrap;
 }
 
-// Touch currentState to avoid noUnusedLocals (it's used inside the message handler closure on assignment).
 void currentState;
-
 vscode.postMessage({ type: 'ready' });

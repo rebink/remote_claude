@@ -5,6 +5,12 @@
   "version": "0.1.0",
   "publisher": "remote-claude",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rebink/remote_claude.git",
+    "directory": "extension"
+  },
+  "license": "MIT",
   "engines": { "vscode": "^1.80.0", "node": ">=20" },
   "categories": ["AI", "Other"],
   "main": "./dist/extension.cjs",
@@ -32,7 +38,7 @@
     "dev": "pnpm build --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "package": "vsce package"
+    "package": "vsce package --no-dependencies"
   },
   "dependencies": {
     "yaml": "^2.5.1"
@@ -41,6 +47,7 @@
     "@types/node": "^20.14.10",
     "@types/vscode": "^1.80.0",
     "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.0",
     "tsup": "^8.2.4",
     "typescript": "^5.5.3",
     "vitest": "^2.0.4"

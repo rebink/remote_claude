@@ -1,18 +1,13 @@
 import * as vscode from 'vscode';
 import type { SyncController } from './SyncController.ts';
-import type { ChatStore } from '../chat/ChatStore.ts';
 
 export class FileDecorationProvider implements vscode.FileDecorationProvider {
   private emitter = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
   readonly onDidChangeFileDecorations = this.emitter.event;
   private pendingFiles = new Set<string>();
-  // Reserved for v2 (per-chat state e.g. latest assistant turn files).
-  private readonly _chatStore: ChatStore;
   private readonly subscription: vscode.Disposable;
 
-  constructor(private readonly sync: SyncController, chatStore: ChatStore) {
-    this._chatStore = chatStore;
-    void this._chatStore;
+  constructor(private readonly sync: SyncController) {
     this.subscription = this.sync.stateChanged(() => this.emitter.fire(undefined));
   }
 

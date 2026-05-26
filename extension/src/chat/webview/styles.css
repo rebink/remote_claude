@@ -1,94 +1,94 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--vscode-font-family); color: var(--vscode-foreground); }
-body { background: var(--vscode-sideBar-background); padding: 8px; }
+body { background: var(--vscode-sideBar-background); padding: 12px; }
 
-.chat-list { border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 8px; margin-bottom: 8px; }
-.chat-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; cursor: pointer; border-radius: 3px; }
-.chat-item:hover { background: var(--vscode-list-hoverBackground); }
-.chat-item.active { background: var(--vscode-list-activeSelectionBackground); }
-.chat-del { background: transparent; opacity: 0.5; border: none; padding: 0 6px; cursor: pointer; color: var(--vscode-foreground); }
-.chat-del:hover { opacity: 1; }
+.header { margin-bottom: 12px; }
+.header h2 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.subtitle { font-size: 11px; opacity: 0.65; word-break: break-all; }
 
-#turns { max-height: calc(100vh - 280px); overflow-y: auto; padding: 4px 2px; }
+.actions { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.actions button { width: 100%; padding: 8px 12px; text-align: left; }
 
-/* Chat-bubble layout */
-.turn { display: flex; margin-bottom: 10px; }
-.turn .bubble {
-  max-width: 88%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  line-height: 1.4;
+.empty {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  margin: 16px 0;
+  line-height: 1.5;
 }
-.turn .role {
-  font-size: 10px;
+.empty .hint { opacity: 0.75; font-size: 11px; }
+
+.pending {
+  border-top: 1px solid var(--vscode-panel-border);
+  padding-top: 12px;
+}
+.pending-header {
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  opacity: 0.55;
-  margin-bottom: 3px;
-  font-weight: 600;
+  opacity: 0.7;
+  margin-bottom: 6px;
 }
 
-/* User bubble: right-aligned, accent background */
-.turn.user { justify-content: flex-end; }
-.turn.user .bubble {
-  background: var(--vscode-textBlockQuote-background, var(--vscode-editor-selectionBackground));
-  border: 1px solid var(--vscode-textBlockQuote-border, transparent);
-  border-bottom-right-radius: 3px;
-  color: var(--vscode-foreground);
-}
-.turn.user .role { color: var(--vscode-textLink-foreground); text-align: right; }
-
-/* Assistant bubble: left-aligned, panel background */
-.turn.assistant { justify-content: flex-start; }
-.turn.assistant .bubble {
-  background: var(--vscode-editor-background);
-  border: 1px solid var(--vscode-panel-border);
-  border-bottom-left-radius: 3px;
-}
-.turn.assistant .role { color: var(--vscode-symbolIcon-classForeground, var(--vscode-foreground)); }
-
-/* System messages (errors, recovery notices): centered, dimmed */
-.turn.system { justify-content: center; }
-.turn.system .bubble {
-  background: transparent;
-  border: 1px dashed var(--vscode-panel-border);
-  color: var(--vscode-descriptionForeground);
-  font-style: italic;
-  max-width: 95%;
+.file-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 3px;
   font-size: 12px;
 }
-
-/* "Thinking…" animated dots for an empty in-flight assistant turn */
-.thinking { display: inline-block; }
-.thinking::after {
-  content: '';
+.file-row:hover { background: var(--vscode-list-hoverBackground); }
+.file-row input { cursor: pointer; }
+.file-row .badge {
   display: inline-block;
-  width: 1.2em;
-  text-align: left;
-  animation: thinking-dots 1.2s steps(4, end) infinite;
+  min-width: 16px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: var(--vscode-button-foreground);
 }
-@keyframes thinking-dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} 100%{content:''} }
+.file-row .badge.modified { background: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d); }
+.file-row .badge.added    { background: var(--vscode-gitDecoration-addedResourceForeground, #73c991); }
+.file-row .badge.deleted  { background: var(--vscode-gitDecoration-deletedResourceForeground, #f48771); }
+.file-row .badge.renamed  { background: var(--vscode-gitDecoration-renamedResourceForeground, #73c991); }
+.file-row .path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row .stat { opacity: 0.6; font-size: 11px; font-variant-numeric: tabular-nums; }
 
-/* Diff card lives inside the assistant bubble */
-.diff-card { margin-top: 8px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 6px 8px; background: var(--vscode-editorWidget-background); }
-.diff-file { display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer; font-size: 12px; }
-.diff-file span:nth-child(2) { opacity: 0.7; font-size: 11px; text-transform: uppercase; min-width: 38px; }
-.diff-actions { margin-top: 6px; display: flex; gap: 4px; }
+.pending-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.pending-actions button { flex: 1; min-width: 80px; }
 
-button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 10px; cursor: pointer; border-radius: 2px; font-size: 12px; }
-button:hover { background: var(--vscode-button-hoverBackground); }
-button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
-
-textarea {
-  width: 100%;
-  background: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  border: 1px solid var(--vscode-input-border);
+.error {
+  color: var(--vscode-errorForeground);
+  font-size: 12px;
+  margin-top: 10px;
   padding: 6px 8px;
-  resize: vertical;
-  min-height: 60px;
-  font-family: var(--vscode-font-family);
-  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, transparent);
+  border: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+  border-radius: 3px;
+  white-space: pre-wrap;
 }
-textarea:focus { outline: 1px solid var(--vscode-focusBorder); }
+
+button {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+}
+button:hover { background: var(--vscode-button-hoverBackground); }
+button:disabled { opacity: 0.6; cursor: wait; }
+button.secondary, button:not(.primary) {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+button.secondary:hover, button:not(.primary):hover { background: var(--vscode-button-secondaryHoverBackground); }
+button.primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+button.primary:hover { background: var(--vscode-button-hoverBackground); }
