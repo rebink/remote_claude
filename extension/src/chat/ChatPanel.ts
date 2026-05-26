@@ -39,7 +39,15 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     view.webview.onDidReceiveMessage(async (msg: { type: string; [k: string]: unknown }) => {
       switch (msg.type) {
         case 'ready':       return this.postState();
-        case 'send':        if (this.activeChatId) this.deps.onSend(this.activeChatId, msg.prompt as string); return;
+        case 'send': {
+          // Auto-create a chat if there's no active one — Send must never be a no-op
+          if (!this.activeChatId) {
+            this.activeChatId = this.chatStore.createChat(`Chat ${this.chatStore.listChats().length + 1}`);
+            this.postState();
+          }
+          this.deps.onSend(this.activeChatId, msg.prompt as string);
+          return;
+        }
         case 'newChat':     this.activeChatId = this.chatStore.createChat(`Chat ${this.chatStore.listChats().length + 1}`); return this.postState();
         case 'switch':      this.activeChatId = msg.id as string; return this.postState();
         case 'diffAction':  return this.deps.onDiffAction(msg as unknown as DiffActionMsg);
