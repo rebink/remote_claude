@@ -92,3 +92,41 @@ button.primary {
   color: var(--vscode-button-foreground);
 }
 button.primary:hover { background: var(--vscode-button-hoverBackground); }
+
+/* Sync panel */
+.sync-panel {
+  margin: 0 0 16px;
+  padding: 10px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+.sync-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px; }
+.sync-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; }
+.sync-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.sync-status.clean   { background: var(--vscode-charts-green); color: var(--vscode-editor-background); }
+.sync-status.dirty   { background: var(--vscode-charts-orange); color: var(--vscode-editor-background); }
+.sync-status.syncing { background: var(--vscode-charts-blue); color: var(--vscode-editor-background); }
+.sync-status.error   { background: var(--vscode-charts-red); color: var(--vscode-editor-background); }
+.sync-status.idle    { background: var(--vscode-input-background); color: var(--vscode-descriptionForeground); }
+.sync-actions { display: flex; gap: 4px; }
+.sync-actions button { flex: 1; font-size: 11px; }
+button.toggle.on  { background: var(--vscode-charts-green); color: var(--vscode-editor-background); }
+button.toggle.off { background: var(--vscode-input-background); color: var(--vscode-descriptionForeground); border: 1px dashed var(--vscode-panel-border); }
+button.toggle:hover { opacity: 0.9; }
+
+/* Conflict markers in file list */
+.file-row.conflict { background: var(--vscode-inputValidation-warningBackground, rgba(255, 200, 0, 0.08)); border-left: 3px solid var(--vscode-charts-yellow, #e2c08d); padding-left: 3px; }
+.conflict-tag { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--vscode-charts-yellow, #e2c08d); color: var(--vscode-editor-background); margin-left: 4px; }
+
+/* Footer */
+.footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--vscode-panel-border); display: flex; gap: 4px; justify-content: flex-start; }
+.footer-link {
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  border: none;
+  font-size: 11px;
+  padding: 2px 6px;
+  text-decoration: underline;
+}
+.footer-link:hover { background: transparent; opacity: 0.8; }

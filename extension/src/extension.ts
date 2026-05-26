@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(vscode.window.registerFileDecorationProvider(decor));
   context.subscriptions.push({ dispose: () => decor.dispose() });
 
-  const panel = new ChatPanel(context.extensionUri, ws, { output });
+  const panel = new ChatPanel(context.extensionUri, ws, { output, sync, status });
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatPanel.viewId, panel));
 
   registerCommands(context, { output, sync, status, setupWizard, panel });
