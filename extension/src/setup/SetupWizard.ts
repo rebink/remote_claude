@@ -13,6 +13,7 @@ export interface WizardState {
   branch?: string;
   projectName?: string;
   localPath?: string;
+  workspaceFolder?: string;
   error?: string;
   busy?: boolean;
 }
@@ -45,6 +46,8 @@ export class SetupWizard {
     panel.onDidDispose(() => { this.panel = undefined; });
     panel.webview.html = this.renderHtml(panel.webview);
     panel.webview.onDidReceiveMessage((m) => this.handleMessage(m));
+    const wsFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    this.state = { ...this.state, workspaceFolder: wsFolder };
     return panel;
   }
 
@@ -165,18 +168,25 @@ export class SetupWizard {
         return;
       }
       case 'step3Submit': {
-        const gitUrl = msg.gitUrl as string;
-        const branch = (msg.branch as string) || 'main';
-        const projectName = msg.projectName as string;
         const localPath = msg.localPath as string;
+        const projectName = msg.projectName as string;
+        const overwrite = !!msg.overwrite;
+        const useExisting = !!msg.useExisting;
         const { host, user, sshPort = 22 } = this.state;
 
-        if (!gitUrl || !projectName || !localPath || !host || !user) {
-          this.state = { ...this.state, error: 'Git URL, project name, and local path are required' };
+        if (!localPath || !projectName || !host || !user) {
+          this.state = { ...this.state, error: 'Local folder and project name are required' };
+          return this.postState();
+        }
+        if (!/^[a-zA-Z0-9._-]+$/.test(projectName) || /^\.+$/.test(projectName)) {
+          this.state = {
+            ...this.state,
+            error: 'Project name must match [a-zA-Z0-9._-]+ and cannot be "." or ".."',
+          };
           return this.postState();
         }
 
-        this.state = { ...this.state, busy: true, error: undefined, gitUrl, branch, projectName, localPath };
+        this.state = { ...this.state, busy: true, error: undefined, projectName, localPath };
         this.postState();
 
         const cp = await import('node:child_process');
@@ -186,52 +196,17 @@ export class SetupWizard {
         const crypto = await import('node:crypto');
         const { stringify } = await import('yaml');
 
-        // Expand a leading "~" in the user-supplied local path.
         const expandedLocalPath = localPath.startsWith('~')
           ? path.join(os.homedir(), localPath.slice(1))
           : localPath;
 
-        // Helper: wrap spawn with settled-guard + stdout/stderr capture so we
-        // never block the extension host on long-running commands like git clone.
-        const runAsync = (
-          cmd: string,
-          args: string[],
-          opts: { cwd?: string } = {},
-        ): Promise<{ ok: boolean; status: number | null; stdout: string; stderr: string }> => {
-          return new Promise((resolve) => {
-            let stdout = '';
-            let stderr = '';
-            let settled = false;
-            const child = cp.spawn(cmd, args, { ...opts, stdio: ['ignore', 'pipe', 'pipe'] });
-            child.stdout?.on('data', (c: Buffer) => { stdout += c.toString(); });
-            child.stderr?.on('data', (c: Buffer) => { stderr += c.toString(); });
-            child.on('error', (err: Error) => {
-              if (settled) return;
-              settled = true;
-              resolve({ ok: false, status: null, stdout: '', stderr: `Failed to spawn ${cmd}: ${err.message}. Is it on PATH?` });
-            });
-            child.on('close', (code) => {
-              if (settled) return;
-              settled = true;
-              resolve({ ok: code === 0, status: code, stdout, stderr });
-            });
-          });
-        };
-
-        // 1. Local clone
-        this.output.appendLine(`Cloning ${gitUrl} into ${expandedLocalPath}…`);
-        const localClone = await runAsync('git', ['clone', '-b', branch, '--', gitUrl, expandedLocalPath]);
-        if (!localClone.ok) {
-          this.state = { ...this.state, busy: false };
-          this.panel?.webview.postMessage({
-            type: 'step3Result',
-            result: { ok: false, where: 'local', stderr: localClone.stderr.slice(0, 500) },
-          });
+        // 1. Ensure local folder exists
+        if (!fs.existsSync(expandedLocalPath) || !fs.statSync(expandedLocalPath).isDirectory()) {
+          this.state = { ...this.state, busy: false, error: `Local folder does not exist: ${expandedLocalPath}` };
           return this.postState();
         }
 
-        // 2. Generate (or reuse) an agent token and write it to ~/.remote-claude/env.
-        // The dev must set RC_AGENT_TOKEN on the remote agent to this same value.
+        // 2. Generate or reuse the agent token
         const envPath = path.join(os.homedir(), '.remote-claude', 'env');
         let token: string;
         if (fs.existsSync(envPath)) {
@@ -248,7 +223,7 @@ export class SetupWizard {
           );
         }
 
-        // 3. Write remote-claude.yml in the local path
+        // 3. Write remote-claude.yml in the local folder
         const yamlPath = path.join(expandedLocalPath, 'remote-claude.yml');
         try {
           fs.writeFileSync(
@@ -276,26 +251,97 @@ export class SetupWizard {
           return this.postState();
         }
 
-        // 4. Remote clone via init-remote (CLI calls the agent's POST /init)
-        this.output.appendLine(`Cloning remote into ~/workspace/${projectName}…`);
-        const initRemote = await runAsync(
-          'remote-claude',
-          ['init-remote', '--git-url', gitUrl, '--branch', branch, '--project', projectName],
-          { cwd: expandedLocalPath },
-        );
+        // 4. Spawn `remote-claude init-remote --from-local --json` and stream NDJSON
+        this.output.appendLine(`Pushing ${expandedLocalPath} → ~/workspace/${projectName}…`);
+        const args = ['init-remote', '--from-local', '--project', projectName, '--host', host, '--user', user, '--ssh-port', String(sshPort), '--json'];
+        if (overwrite) args.push('--overwrite');
+        if (useExisting) args.push('--use-existing');
+
+        const child = cp.spawn('remote-claude', args, { cwd: expandedLocalPath, stdio: ['ignore', 'pipe', 'pipe'] });
+        let stdoutBuf = '';
+        let stderrBuf = '';
+        let lastFailure: { code?: string; stderr?: string; name?: string } | undefined;
+        let doneOk = false;
+
+        child.stdout.on('data', (c: Buffer) => {
+          stdoutBuf += c.toString();
+          let nl: number;
+          while ((nl = stdoutBuf.indexOf('\n')) !== -1) {
+            const line = stdoutBuf.slice(0, nl).trim();
+            stdoutBuf = stdoutBuf.slice(nl + 1);
+            if (!line) continue;
+            try {
+              const evt = JSON.parse(line) as { type: string; [k: string]: unknown };
+              this.output.appendLine(`[init-remote] ${line}`);
+              // Forward progress + step events to the webview
+              this.panel?.webview.postMessage({ type: 'step3Event', event: evt });
+              if (evt.type === 'step' && evt.status === 'fail') {
+                lastFailure = { code: evt.code as string, stderr: evt.stderr as string, name: evt.name as string };
+              }
+              if (evt.type === 'done') doneOk = evt.ok === true;
+            } catch {
+              this.output.appendLine(`[init-remote] (non-JSON) ${line}`);
+            }
+          }
+        });
+        child.stderr.on('data', (c: Buffer) => {
+          stderrBuf += c.toString();
+          this.output.appendLine(`[init-remote stderr] ${c.toString()}`);
+        });
+
+        const exit: number | null = await new Promise((resolve) => {
+          let settled = false;
+          child.on('error', (err) => {
+            if (settled) return;
+            settled = true;
+            this.output.appendLine(`Failed to spawn remote-claude: ${err.message}. Is it on PATH?`);
+            resolve(null);
+          });
+          child.on('close', (code) => {
+            if (settled) return;
+            settled = true;
+            resolve(code);
+          });
+        });
 
         this.state = { ...this.state, busy: false };
 
-        if (!initRemote.ok) {
+        if (doneOk && exit === 0) {
+          this.panel?.webview.postMessage({ type: 'step3Result', result: { ok: true } });
+          this.state = { ...this.state, step: 4 };
+          return this.postState();
+        }
+
+        // Handle target_exists with a modal asking overwrite / use-existing / cancel
+        if (lastFailure?.code === 'target_exists') {
+          const choice = await vscode.window.showWarningMessage(
+            `~/workspace/${projectName} already exists on the Mac Mini.`,
+            { modal: true },
+            'Overwrite (rm -rf + re-push)',
+            'Use existing (skip rsync)',
+          );
+          if (choice === 'Overwrite (rm -rf + re-push)') {
+            return this.handleMessage({ ...msg, overwrite: true });
+          }
+          if (choice === 'Use existing (skip rsync)') {
+            return this.handleMessage({ ...msg, useExisting: true });
+          }
+          // Cancel: leave wizard on Step 3
           this.panel?.webview.postMessage({
             type: 'step3Result',
-            result: { ok: false, where: 'remote', stderr: initRemote.stderr.slice(0, 500) },
+            result: { ok: false, where: 'remote', stderr: 'Cancelled: target exists on remote.' },
           });
           return this.postState();
         }
 
-        this.state = { ...this.state, step: 4, error: undefined };
-        this.panel?.webview.postMessage({ type: 'step3Result', result: { ok: true } });
+        this.panel?.webview.postMessage({
+          type: 'step3Result',
+          result: {
+            ok: false,
+            where: 'remote',
+            stderr: (lastFailure?.stderr ?? stderrBuf ?? `init-remote exited with code ${exit}`).slice(0, 500),
+          },
+        });
         this.postState();
         return;
       }

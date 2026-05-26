@@ -33,4 +33,43 @@ export const workspace = {
 
 export const Uri = {
   file: (path: string) => ({ fsPath: path, path }),
+  joinPath: (base: { fsPath?: string; path?: string }, ...parts: string[]) => {
+    const base_ = base.fsPath ?? base.path ?? '';
+    const joined = [base_, ...parts].join('/');
+    return { fsPath: joined, path: joined };
+  },
+};
+
+export enum ViewColumn {
+  Active = -1,
+  One = 1,
+  Two = 2,
+}
+
+export const window = {
+  createWebviewPanel: (
+    _viewType: string,
+    _title: string,
+    _showOptions: unknown,
+    _options?: unknown,
+  ) => ({
+    webview: {
+      html: '',
+      postMessage: (_msg: unknown) => Promise.resolve(true),
+      onDidReceiveMessage: (_cb: unknown) => ({ dispose: () => {} }),
+      asWebviewUri: (uri: { fsPath?: string; path?: string } | string) =>
+        typeof uri === 'string' ? uri : (uri.fsPath ?? uri.path ?? ''),
+      cspSource: 'self',
+    },
+    onDidDispose: (_cb: unknown) => ({ dispose: () => {} }),
+    reveal: () => {},
+    dispose: () => {},
+  }),
+  showWarningMessage: async (..._args: unknown[]) => undefined as unknown,
+  showErrorMessage: async (..._args: unknown[]) => undefined as unknown,
+  showInformationMessage: async (..._args: unknown[]) => undefined as unknown,
+};
+
+export const commands = {
+  executeCommand: async (_command: string, ..._args: unknown[]) => undefined,
 };
