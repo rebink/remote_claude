@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
@@ -32,6 +33,26 @@ export type Config = z.infer<typeof ConfigSchema>;
 
 const ENV_INTERPOLATION = /\$\{([A-Z0-9_]+)\}/g;
 
+/**
+ * Load `~/.remote-claude/env` (KEY=VALUE lines, optional `export` prefix) into
+ * process.env for keys not already set. Idempotent. Lets GUI-launched callers
+ * like the VS Code extension pick up RC_TOKEN even when their PATH-stripped
+ * environment doesn't have it set.
+ */
+let rcEnvLoaded = false;
+function ensureRcEnvLoaded(): void {
+  if (rcEnvLoaded) return;
+  rcEnvLoaded = true;
+  const envPath = join(homedir(), '.remote-claude', 'env');
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)=(.*)$/);
+    if (!m) continue;
+    const [, name, value] = m;
+    if (process.env[name!] === undefined) process.env[name!] = value!;
+  }
+}
+
 function interpolateEnv(value: unknown): unknown {
   if (typeof value === 'string') {
     return value.replace(ENV_INTERPOLATION, (_, name) => {
@@ -60,6 +81,7 @@ export async function loadConfig(cwd = process.cwd(), path = DEFAULT_CONFIG_PATH
   }
   const raw = await readFile(full, 'utf8');
   const parsed = parseYaml(raw);
+  ensureRcEnvLoaded();
   const interpolated = interpolateEnv(parsed);
   const result = ConfigSchema.safeParse(interpolated);
   if (!result.success) {
