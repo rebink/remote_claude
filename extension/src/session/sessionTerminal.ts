@@ -48,19 +48,19 @@ export function openSessionTerminal(target: SessionTarget): vscode.Terminal {
   if (existsSync(keyPath)) sshArgs.push('-i', keyPath);
   if (target.sshPort && target.sshPort !== 22) sshArgs.push('-p', String(target.sshPort));
   sshArgs.push('-t', '-o', 'ServerAliveInterval=30', `${target.user}@${target.host}`);
-  // Remote command: cd into the project, print a banner so the user can SEE
-  // they're on the remote, then exec the first claude binary we find. SSH
-  // non-interactive doesn't source .zshrc, so we can't rely on PATH alone —
-  // try the common macOS install locations explicitly. `exec` replaces the
-  // shell so Ctrl+D / claude exit closes the SSH session cleanly.
+  // Remote command: cd into the project, print a banner, then exec a
+  // login+interactive zsh that runs `claude`. The `-i` flag is critical —
+  // it makes zsh source ~/.zshrc, which is where most users set up PATH and
+  // ANTHROPIC_* env that affect claude's auth context (Claude Max vs API
+  // key billing). SSH's default `$SHELL -c` mode is non-interactive and
+  // skips .zshrc, which is why the same claude binary reports different
+  // auth state in an interactive ssh vs ours. `exec` chains so Ctrl+D /
+  // claude exit closes the SSH session cleanly.
   const remoteCmd = [
-    `cd ${target.remotePath}`,
+    `cd "${target.remotePath}"`,
     `printf '\\033[36m── Remote Claude · %s:%s\\033[0m\\n' "$(hostname)" "$(pwd)"`,
-    `for p in "$HOME/.node/bin/claude" "$HOME/.local/bin/claude" "/opt/homebrew/bin/claude" "/usr/local/bin/claude"; do`,
-    `  [ -x "$p" ] && exec "$p"`,
-    `done`,
-    `exec claude`,
-  ].join('; ');
+    `exec zsh -lic claude`,
+  ].join(' && ');
   sshArgs.push(remoteCmd);
 
   const terminal = vscode.window.createTerminal({
