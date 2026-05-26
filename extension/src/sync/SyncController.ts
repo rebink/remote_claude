@@ -31,8 +31,23 @@ export class SyncController {
   private liveSync = false;
   private suspended = false;
   private outOfSync = new Set<string>();
+  private syncing = false;
+  private lastSyncTs?: number;
+  private lastError?: string;
   private readonly onChange = new vscode.EventEmitter<void>();
   readonly stateChanged = this.onChange.event;
+
+  isSyncing(): boolean {
+    return this.syncing;
+  }
+
+  lastSync(): number | undefined {
+    return this.lastSyncTs;
+  }
+
+  lastSyncError(): string | undefined {
+    return this.lastError;
+  }
 
   constructor(
     private readonly cli: CliClient,
@@ -94,16 +109,25 @@ export class SyncController {
   }
 
   private async runRsync(): Promise<void> {
+    this.syncing = true;
+    this.lastError = undefined;
+    this.onChange.fire();
     const run = this.cli.spawn(['sync', '--json']);
     let errored = false;
+    let errorMsg = '';
     for await (const e of run.events) {
       if (e.type === 'error') {
         errored = true;
-        this.output.appendLine(`sync error: ${e.code}: ${e.message}`);
+        errorMsg = `${e.code}: ${e.message}`;
+        this.output.appendLine(`sync error: ${errorMsg}`);
       }
     }
-    if (!errored) {
+    this.syncing = false;
+    if (errored) {
+      this.lastError = errorMsg;
+    } else {
       this.outOfSync.clear();
+      this.lastSyncTs = Date.now();
     }
     this.onChange.fire();
   }

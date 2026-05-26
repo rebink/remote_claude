@@ -11,6 +11,12 @@ import {
 import { pullRemoteDiff, type ChangedFile } from '../session/pullChanges.ts';
 import { applyPatch } from '../diff/applyPatch.ts';
 import { filterPatchByPaths } from '../diff/filterPatch.ts';
+import type { SyncController } from '../sync/SyncController.ts';
+import type { StatusBarController } from '../statusbar/StatusBarController.ts';
+
+interface PendingFile extends ChangedFile {
+  conflict?: boolean;
+}
 
 interface SessionState {
   configured: boolean;
@@ -20,14 +26,21 @@ interface SessionState {
   sshPort?: number;
   remotePath?: string;
   sessionRunning: boolean;
+  liveSync: boolean;
+  syncing: boolean;
+  dirtyCount: number;
+  lastSync?: number;
+  syncError?: string;
   pulling: boolean;
   applying: boolean;
-  pendingFiles: ChangedFile[];
+  pendingFiles: PendingFile[];
   lastError?: string;
 }
 
 export interface ChatPanelDeps {
   output: vscode.OutputChannel;
+  sync: SyncController;
+  status: StatusBarController;
 }
 
 /**
@@ -43,7 +56,7 @@ export interface ChatPanelDeps {
 export class ChatPanel implements vscode.WebviewViewProvider {
   static readonly viewId = 'remoteClaude.chatPanel';
   private view?: vscode.WebviewView;
-  private pendingFiles: ChangedFile[] = [];
+  private pendingFiles: PendingFile[] = [];
   private pendingPatch = '';
   private pulling = false;
   private applying = false;
@@ -54,10 +67,10 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     private readonly workspaceFolder: string,
     private readonly deps: ChatPanelDeps,
   ) {
-    // Refresh on terminal close/open so the "Focus session" / "Open session"
-    // label tracks reality.
     vscode.window.onDidCloseTerminal(() => this.postState());
     vscode.window.onDidOpenTerminal(() => this.postState());
+    // React to live-sync state changes (toggled, file dirty, sync done, error)
+    deps.sync.stateChanged(() => this.postState());
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -78,6 +91,9 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         case 'applySelected':   return this.handleApplySelected(msg.paths as string[]);
         case 'savePatch':       return this.handleSavePatch();
         case 'dismissPending':  return this.dismissPending();
+        case 'toggleLiveSync':  return this.deps.status.toggle();
+        case 'syncNow':         return this.handleSyncNow();
+        case 'viewOutput':      return this.deps.output.show();
         default:
           this.deps.output.appendLine(`ChatPanel: unknown message type "${(msg as { type?: string }).type}"`);
           return;
@@ -114,6 +130,14 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   postState(): void {
     if (!this.view) return;
     const cfg = this.loadConfig();
+    const sync = this.deps.sync;
+    const baseSync = {
+      liveSync: sync.isLiveSync(),
+      syncing: sync.isSyncing(),
+      dirtyCount: sync.getOutOfSyncFiles().length,
+      lastSync: sync.lastSync(),
+      syncError: sync.lastSyncError(),
+    };
     const state: SessionState = cfg
       ? {
           configured: true,
@@ -123,19 +147,35 @@ export class ChatPanel implements vscode.WebviewViewProvider {
           sshPort: cfg.sshPort,
           remotePath: cfg.remotePath,
           sessionRunning: !!findExistingSessionTerminal(cfg.project),
+          ...baseSync,
           pulling: this.pulling,
           applying: this.applying,
-          pendingFiles: this.pendingFiles,
+          pendingFiles: this.markConflicts(this.pendingFiles),
           lastError: this.lastError,
         }
       : {
           configured: false,
           sessionRunning: false,
+          ...baseSync,
           pulling: false,
           applying: false,
           pendingFiles: [],
         };
     this.view.webview.postMessage({ type: 'state', state });
+  }
+
+  /** Flag a pending remote file as `conflict` if the same path is dirty locally. */
+  private markConflicts(files: PendingFile[]): PendingFile[] {
+    const dirty = new Set(this.deps.sync.getOutOfSyncFiles());
+    return files.map((f) => ({ ...f, conflict: dirty.has(f.path) }));
+  }
+
+  private async handleSyncNow(): Promise<void> {
+    try {
+      await this.deps.sync.syncOnce();
+    } catch (err) {
+      this.deps.output.appendLine(`[sync now] ${(err as Error).message}`);
+    }
   }
 
   private handleOpenSession(): void {
