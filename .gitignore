@@ -14,3 +14,7 @@ vendor/sshpass/sshpass-*
 !README.md
 !CHANGELOG.md
 !CONTRIBUTING.md
+remote-claude.yml
+rc-del-*/
+tsx-501/
+node-compile-cache/
