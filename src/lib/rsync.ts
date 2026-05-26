@@ -37,9 +37,19 @@ export async function rsyncPush(
     if (cfg.remote.sshPort) sshParts.push('-p', String(cfg.remote.sshPort));
     const sshArg = sshParts.join(' ');
 
+    // --update: skip destination files whose mtime is NEWER than the source.
+    // Without this, live-sync would clobber edits Claude makes on the Mini —
+    // the laptop's stale local file would overwrite the Mini's fresh one.
+    //
+    // --delete intentionally OMITTED: it would remove files that exist on
+    // the Mini but not on the laptop, which includes any new files Claude
+    // created during a session. The trade-off is that file deletions on the
+    // laptop no longer propagate automatically — user must clean up via
+    // SSH or via the Claude session. Phase 2: track per-file send history
+    // so we only delete what we previously sent.
     const args = [
       '-az',
-      '--delete',
+      '--update',
       '--exclude-from', excludeFile,
       '-e', sshArg,
       `${cwd.replace(/\/?$/, '/')}`,
