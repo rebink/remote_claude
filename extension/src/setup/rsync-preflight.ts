@@ -24,11 +24,19 @@ export function isSupported(v: RsyncVersion): boolean {
 export type RsyncStatus =
   | { state: 'ok'; version: RsyncVersion }
   | { state: 'missing' }
-  | { state: 'too_old'; version: RsyncVersion };
+  | { state: 'too_old'; version: RsyncVersion }
+  | { state: 'openrsync' }; // Apple's BSD reimplementation — wire-compatible but rejects --info=
+
+/** True if `--version` output is openrsync (Apple's reimplementation) rather than GNU rsync. */
+export function isOpenrsync(stdout: string): boolean {
+  return /openrsync/i.test(stdout);
+}
 
 export function checkRsync(): RsyncStatus {
   const probe = spawnSync('rsync', ['--version'], { encoding: 'utf8' });
   if (probe.error || probe.status !== 0) return { state: 'missing' };
+  // openrsync masquerades as `rsync` on $PATH but doesn't support --info= flags.
+  if (isOpenrsync(probe.stdout)) return { state: 'openrsync' };
   const v = parseRsyncVersion(probe.stdout);
   if (!v) return { state: 'missing' };
   return isSupported(v) ? { state: 'ok', version: v } : { state: 'too_old', version: v };
@@ -81,7 +89,7 @@ export function installRsyncViaBrew(
 
 export type EnsureRsyncResult =
   | { ok: true }
-  | { ok: false; reason: 'cancelled' | 'brew_missing' | 'install_failed' | 'still_too_old'; detail?: string };
+  | { ok: false; reason: 'cancelled' | 'brew_missing' | 'install_failed' | 'still_too_old' | 'openrsync_conflict'; detail?: string };
 
 /**
  * Verify rsync >= 3.1 is present. If missing/old, prompt the user via a modal,
@@ -94,6 +102,24 @@ export async function ensureRsync(
 ): Promise<EnsureRsyncResult> {
   const initial = checkRsync();
   if (initial.state === 'ok') return { ok: true };
+
+  // openrsync (Apple's BSD reimplementation) masquerades as `rsync` on PATH but
+  // rejects --info= flags. brew install rsync won't help if openrsync owns the
+  // symlink — user must remove it explicitly.
+  if (initial.state === 'openrsync') {
+    await vscode.window.showErrorMessage(
+      'The `rsync` on your PATH is `openrsync` (Apple\'s BSD reimplementation), which is missing the `--info=` flags we need. ' +
+        'Replace it with GNU rsync:\n\n' +
+        '  brew uninstall openrsync 2>/dev/null\n' +
+        '  brew install rsync\n' +
+        '  brew link --overwrite rsync\n' +
+        '  rsync --version  # must say "rsync version 3.x.x"\n\n' +
+        'Then quit VS Code and relaunch from a terminal so it picks up the new PATH.',
+      { modal: true },
+      'OK',
+    );
+    return { ok: false, reason: 'openrsync_conflict' };
+  }
 
   const brew = checkBrew();
   const foundVersion = initial.state === 'too_old'
@@ -129,6 +155,13 @@ export async function ensureRsync(
   if (after.state === 'ok') {
     output.appendLine(`[rsync-preflight] rsync now ${after.version.major}.${after.version.minor}.${after.version.patch}; continuing`);
     return { ok: true };
+  }
+  if (after.state === 'openrsync') {
+    return {
+      ok: false,
+      reason: 'openrsync_conflict',
+      detail: 'brew install rsync succeeded but openrsync still owns the `rsync` symlink. Run: brew link --overwrite rsync',
+    };
   }
   const detailAfter = after.state === 'too_old'
     ? `${after.version.major}.${after.version.minor}.${after.version.patch}`

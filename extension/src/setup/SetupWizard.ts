@@ -205,9 +205,11 @@ export class SetupWizard {
               ? 'rsync install was cancelled. Run `brew install rsync` manually, then retry setup.'
               : rsyncCheck.reason === 'brew_missing'
                 ? 'Homebrew is not installed. Install it from https://brew.sh, then run `brew install rsync` and retry.'
-                : rsyncCheck.reason === 'install_failed'
-                  ? `brew install rsync failed: ${rsyncCheck.detail ?? 'unknown error'}. Check the Remote Claude output channel.`
-                  : `rsync is still not 3.1+ after install (${rsyncCheck.detail ?? 'unknown'}). Check PATH.`;
+                : rsyncCheck.reason === 'openrsync_conflict'
+                  ? `openrsync owns the \`rsync\` symlink and rejects --info= flags. ${rsyncCheck.detail ?? 'Run: brew uninstall openrsync && brew link --overwrite rsync'}`
+                  : rsyncCheck.reason === 'install_failed'
+                    ? `brew install rsync failed: ${rsyncCheck.detail ?? 'unknown error'}. Check the Remote Claude output channel.`
+                    : `rsync is still not 3.1+ after install (${rsyncCheck.detail ?? 'unknown'}). Check PATH.`;
           this.panel?.webview.postMessage({
             type: 'step3Result',
             result: { ok: false, where: 'local', stderr: friendly },
