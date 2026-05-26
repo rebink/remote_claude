@@ -3,14 +3,10 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { DiffContentProvider, SCHEME } from './diff/DiffContentProvider.ts';
 import { ChatPanel } from './chat/ChatPanel.ts';
-import { CliClient } from './cli/CliClient.ts';
 import { registerCommands } from './commands.ts';
-import { SyncController } from './sync/SyncController.ts';
-import { StatusBarController } from './statusbar/StatusBarController.ts';
-import { FileDecorationProvider } from './sync/FileDecorationProvider.ts';
 import { SetupWizard } from './setup/SetupWizard.ts';
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel('Remote Claude');
   context.subscriptions.push(output);
   output.appendLine('Remote Claude activated.');
@@ -21,26 +17,22 @@ export function activate(context: vscode.ExtensionContext): void {
   const diff = new DiffContentProvider();
   context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, diff));
 
-  const cli = new CliClient('remote-claude', ws);
-  const sync = new SyncController(cli, output);
-  const status = new StatusBarController(ws, sync);
-  context.subscriptions.push({ dispose: () => status.dispose() });
-
   const setupWizard = new SetupWizard(context.extensionUri, output);
 
-  const decor = new FileDecorationProvider(sync);
-  context.subscriptions.push(vscode.window.registerFileDecorationProvider(decor));
-  context.subscriptions.push({ dispose: () => decor.dispose() });
-
-  const panel = new ChatPanel(context.extensionUri, ws, { output, sync, status });
+  const panel = new ChatPanel(context.extensionUri, ws, { output });
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatPanel.viewId, panel));
+  context.subscriptions.push({ dispose: () => panel.dispose() });
 
-  registerCommands(context, { output, sync, status, setupWizard, panel });
+  registerCommands(context, { output, setupWizard, panel });
 
   const configPath = join(ws, 'remote-claude.yml');
   if (!existsSync(configPath)) {
     // Defer slightly so the activation hot path doesn't block on opening a tab.
     setTimeout(() => setupWizard.show(), 100);
+  } else {
+    // Start the bidirectional sync session in the background. Failure is
+    // surfaced in the panel UI (e.g., "Mutagen not installed" message).
+    panel.startMutagen().catch((e) => output.appendLine(`mutagen start failed: ${(e as Error).message}`));
   }
 }
 

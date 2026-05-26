@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
@@ -8,15 +8,7 @@ import {
   findExistingSessionTerminal,
   type SessionTarget,
 } from '../session/sessionTerminal.ts';
-import { pullRemoteDiff, type ChangedFile } from '../session/pullChanges.ts';
-import { applyPatch } from '../diff/applyPatch.ts';
-import { filterPatchByPaths } from '../diff/filterPatch.ts';
-import type { SyncController } from '../sync/SyncController.ts';
-import type { StatusBarController } from '../statusbar/StatusBarController.ts';
-
-interface PendingFile extends ChangedFile {
-  conflict?: boolean;
-}
+import { MutagenController, type MutagenStatus } from '../sync/MutagenController.ts';
 
 interface SessionState {
   configured: boolean;
@@ -26,41 +18,32 @@ interface SessionState {
   sshPort?: number;
   remotePath?: string;
   sessionRunning: boolean;
-  liveSync: boolean;
-  syncing: boolean;
-  dirtyCount: number;
-  lastSync?: number;
-  syncError?: string;
-  pulling: boolean;
-  applying: boolean;
-  pendingFiles: PendingFile[];
-  lastError?: string;
+  sync: SyncUiState;
+}
+
+interface SyncUiState {
+  kind: MutagenStatus['kind'];
+  conflicts?: string[];
+  message?: string;
 }
 
 export interface ChatPanelDeps {
   output: vscode.OutputChannel;
-  sync: SyncController;
-  status: StatusBarController;
 }
 
 /**
- * Sidebar panel for the terminal-based Remote Claude session. Replaces the
- * previous chat-bubble UI. Surfaces two primary actions:
- *   1. Open Claude session — spawns a VS Code terminal SSH'd to the Mac Mini
- *      in the synced project dir, running the real `claude` REPL.
- *   2. Pull remote changes — fetches `git diff HEAD` from the Mini, shows
- *      changed files with checkboxes, applies selected ones to the laptop.
- * Internal name kept as ChatPanel for now to avoid touching the registration
- * id and the file decoration provider that imports the type.
+ * Sidebar panel for the terminal-based Remote Claude session.
+ *
+ * Phase 2 architecture: bidirectional sync is handled by Mutagen
+ * (`MutagenController`). The panel just shows session controls and the
+ * current sync state — no more Pull/Apply/Dismiss buttons. Files stay
+ * mirrored automatically.
  */
 export class ChatPanel implements vscode.WebviewViewProvider {
   static readonly viewId = 'remoteClaude.chatPanel';
   private view?: vscode.WebviewView;
-  private pendingFiles: PendingFile[] = [];
-  private pendingPatch = '';
-  private pulling = false;
-  private applying = false;
-  private lastError?: string;
+  private mutagen?: MutagenController;
+  private syncStatus: MutagenStatus = { kind: 'no_session' };
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -69,8 +52,38 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   ) {
     vscode.window.onDidCloseTerminal(() => this.postState());
     vscode.window.onDidOpenTerminal(() => this.postState());
-    // React to live-sync state changes (toggled, file dirty, sync done, error)
-    deps.sync.stateChanged(() => this.postState());
+  }
+
+  /** Called from extension.activate after the panel is constructed. */
+  async startMutagen(): Promise<void> {
+    const cfg = this.loadConfig();
+    if (!cfg) return;
+    if (!MutagenController.isInstalled()) {
+      this.syncStatus = { kind: 'not_installed' };
+      this.postState();
+      return;
+    }
+    this.mutagen = new MutagenController(
+      {
+        project: cfg.project,
+        host: cfg.host,
+        user: cfg.user,
+        sshPort: cfg.sshPort,
+        localPath: this.workspaceFolder,
+        remotePath: cfg.remotePath,
+      },
+      this.deps.output,
+    );
+    this.mutagen.onStatusChange((s) => {
+      this.syncStatus = s;
+      this.postState();
+    });
+    await this.mutagen.ensureSession();
+  }
+
+  /** Called on extension deactivation. */
+  async dispose(): Promise<void> {
+    if (this.mutagen) await this.mutagen.terminate();
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -86,13 +99,10 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         case 'ready':           return this.postState();
         case 'openSetup':       return vscode.commands.executeCommand('remoteClaude.openSetup');
         case 'openSession':     return this.handleOpenSession();
-        case 'pullChanges':     return this.handlePullChanges();
-        case 'openDiff':        return this.handleOpenDiff(msg.path as string);
-        case 'applySelected':   return this.handleApplySelected(msg.paths as string[]);
-        case 'savePatch':       return this.handleSavePatch();
-        case 'dismissPending':  return this.dismissPending();
-        case 'toggleLiveSync':  return this.deps.status.toggle();
-        case 'syncNow':         return this.handleSyncNow();
+        case 'flushSync':       return this.mutagen?.flush();
+        case 'pauseSync':       this.mutagen?.pause(); return;
+        case 'resumeSync':      this.mutagen?.resume(); return;
+        case 'restartSync':     return this.startMutagen();
         case 'viewOutput':      return this.deps.output.show();
         default:
           this.deps.output.appendLine(`ChatPanel: unknown message type "${(msg as { type?: string }).type}"`);
@@ -130,14 +140,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   postState(): void {
     if (!this.view) return;
     const cfg = this.loadConfig();
-    const sync = this.deps.sync;
-    const baseSync = {
-      liveSync: sync.isLiveSync(),
-      syncing: sync.isSyncing(),
-      dirtyCount: sync.getOutOfSyncFiles().length,
-      lastSync: sync.lastSync(),
-      syncError: sync.lastSyncError(),
-    };
+    const sync: SyncUiState = toUiSync(this.syncStatus);
     const state: SessionState = cfg
       ? {
           configured: true,
@@ -147,35 +150,10 @@ export class ChatPanel implements vscode.WebviewViewProvider {
           sshPort: cfg.sshPort,
           remotePath: cfg.remotePath,
           sessionRunning: !!findExistingSessionTerminal(cfg.project),
-          ...baseSync,
-          pulling: this.pulling,
-          applying: this.applying,
-          pendingFiles: this.markConflicts(this.pendingFiles),
-          lastError: this.lastError,
+          sync,
         }
-      : {
-          configured: false,
-          sessionRunning: false,
-          ...baseSync,
-          pulling: false,
-          applying: false,
-          pendingFiles: [],
-        };
+      : { configured: false, sessionRunning: false, sync };
     this.view.webview.postMessage({ type: 'state', state });
-  }
-
-  /** Flag a pending remote file as `conflict` if the same path is dirty locally. */
-  private markConflicts(files: PendingFile[]): PendingFile[] {
-    const dirty = new Set(this.deps.sync.getOutOfSyncFiles());
-    return files.map((f) => ({ ...f, conflict: dirty.has(f.path) }));
-  }
-
-  private async handleSyncNow(): Promise<void> {
-    try {
-      await this.deps.sync.syncOnce();
-    } catch (err) {
-      this.deps.output.appendLine(`[sync now] ${(err as Error).message}`);
-    }
   }
 
   private handleOpenSession(): void {
@@ -185,96 +163,6 @@ export class ChatPanel implements vscode.WebviewViewProvider {
       return;
     }
     openSessionTerminal(cfg);
-    this.postState();
-  }
-
-  private async handlePullChanges(): Promise<void> {
-    const cfg = this.loadConfig();
-    if (!cfg) return;
-    this.pulling = true;
-    this.lastError = undefined;
-    this.postState();
-    const r = pullRemoteDiff(cfg);
-    this.pulling = false;
-    if (!r.ok) {
-      this.lastError = r.error;
-      this.deps.output.appendLine(`[pull-changes] ${r.error}`);
-      this.postState();
-      return;
-    }
-    this.pendingFiles = r.result.files;
-    this.pendingPatch = r.result.patch;
-    if (!this.pendingFiles.length) {
-      vscode.window.showInformationMessage('No changes on the remote.');
-    } else {
-      this.deps.output.appendLine(`[pull-changes] ${this.pendingFiles.length} file(s) changed`);
-    }
-    this.postState();
-  }
-
-  private async handleOpenDiff(filePath: string): Promise<void> {
-    // Save the full patch to a temp file then open VS Code's native diff editor
-    // between the local file and a synthetic "remote" version constructed by
-    // applying just this file's hunks. For v1 simplicity, just open the local
-    // file alongside the patch text. (Native scoped diff is a v1.1 polish.)
-    const local = vscode.Uri.file(join(this.workspaceFolder, filePath));
-    try {
-      const doc = await vscode.workspace.openTextDocument(local);
-      await vscode.window.showTextDocument(doc, { preview: true });
-    } catch {
-      vscode.window.showWarningMessage(`Could not open ${filePath} (file may not exist locally yet).`);
-    }
-  }
-
-  private async handleApplySelected(paths: string[]): Promise<void> {
-    if (!paths.length || !this.pendingPatch) return;
-    this.applying = true;
-    this.lastError = undefined;
-    this.postState();
-    const filtered = filterPatchByPaths(this.pendingPatch, paths);
-    if (!filtered) {
-      this.applying = false;
-      this.lastError = 'No patch sections matched the selected files (the diff format may differ from `git diff --git` shape).';
-      this.postState();
-      return;
-    }
-    const result = await applyPatch(filtered, this.workspaceFolder);
-    this.applying = false;
-    if (result.ok) {
-      vscode.window.showInformationMessage(`Applied ${paths.length} file(s).`);
-      // Drop the applied files from the pending list; keep the rest so the
-      // user can iterate. Patch is regenerated from remaining files.
-      const appliedSet = new Set(paths);
-      this.pendingFiles = this.pendingFiles.filter((f) => !appliedSet.has(f.path));
-      if (this.pendingFiles.length === 0) {
-        this.pendingPatch = '';
-      } else {
-        const remaining = this.pendingFiles.map((f) => f.path);
-        this.pendingPatch = filterPatchByPaths(this.pendingPatch, remaining);
-      }
-    } else {
-      const conflicts = result.conflicted.length ? ` (conflicts: ${result.conflicted.join(', ')})` : '';
-      this.lastError = `Apply failed: ${result.stderr}${conflicts}`;
-      this.deps.output.appendLine(`[apply] ${result.stderr}`);
-    }
-    this.postState();
-  }
-
-  private handleSavePatch(): void {
-    if (!this.pendingPatch) return;
-    const target = join(this.workspaceFolder, '.remote-claude', `pull-${Date.now()}.patch`);
-    try {
-      writeFileSync(target, this.pendingPatch, 'utf8');
-      vscode.window.showInformationMessage(`Patch saved: ${target}`);
-    } catch (err) {
-      vscode.window.showErrorMessage(`Failed to save patch: ${(err as Error).message}`);
-    }
-  }
-
-  private dismissPending(): void {
-    this.pendingFiles = [];
-    this.pendingPatch = '';
-    this.lastError = undefined;
     this.postState();
   }
 
@@ -290,4 +178,10 @@ export class ChatPanel implements vscode.WebviewViewProvider {
       .replace(/\$\{scriptUri\}/g, scriptUri.toString())
       .replace(/\$\{stylesUri\}/g, stylesUri.toString());
   }
+}
+
+function toUiSync(s: MutagenStatus): SyncUiState {
+  if (s.kind === 'conflict') return { kind: s.kind, conflicts: s.files };
+  if (s.kind === 'error') return { kind: s.kind, message: s.message };
+  return { kind: s.kind };
 }
