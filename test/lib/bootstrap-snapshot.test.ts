@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   bootstrapSnapshot,
+  parseRsyncVersion,
   type BootstrapDeps,
   type BootstrapEvent,
 } from '../../src/lib/bootstrap-snapshot.ts';
@@ -152,5 +153,27 @@ describe('bootstrapSnapshot', () => {
     );
     const failed = events.find((e) => e.type === 'step' && e.status === 'fail');
     expect(failed).toMatchObject({ name: 'safety', code: 'unsafe_state' });
+  });
+});
+
+describe('parseRsyncVersion', () => {
+  it('parses modern rsync 3.x.y output', () => {
+    expect(parseRsyncVersion('rsync  version 3.2.7  protocol version 31\n'))
+      .toEqual({ major: 3, minor: 2, patch: 7 });
+  });
+
+  it('parses Apple\'s ancient rsync 2.6.9 output', () => {
+    expect(parseRsyncVersion('rsync  version 2.6.9  protocol version 29\n'))
+      .toEqual({ major: 2, minor: 6, patch: 9 });
+  });
+
+  it('handles two-component versions (no patch)', () => {
+    expect(parseRsyncVersion('rsync version 3.1\n'))
+      .toEqual({ major: 3, minor: 1, patch: 0 });
+  });
+
+  it('returns null on unrecognized output', () => {
+    expect(parseRsyncVersion('not rsync at all\n')).toBeNull();
+    expect(parseRsyncVersion('')).toBeNull();
   });
 });
