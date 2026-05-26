@@ -42,12 +42,14 @@ export function openSessionTerminal(target: SessionTarget): vscode.Terminal {
   if (existsSync(keyPath)) sshArgs.push('-i', keyPath);
   if (target.sshPort && target.sshPort !== 22) sshArgs.push('-p', String(target.sshPort));
   sshArgs.push('-t', '-o', 'ServerAliveInterval=30', `${target.user}@${target.host}`);
-  // Remote command: cd into the project, then exec the first claude binary we
-  // find. SSH non-interactive doesn't source .zshrc, so we can't rely on PATH
-  // alone — try the common macOS install locations explicitly. `exec` replaces
-  // the shell so Ctrl+D / claude exit closes the SSH session cleanly.
+  // Remote command: cd into the project, print a banner so the user can SEE
+  // they're on the remote, then exec the first claude binary we find. SSH
+  // non-interactive doesn't source .zshrc, so we can't rely on PATH alone —
+  // try the common macOS install locations explicitly. `exec` replaces the
+  // shell so Ctrl+D / claude exit closes the SSH session cleanly.
   const remoteCmd = [
     `cd ${target.remotePath}`,
+    `printf '\\033[36m── Remote Claude · %s:%s\\033[0m\\n' "$(hostname)" "$(pwd)"`,
     `for p in "$HOME/.node/bin/claude" "$HOME/.local/bin/claude" "/opt/homebrew/bin/claude" "/usr/local/bin/claude"; do`,
     `  [ -x "$p" ] && exec "$p"`,
     `done`,
