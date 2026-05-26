@@ -3,13 +3,9 @@ import { h, clear } from './h.ts';
 declare const acquireVsCodeApi: () => { postMessage: (m: unknown) => void };
 const vscode = acquireVsCodeApi();
 
-interface ChangedFile {
-  path: string;
-  status: 'modified' | 'added' | 'deleted' | 'renamed';
-  additions: number;
-  deletions: number;
-  conflict?: boolean;
-}
+type SyncKind = 'not_installed' | 'connecting' | 'watching' | 'syncing' | 'conflict' | 'paused' | 'error' | 'no_session';
+
+interface SyncUiState { kind: SyncKind; conflicts?: string[]; message?: string }
 
 interface State {
   configured: boolean;
@@ -18,43 +14,20 @@ interface State {
   user?: string;
   remotePath?: string;
   sessionRunning: boolean;
-  liveSync: boolean;
-  syncing: boolean;
-  dirtyCount: number;
-  lastSync?: number;
-  syncError?: string;
-  pulling: boolean;
-  applying: boolean;
-  pendingFiles: ChangedFile[];
-  lastError?: string;
+  sync: SyncUiState;
 }
 
 const root = document.getElementById('app')!;
 let currentState: State = {
   configured: false,
   sessionRunning: false,
-  liveSync: false,
-  syncing: false,
-  dirtyCount: 0,
-  pulling: false,
-  applying: false,
-  pendingFiles: [],
+  sync: { kind: 'no_session' },
 };
-let selectedFiles = new Set<string>();
 
 window.addEventListener('message', (event: MessageEvent) => {
   const msg = event.data as { type: string; state?: State };
   if (msg.type === 'state' && msg.state) {
-    const previousIds = new Set(currentState.pendingFiles.map((f) => f.path));
     currentState = msg.state;
-    // Default-check newly-arrived files (don't clobber user's earlier choices
-    // on a re-fetch of the same files).
-    for (const f of currentState.pendingFiles) {
-      if (!previousIds.has(f.path)) selectedFiles.add(f.path);
-    }
-    // Drop selections for files no longer in the pending list.
-    const stillPending = new Set(currentState.pendingFiles.map((f) => f.path));
-    for (const p of [...selectedFiles]) if (!stillPending.has(p)) selectedFiles.delete(p);
     render();
   }
 });
@@ -66,12 +39,15 @@ function render(): void {
     root.append(
       h('div', { className: 'header' }, h('h2', {}, 'Remote Claude')),
       h('p', { className: 'empty' }, 'No remote-claude.yml in this workspace yet.'),
-      h('button', { className: 'primary', events: { click: () => vscode.postMessage({ type: 'openSetup' }) } }, 'Run Setup Wizard'),
+      h('button', {
+        className: 'primary',
+        events: { click: () => vscode.postMessage({ type: 'openSetup' }) },
+      }, 'Run Setup Wizard'),
     );
     return;
   }
 
-  root.append(renderHeader(), renderActions(), renderSync(), renderPending(), renderFooter());
+  root.append(renderHeader(), renderActions(), renderSync(), renderFooter());
 }
 
 function renderHeader(): HTMLElement {
@@ -83,129 +59,114 @@ function renderHeader(): HTMLElement {
 }
 
 function renderActions(): HTMLElement {
-  const wrap = h('div', { className: 'actions' });
-  wrap.append(
+  return h('div', { className: 'actions' },
     h('button', {
       className: 'primary',
       events: { click: () => vscode.postMessage({ type: 'openSession' }) },
     }, currentState.sessionRunning ? '⎈ Focus Claude session' : '⎈ Open Claude session'),
-    h('button', {
-      events: { click: () => vscode.postMessage({ type: 'pullChanges' }) },
-    }, currentState.pulling ? 'Fetching…' : '⇣ Pull remote changes'),
   );
-  if (currentState.pulling) ((wrap.lastChild) as HTMLButtonElement).disabled = true;
-  return wrap;
 }
 
 function renderSync(): HTMLElement {
+  const s = currentState.sync;
   const wrap = h('div', { className: 'sync-panel' });
 
-  // Status pill
-  let label = '';
-  let cls = '';
-  if (currentState.syncing) {
-    label = '⟳ Syncing…';
-    cls = 'syncing';
-  } else if (currentState.syncError) {
-    label = '✗ Sync error';
-    cls = 'error';
-  } else if (currentState.dirtyCount > 0) {
-    label = `${currentState.dirtyCount} file${currentState.dirtyCount === 1 ? '' : 's'} dirty`;
-    cls = 'dirty';
-  } else if (currentState.lastSync) {
-    label = `✓ In sync · ${formatAgo(currentState.lastSync)}`;
-    cls = 'clean';
-  } else {
-    label = 'Not yet synced';
-    cls = 'idle';
+  // Build status pill + description
+  let pillText = '';
+  let pillCls = '';
+  let detail: HTMLElement | null = null;
+
+  switch (s.kind) {
+    case 'not_installed':
+      pillText = '✗ Mutagen not installed';
+      pillCls = 'error';
+      detail = h('div', { className: 'sync-detail' },
+        h('p', {}, 'Mutagen powers the bidirectional sync. Install it on your laptop:'),
+        h('pre', { className: 'cmd' }, 'brew install mutagen-io/mutagen/mutagen'),
+        h('p', { className: 'hint' }, 'Then click Restart sync below. Mutagen will deploy its agent on the Mac Mini automatically.'),
+        h('button', {
+          className: 'primary',
+          events: { click: () => vscode.postMessage({ type: 'restartSync' }) },
+        }, '↻ Restart sync'),
+      );
+      break;
+    case 'no_session':
+      pillText = '○ Sync not started';
+      pillCls = 'idle';
+      detail = h('button', {
+        className: 'primary',
+        events: { click: () => vscode.postMessage({ type: 'restartSync' }) },
+      }, '⇄ Start sync');
+      break;
+    case 'connecting':
+      pillText = '⟳ Connecting…';
+      pillCls = 'syncing';
+      break;
+    case 'syncing':
+      pillText = '⟳ Syncing…';
+      pillCls = 'syncing';
+      break;
+    case 'watching':
+      pillText = '✓ In sync';
+      pillCls = 'clean';
+      break;
+    case 'paused':
+      pillText = '⏸ Paused';
+      pillCls = 'idle';
+      detail = h('button', { events: { click: () => vscode.postMessage({ type: 'resumeSync' }) } }, '▶ Resume');
+      break;
+    case 'conflict': {
+      pillText = `⚠ Conflict on ${s.conflicts?.length ?? 0} file(s)`;
+      pillCls = 'warn';
+      const list = h('ul', { className: 'conflict-list' });
+      for (const f of (s.conflicts ?? []).slice(0, 8)) {
+        list.append(h('li', {}, f));
+      }
+      detail = h('div', { className: 'sync-detail' },
+        h('p', { className: 'hint' },
+          'Both your laptop and the Mini changed the same file in the same window. ',
+          'Laptop version wins; the Mini\'s version is preserved with a .conflict-N suffix next to the original.',
+        ),
+        list,
+      );
+      break;
+    }
+    case 'error':
+      pillText = '✗ Sync error';
+      pillCls = 'error';
+      detail = h('div', { className: 'sync-detail' },
+        h('pre', { className: 'cmd' }, s.message ?? 'unknown'),
+        h('button', {
+          className: 'primary',
+          events: { click: () => vscode.postMessage({ type: 'restartSync' }) },
+        }, '↻ Restart sync'),
+      );
+      break;
   }
 
   wrap.append(
     h('div', { className: 'sync-header' },
-      h('span', { className: 'sync-title' }, 'Live sync (laptop → remote)'),
-      h('span', { className: `sync-status ${cls}` }, label),
-    ),
-    h('div', { className: 'sync-actions' },
-      h('button', {
-        className: currentState.liveSync ? 'toggle on' : 'toggle off',
-        events: { click: () => vscode.postMessage({ type: 'toggleLiveSync' }) },
-      }, currentState.liveSync ? '● Live sync ON' : '○ Live sync OFF'),
-      h('button', {
-        events: { click: () => vscode.postMessage({ type: 'syncNow' }) },
-      }, currentState.syncing ? 'Syncing…' : '⇡ Sync now'),
+      h('span', { className: 'sync-title' }, 'Two-way sync'),
+      h('span', { className: `sync-status ${pillCls}` }, pillText),
     ),
   );
-  if (currentState.syncing) ((wrap.querySelector('.sync-actions button:last-child')) as HTMLButtonElement).disabled = true;
-  if (currentState.syncError) {
-    wrap.append(h('p', { className: 'error' }, currentState.syncError));
-  }
-  return wrap;
-}
 
-function renderPending(): HTMLElement {
-  if (currentState.pulling) {
-    return h('div', { className: 'pending' }, h('p', { className: 'empty' }, 'Checking remote for changes…'));
-  }
-  if (!currentState.pendingFiles.length) {
-    return h('div', { className: 'pending' },
-      h('p', { className: 'empty' },
-        'No remote changes pending.',
-        h('br', {}),
-        h('span', { className: 'hint' }, 'Open the Claude session, edit files, then click Pull.'),
+  // Controls row (pause / flush) only when there's an active session
+  if (s.kind === 'watching' || s.kind === 'syncing' || s.kind === 'connecting' || s.kind === 'conflict') {
+    wrap.append(
+      h('div', { className: 'sync-actions' },
+        h('button', {
+          events: { click: () => vscode.postMessage({ type: 'flushSync' }) },
+        }, '⇄ Flush now'),
+        h('button', {
+          events: { click: () => vscode.postMessage({ type: 'pauseSync' }) },
+        }, '⏸ Pause'),
       ),
     );
   }
 
-  const list = h('div', { className: 'file-list' });
-  for (const f of currentState.pendingFiles) {
-    const cb = h('input', { type: 'checkbox', checked: selectedFiles.has(f.path) }) as HTMLInputElement;
-    // Conflicts default to unchecked — explicit opt-in only
-    if (f.conflict && !selectedFiles.has(f.path)) {
-      cb.checked = false;
-      selectedFiles.delete(f.path);
-    }
-    cb.addEventListener('change', () => {
-      if (cb.checked) selectedFiles.add(f.path);
-      else selectedFiles.delete(f.path);
-    });
-    const row = h('label', {
-      className: 'file-row' + (f.conflict ? ' conflict' : ''),
-      events: { click: (e: Event) => {
-        if ((e.target as HTMLElement).tagName === 'INPUT') return;
-        vscode.postMessage({ type: 'openDiff', path: f.path });
-      }},
-    },
-      cb,
-      h('span', { className: 'badge ' + f.status }, f.status[0].toUpperCase()),
-      h('span', { className: 'path' }, f.path),
-      h('span', { className: 'stat' }, `+${f.additions} −${f.deletions}`),
-    );
-    if (f.conflict) row.append(h('span', { className: 'conflict-tag', title: 'Also changed locally — review before applying' }, '⚠ conflict'));
-    list.append(row);
-  }
+  if (detail) wrap.append(detail);
 
-  const wrap = h('div', { className: 'pending' },
-    h('div', { className: 'pending-header' },
-      `${currentState.pendingFiles.length} file${currentState.pendingFiles.length === 1 ? '' : 's'} changed on remote`,
-    ),
-    list,
-    h('div', { className: 'pending-actions' },
-      h('button', {
-        className: 'primary',
-        events: { click: () => {
-          const paths = Array.from(selectedFiles);
-          if (!paths.length) return;
-          vscode.postMessage({ type: 'applySelected', paths });
-        }},
-      }, currentState.applying ? 'Applying…' : 'Apply selected'),
-      h('button', { events: { click: () => vscode.postMessage({ type: 'savePatch' }) } }, 'Save patch'),
-      h('button', { events: { click: () => vscode.postMessage({ type: 'dismissPending' }) } }, 'Dismiss'),
-    ),
-  );
-
-  if (currentState.lastError) {
-    wrap.append(h('p', { className: 'error' }, currentState.lastError));
-  }
   return wrap;
 }
 
@@ -220,15 +181,6 @@ function renderFooter(): HTMLElement {
       events: { click: () => vscode.postMessage({ type: 'openSetup' }) },
     }, 'Setup wizard'),
   );
-}
-
-function formatAgo(ts: number): string {
-  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  return `${h}h ago`;
 }
 
 void currentState;
