@@ -3,7 +3,7 @@ import { existsSync, statSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import { isNotLoggedIn, NOT_LOGGED_IN_REMEDIATION, tryDisableKeychainAutoLock } from './keychain.ts';
 
-export interface ClaudeResult {
+export interface AiResult {
   stdout: string;
   stderr: string;
   exitCode: number;
@@ -34,10 +34,10 @@ export function runAi(opts: {
   prompt: string;
   cwd: string;
   timeoutMs: number;
-}): Promise<ClaudeResult> {
+}): Promise<AiResult> {
   return new Promise((resolve, reject) => {
     let settled = false;
-    const settleResolve = (v: ClaudeResult) => {
+    const settleResolve = (v: AiResult) => {
       if (settled) return;
       settled = true;
       resolve(v);
@@ -93,13 +93,13 @@ export function probeAiVersion(commandPath: string): string | undefined {
  * with the configured binary path + base args. Resumes an AI session by id
  * and streams stdout chunks via `onText`. Resolves when the child exits 0.
  */
-export interface ClaudeStreamingOptions {
+export interface AiStreamingOptions {
   bin: string;
   /** Base args; `--resume <sessionId>` is appended per call. */
   args: string[];
 }
 
-export function makeAiRunner(opts: ClaudeStreamingOptions) {
+export function makeAiRunner(opts: AiStreamingOptions) {
   return {
     async run(
       sessionId: string,

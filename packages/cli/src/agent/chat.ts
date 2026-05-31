@@ -13,7 +13,7 @@ export type ChatEvent =
   | { type: 'chat_diff'; patch: string; files: ChangedFile[] }
   | { type: 'chat_done'; tokensIn: number; tokensOut: number; durationMs: number };
 
-export interface ClaudeRunner {
+export interface AiRunner {
   run(
     claudeSessionId: string,
     prompt: string,
@@ -31,7 +31,7 @@ export async function runChatTurn(input: {
   prompt: string;
   cwd: string;
   store: SessionStore;
-  ai: ClaudeRunner;
+  ai: AiRunner;
   git: GitOps;
   emit: (e: ChatEvent) => void;
 }): Promise<void> {
