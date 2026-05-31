@@ -3,7 +3,7 @@ title: Networking
 description: How your laptop reaches the Mac Mini — Tailscale, LAN, alternatives.
 ---
 
-Remote Claude isn't opinionated. It just needs **SSH** and **HTTP** reachability from the laptop to whatever hostname you put in `remote-claude.yml`. Pick the option that fits.
+Patchwire isn't opinionated. It just needs **SSH** and **HTTP** reachability from the laptop to whatever hostname you put in `patchwire.yml`. Pick the option that fits.
 
 ## At a glance
 
@@ -22,7 +22,7 @@ brew install tailscale
 sudo tailscale up
 ```
 
-Each machine gets a stable `100.x.y.z` IP and a Magic-DNS hostname like `mac-mini.tail-abc123.ts.net`. Drop that into `remote-claude.yml`:
+Each machine gets a stable `100.x.y.z` IP and a Magic-DNS hostname like `mac-mini.tail-abc123.ts.net`. Drop that into `patchwire.yml`:
 
 ```yaml
 remote:
@@ -30,7 +30,7 @@ remote:
   agentUrl: http://mac-mini.tail-abc123.ts.net:7878
 ```
 
-`remote-claude setup` calls `tailscale status --json` and lets you pick the Mini from a list — no IP typing.
+`patchwire setup` calls `tailscale status --json` and lets you pick the Mini from a list — no IP typing.
 
 ### Why Tailscale for this use case
 
@@ -46,8 +46,8 @@ If you want belt-and-braces:
 
 ```bash
 # bind the agent ONLY to the Tailscale interface
-export RC_AGENT_HOST=100.x.y.z   # the Mini's tailnet IP
-remote-claude-agent install --host 100.x.y.z
+export PW_AGENT_HOST=100.x.y.z   # the Mini's tailnet IP
+patchwire-agent install --host 100.x.y.z
 ```
 
 Or, even tighter: bind to `127.0.0.1` and run `tailscale serve` to expose a single named endpoint into the tailnet. (See [Tailscale Serve docs](https://tailscale.com/kb/1242/tailscale-serve).)
@@ -87,4 +87,4 @@ If you must, at least restrict source IPs at the router and put the agent behind
 
 ## Switching networks later
 
-The whole "network plane" is a single hostname in `remote-claude.yml`. Moving from LAN to Tailscale to WireGuard is a one-line edit. Re-run `remote-claude doctor` to verify, and you're done.
+The whole "network plane" is a single hostname in `patchwire.yml`. Moving from LAN to Tailscale to WireGuard is a one-line edit. Re-run `patchwire doctor` to verify, and you're done.

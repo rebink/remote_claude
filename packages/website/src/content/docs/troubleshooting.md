@@ -3,12 +3,12 @@ title: Troubleshooting
 description: Common failure modes and how to fix them.
 ---
 
-## `remote-claude doctor` fails
+## `patchwire doctor` fails
 
 Run with verbose mode for stack traces:
 
 ```bash
-RC_VERBOSE=1 remote-claude doctor
+PW_VERBOSE=1 patchwire doctor
 ```
 
 ### `FAIL  ssh user@host`
@@ -24,7 +24,7 @@ Common causes:
 - **Public key not on remote.** Run `ssh-copy-id rebin@<host>`.
 - **SSH agent doesn't have your key loaded.** `ssh-add -L` to check.
 - **Tailscale isn't up on one of the machines.** `tailscale status` on both.
-- **Wrong port.** Override with `remote.sshPort` in `remote-claude.yml`.
+- **Wrong port.** Override with `remote.sshPort` in `patchwire.yml`.
 
 ### `FAIL  agent /health`
 
@@ -32,13 +32,13 @@ Common causes:
 curl -v http://<host>:7878/health
 ```
 
-- **Connection refused** → agent isn't running. On the Mini: `launchctl list | grep com.remote-claude.agent`. If not loaded, `remote-claude-agent install` again.
+- **Connection refused** → agent isn't running. On the Mini: `launchctl list | grep com.patchwire.agent`. If not loaded, `patchwire-agent install` again.
 - **No route to host** → wrong IP/hostname. If using Tailscale, the device may be offline.
-- **`claude.found: false` in the response** → set `RC_CLAUDE_BIN` to the full path on the Mini and re-install the agent.
+- **`claude.found: false` in the response** → set `PW_AI_BIN` to the full path on the Mini and re-install the agent.
 
-### `FAIL  remote-claude.yml present`
+### `FAIL  patchwire.yml present`
 
-You haven't run `remote-claude setup` yet, or you're in the wrong directory. The file lives at the root of each project.
+You haven't run `patchwire setup` yet, or you're in the wrong directory. The file lives at the root of each project.
 
 ## `ask` returns no diff
 
@@ -79,8 +79,8 @@ Then re-run the `ask`.
 
 You probably edited the same files locally between sync and apply. Two options:
 
-- **Save and rebase.** The patch is in `.remote-claude/last.patch`. Stash your local edits, apply the patch, replay your edits.
-- **Re-run with fresh sync.** `remote-claude ask "<prompt>"` again so the remote is up to date with your latest local state, then apply.
+- **Save and rebase.** The patch is in `.patchwire/last.patch`. Stash your local edits, apply the patch, replay your edits.
+- **Re-run with fresh sync.** `patchwire ask "<prompt>"` again so the remote is up to date with your latest local state, then apply.
 
 ## rsync deletes files I wanted to keep
 
@@ -92,21 +92,21 @@ If you genuinely need a file to live only on the Mini, add it to `sync.exclude` 
 
 The agent has a `finally` block that resets the working tree even when `claude` fails. If you see a `409` *immediately after* a crash, log into the Mini and check `git status` — there may be leftover state. Reset manually and resume.
 
-If this happens repeatedly, please open an issue with the contents of `~/.remote-claude/logs/agent.err.log`.
+If this happens repeatedly, please open an issue with the contents of `~/.patchwire/logs/agent.err.log`.
 
 ## Diff preview is huge / hard to read
 
 ```bash
 # save the diff and review with your favorite tool
-remote-claude ask "<prompt>" --save-only
-delta .remote-claude/last.patch     # if you have `delta` installed
+patchwire ask "<prompt>" --save-only
+delta .patchwire/last.patch     # if you have `delta` installed
 # or
-code -d .remote-claude/last.patch
+code -d .patchwire/last.patch
 ```
 
 ## Tailscale device list is empty in `setup`
 
-`remote-claude setup` calls `tailscale status --json` on the laptop. If the response has zero peers, you'll fall through to the manual host prompt. Check:
+`patchwire setup` calls `tailscale status --json` on the laptop. If the response has zero peers, you'll fall through to the manual host prompt. Check:
 
 - `tailscale status` shows peers (otherwise you're not logged in)
 - the Mac Mini is online in your Tailscale admin console
@@ -118,13 +118,13 @@ If you want to wipe everything and start over:
 
 ```bash
 # laptop
-rm -rf ~/.remote-claude
-rm <your-project>/remote-claude.yml
-rm -rf <your-project>/.remote-claude
-remote-claude setup --force
+rm -rf ~/.patchwire
+rm <your-project>/patchwire.yml
+rm -rf <your-project>/.patchwire
+patchwire setup --force
 
 # mini
-remote-claude-agent uninstall
-rm -rf ~/.remote-claude
-remote-claude-agent install
+patchwire-agent uninstall
+rm -rf ~/.patchwire
+patchwire-agent install
 ```

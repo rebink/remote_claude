@@ -6,7 +6,7 @@ description: The request lifecycle, the diff strategy, and the failure model.
 ## Components
 
 ```
-MacBook (remote-claude CLI)            Mac Mini (remote-claude-agent)
+MacBook (patchwire CLI)            Mac Mini (patchwire-agent)
   - source of truth                      - bearer-token HTTP
   - rsync push (one-way)                 - clean git tree per request
   - HTTP /ask                            - spawn `claude --print`
@@ -16,19 +16,19 @@ MacBook (remote-claude CLI)            Mac Mini (remote-claude-agent)
 
 Two binaries, one shared bearer token, one TCP connection. That's the whole product surface.
 
-## Request lifecycle — `remote-claude ask "<prompt>"`
+## Request lifecycle — `patchwire ask "<prompt>"`
 
-1. **Load config** — `remote-claude.yml`, with `${ENV_VAR}` interpolation.
-2. **Sync** — `rsync -az --delete` from your project root to `RC_PROJECTS_ROOT/<project>` on the Mini, with your excludes.
+1. **Load config** — `patchwire.yml`, with `${ENV_VAR}` interpolation.
+2. **Sync** — `rsync -az --delete` from your project root to `PW_PROJECTS_ROOT/<project>` on the Mini, with your excludes.
 3. **POST `/ask`** — JSON body `{ prompt, project }`, bearer token in `Authorization`.
 4. **Agent: pre-flight** — verify the project dir exists, is a git repo, and has a clean working tree. If not, return `404`/`412`/`409`.
-5. **Agent: run claude** — `spawn(claudeBin, claudeArgs, { cwd: projectDir })`, prompt sent on stdin. Stdout/stderr captured. Hard timeout via `RC_TIMEOUT_SEC`.
+5. **Agent: run claude** — `spawn(claudeBin, claudeArgs, { cwd: projectDir })`, prompt sent on stdin. Stdout/stderr captured. Hard timeout via `PW_TIMEOUT_SEC`.
 6. **Agent: capture diff** — `git add -A` (so untracked files are included) → `git diff --cached --no-color`. Also `git diff --cached --name-only` for the file list.
 7. **Agent: reset** — `git reset HEAD --` → `git checkout -- .` → `git clean -fd`. Working tree is back to where it started.
 8. **Agent: respond** — `{ diff, files, durationMs, stdout, stderr, exitCode }`.
 9. **CLI: preview** — colorized unified-diff to stdout, summary line.
 10. **CLI: confirm** — interactive: apply all / apply selected / save / reject.
-11. **CLI: `git apply`** — `git apply --check` first, then `git apply`. On failure, save to `.remote-claude/last.patch` for inspection.
+11. **CLI: `git apply`** — `git apply --check` first, then `git apply`. On failure, save to `.patchwire/last.patch` for inspection.
 
 ## Why "let claude edit + git diff" instead of "ask claude for a diff"
 
@@ -54,11 +54,11 @@ Each step has a clear failure mode, and a failure never leaves the remote in a h
 | Claude run | non-zero exit | Agent still runs `git diff` (capturing partial work) and resets. CLI shows stderr; the diff may be empty. |
 | Capture | `git` errors | Agent attempts the reset in a `finally` block. |
 | Reset | `git` errors | Logged; very unlikely. The agent is conservative — `clean -fd` removes untracked, no `-x` (so .gitignored stays). |
-| Local apply | `git apply --check` fails | Patch is *not* applied. Saved to `.remote-claude/last.patch` for manual inspection. |
+| Local apply | `git apply --check` fails | Patch is *not* applied. Saved to `.patchwire/last.patch` for manual inspection. |
 
 ## The agent's filesystem footprint
 
-The agent only ever writes inside `RC_PROJECTS_ROOT/<project>` — a directory you control. Project names are regex-restricted (`[a-zA-Z0-9_.-]+`) so a malicious request can't escape the root. Every run leaves the project tree in the same git state it started in.
+The agent only ever writes inside `PW_PROJECTS_ROOT/<project>` — a directory you control. Project names are regex-restricted (`[a-zA-Z0-9_.-]+`) so a malicious request can't escape the root. Every run leaves the project tree in the same git state it started in.
 
 ## Sequence diagram
 

@@ -12,14 +12,14 @@ Base URL: whatever you configured as `remote.agentUrl`, e.g. `http://mac-mini.ta
 Every endpoint **except `/health`** requires a bearer token:
 
 ```
-Authorization: Bearer <RC_AGENT_TOKEN>
+Authorization: Bearer <PW_AGENT_TOKEN>
 ```
 
 The compare is constant-time. A wrong / missing token returns `401`.
 
 ## `GET /health`
 
-No auth required. Used by `remote-claude doctor` and any external monitor.
+No auth required. Used by `patchwire doctor` and any external monitor.
 
 ```bash
 curl -s http://mini:7878/health
@@ -36,7 +36,7 @@ curl -s http://mini:7878/health
 }
 ```
 
-If `claude.found` is `false`, the agent is running but won't be able to fulfil `/ask` — fix `RC_CLAUDE_BIN` or install Claude.
+If `claude.found` is `false`, the agent is running but won't be able to fulfil `/ask` — fix `PW_AI_BIN` or install Claude.
 
 ## `POST /ask`
 
@@ -58,7 +58,7 @@ Content-Type: application/json
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `prompt` | string | yes | Free-form instruction for Claude. Sent on stdin to `claude --print`. |
-| `project` | string | yes | Folder name under `RC_PROJECTS_ROOT`. Restricted to `[a-zA-Z0-9_.-]+`. |
+| `project` | string | yes | Folder name under `PW_PROJECTS_ROOT`. Restricted to `[a-zA-Z0-9_.-]+`. |
 
 ### Response — 200 OK
 
@@ -87,7 +87,7 @@ Content-Type: application/json
 | --- | --- | --- |
 | `400` | Invalid body (e.g. project name fails regex) | `{ "error": "invalid body", "issues": [...] }` |
 | `401` | Missing or wrong bearer token | `{ "error": "unauthorized" }` |
-| `404` | `RC_PROJECTS_ROOT/<project>` does not exist | `{ "error": "project not found: …" }` |
+| `404` | `PW_PROJECTS_ROOT/<project>` does not exist | `{ "error": "project not found: …" }` |
 | `409` | Working tree was dirty before the run | `{ "error": "agent working tree is dirty before run", "status": "M file.txt\n" }` |
 | `412` | Project dir is not a git repo | `{ "error": "project is not a git repository on agent host" }` |
 | `500` | Claude execution error or unexpected failure | `{ "error": "<message>" }` |
@@ -123,7 +123,7 @@ import { request } from 'undici';
 const res = await request(`http://${host}/ask`, {
   method: 'POST',
   headers: {
-    authorization: `Bearer ${process.env.RC_TOKEN}`,
+    authorization: `Bearer ${process.env.PW_TOKEN}`,
     'content-type': 'application/json',
   },
   body: JSON.stringify({ prompt, project: 'my_app' }),
@@ -132,4 +132,4 @@ const json = await res.body.json();
 console.log(json.diff);
 ```
 
-This is roughly what `remote-claude ask` does internally — the CLI is a thin wrapper around this API.
+This is roughly what `patchwire ask` does internally — the CLI is a thin wrapper around this API.
