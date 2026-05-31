@@ -49,7 +49,7 @@ describe('loadConfig', () => {
   });
 
   it('throws when the file is missing', async () => {
-    await expect(loadConfig(dir)).rejects.toThrow(/remote-claude init/);
+    await expect(loadConfig(dir)).rejects.toThrow(/patchwire init/);
   });
 
   it('reports zod validation issues with paths', async () => {

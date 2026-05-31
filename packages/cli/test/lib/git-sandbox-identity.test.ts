@@ -48,12 +48,12 @@ describe('git sandbox identity init script', () => {
       'git',
       ['-C', join(workDir, 'home/workspace/demo'), 'config', '--local', '--get', 'user.email'],
     ).toString().trim();
-    expect(localEmail).toBe('remote-claude@local');
+    expect(localEmail).toBe('patchwire@local');
     const localName = execFileSync(
       'git',
       ['-C', join(workDir, 'home/workspace/demo'), 'config', '--local', '--get', 'user.name'],
     ).toString().trim();
-    expect(localName).toBe('Remote Claude (sandbox)');
+    expect(localName).toBe('Patchwire (sandbox)');
     // Global must be unchanged
     const afterGlobalEmail = (() => {
       try {

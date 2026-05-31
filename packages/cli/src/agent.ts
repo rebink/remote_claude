@@ -46,7 +46,7 @@ async function runServe(): Promise<void> {
 
   try {
     const addr = await app.listen({ host, port });
-    app.log.info(`remote-claude-agent listening on ${addr}`);
+    app.log.info(`patchwire-agent listening on ${addr}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -55,8 +55,8 @@ async function runServe(): Promise<void> {
 
 const program = new Command();
 program
-  .name('remote-claude-agent')
-  .description('Remote Claude HTTP agent — runs `claude` on a remote machine and returns diffs.')
+  .name('patchwire-agent')
+  .description('Patchwire HTTP agent — runs `claude` on a remote machine and returns diffs.')
   .version(VERSION);
 
 program

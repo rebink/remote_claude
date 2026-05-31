@@ -1,7 +1,7 @@
-# Remote Claude — Monorepo
+# Patchwire — Monorepo
 
-[![CI](https://github.com/rebink/remote_claude/actions/workflows/ci.yml/badge.svg)](https://github.com/rebink/remote_claude/actions/workflows/ci.yml)
-[![Docs](https://github.com/rebink/remote_claude/actions/workflows/docs.yml/badge.svg)](https://github.com/rebink/remote_claude/actions/workflows/docs.yml)
+[![CI](https://github.com/rebink/patchwire/actions/workflows/ci.yml/badge.svg)](https://github.com/rebink/patchwire/actions/workflows/ci.yml)
+[![Docs](https://github.com/rebink/patchwire/actions/workflows/docs.yml/badge.svg)](https://github.com/rebink/patchwire/actions/workflows/docs.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](#requirements)
 
@@ -9,16 +9,16 @@
 
 You keep coding on your laptop with full IDE speed. A bigger Mac (or any remote box) runs Claude Code with full repo context. The result comes back as a **unified diff** that you preview and `git apply` — no surprise file edits, no commits you didn't see.
 
-**Full docs:** [remote-claude.vercel.app](https://remote-claude.vercel.app)
+**Full docs:** [patchwire.vercel.app](https://patchwire.vercel.app)
 
 ## Packages
 
 | Package | Path | Description |
 |---|---|---|
-| `remote-claude` | [`packages/cli`](packages/cli) | Laptop CLI + remote agent daemon (two npm bins, one package) |
-| `remote-claude-vscode` | [`packages/extension`](packages/extension) | VS Code extension — chat panel + setup wizard + sync controller |
-| `remote-claude-docs` | [`packages/website`](packages/website) | Astro/Starlight docs site, deployed to Vercel |
-| `@remote-claude/protocol` | [`packages/protocol`](packages/protocol) | Private workspace package — wire types shared by `cli` and `extension` |
+| `patchwire` | [`packages/cli`](packages/cli) | Laptop CLI + remote agent daemon (two npm bins, one package) |
+| `patchwire-vscode` | [`packages/extension`](packages/extension) | VS Code extension — chat panel + setup wizard + sync controller |
+| `patchwire-docs` | [`packages/website`](packages/website) | Astro/Starlight docs site, deployed to Vercel |
+| `@patchwire/protocol` | [`packages/protocol`](packages/protocol) | Private workspace package — wire types shared by `cli` and `extension` |
 
 ## Requirements
 
@@ -35,9 +35,9 @@ pnpm -r build          # build every package
 pnpm -r test           # run all unit tests
 pnpm -r typecheck      # typecheck every package
 
-pnpm cli <args>        # shorthand for pnpm --filter remote-claude <args>
-pnpm extension <args>  # shorthand for pnpm --filter remote-claude-vscode <args>
-pnpm website <args>    # shorthand for pnpm --filter remote-claude-docs <args>
+pnpm cli <args>        # shorthand for pnpm --filter patchwire <args>
+pnpm extension <args>  # shorthand for pnpm --filter patchwire-vscode <args>
+pnpm website <args>    # shorthand for pnpm --filter patchwire-docs <args>
 ```
 
 ## Development

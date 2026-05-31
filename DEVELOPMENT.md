@@ -1,16 +1,16 @@
 # Developer Guide
 
-This document is for people working **on** Remote Claude (not just using it). It maps
+This document is for people working **on** Patchwire (not just using it). It maps
 the codebase, explains the request flow, and covers the build/test loop. For usage,
 see [`README.md`](README.md); for PR mechanics, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## The big picture
 
-Remote Claude has **two binaries** and **one VS Code extension** sharing one repo:
+Patchwire has **two binaries** and **one VS Code extension** sharing one repo:
 
 ```
 ┌─────────────────── your laptop ───────────────────┐      ┌──────── remote Mac ────────┐
-│  remote-claude (CLI)            VS Code extension  │      │  remote-claude-agent       │
+│  patchwire (CLI)                VS Code extension  │      │  patchwire-agent           │
 │  src/cli.ts                     extension/         │      │  src/agent.ts              │
 │      │                               │             │      │      │                     │
 │      └──── rsync push ───────────────┴─── HTTP ────┼──────┼──► Fastify server          │
@@ -51,12 +51,12 @@ pnpm verify             # typecheck + test + build + smoke — run this before p
 Run the binaries straight from TypeScript without building, via `tsx`:
 
 ```bash
-pnpm dev:cli -- --help          # remote-claude CLI
-pnpm dev:agent                  # remote-claude-agent server (reads RC_* env vars)
+pnpm dev:cli -- --help          # patchwire CLI
+pnpm dev:agent                  # patchwire-agent server (reads PW_* env vars)
 ```
 
 `tsup` bundles two entry points (`src/cli.ts`, `src/agent.ts`) into `dist/`, prepends a
-`#!/usr/bin/env node` banner, and those map to the `remote-claude` / `remote-claude-agent`
+`#!/usr/bin/env node` banner, and those map to the `patchwire` / `patchwire-agent`
 bins in `package.json`. The `prepare` hook builds on install so `github:` installs work
 without a published artifact.
 
@@ -84,11 +84,11 @@ via `agent/session-store.ts` + `agent/turn-state.ts`, streaming JSONL events.
 
 ## Configuration & environment
 
-- Laptop config: `remote-claude.yml` (parsed/validated in `lib/config.ts`, supports
-  `${ENV}` interpolation). The token typically comes from `~/.remote-claude/env`.
-- Agent config is **all env vars** (`RC_AGENT_TOKEN`, `RC_PROJECTS_ROOT`, `RC_AGENT_HOST`,
-  `RC_AGENT_PORT`, `RC_CLAUDE_BIN`, `RC_CLAUDE_ARGS`, `RC_TIMEOUT_SEC`). See `src/agent.ts`.
-- Set `RC_VERBOSE=1` to print stack traces from the CLI.
+- Laptop config: `patchwire.yml` (parsed/validated in `lib/config.ts`, supports
+  `${ENV}` interpolation). The token typically comes from `~/.patchwire/env`.
+- Agent config is **all env vars** (`PW_AGENT_TOKEN`, `PW_PROJECTS_ROOT`, `PW_AGENT_HOST`,
+  `PW_AGENT_PORT`, `PW_AI_BIN`, `PW_AI_ARGS`, `PW_TIMEOUT_SEC`). See `src/agent.ts`.
+- Set `PW_VERBOSE=1` to print stack traces from the CLI.
 
 ## Conventions
 

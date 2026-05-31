@@ -31,7 +31,7 @@ async function commitPostPush(cfg: Config): Promise<void> {
   const cmd = [
     `cd ${cfg.remote.path}`,
     `git add -A`,
-    `git -c user.email='remote-claude@local' -c user.name='Remote Claude (sandbox)' -c commit.gpgsign=false commit -q --allow-empty -m 'live-sync push'`,
+    `git -c user.email='patchwire@local' -c user.name='Patchwire (sandbox)' -c commit.gpgsign=false commit -q --allow-empty -m 'live-sync push'`,
   ].join(' && ');
   const r = await runSsh({
     host: cfg.remote.host,

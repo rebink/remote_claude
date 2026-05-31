@@ -68,6 +68,6 @@ describe.skipIf(!ENABLED)('bootstrap e2e (localhost)', () => {
       'git',
       ['-C', remoteProj, 'log', '-1', '--format=%ae %an'],
     ).toString().trim();
-    expect(author).toBe('remote-claude@local Remote Claude (sandbox)');
+    expect(author).toBe('patchwire@local Patchwire (sandbox)');
   });
 });

@@ -11,7 +11,7 @@ const VERSION = '0.1.0';
 
 const program = new Command();
 program
-  .name('remote-claude')
+  .name('patchwire')
   .description('Local-first dev tool: push your project to a remote Mac Mini, run Claude Code there, and pull back a reviewable unified diff.')
   .version(VERSION);
 

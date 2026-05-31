@@ -45,14 +45,14 @@ interface InstallOptions {
 
 export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void> {
   if (platform() !== 'darwin') {
-    log.err(`launchd install is macOS-only. On Linux, run \`remote-claude-agent\` under systemd or tmux.`);
+    log.err(`launchd install is macOS-only. On Linux, run \`patchwire-agent\` under systemd or tmux.`);
     process.exitCode = 1;
     return;
   }
 
-  const agentBin = which('remote-claude-agent');
+  const agentBin = which('patchwire-agent');
   if (!agentBin) {
-    log.err('`remote-claude-agent` not found on PATH. Install with `pnpm add -g github:rebink/remote_claude` first.');
+    log.err('`patchwire-agent` not found on PATH. Install with `pnpm add -g github:rebink/patchwire` first.');
     process.exitCode = 1;
     return;
   }
@@ -126,7 +126,7 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
   log.step('Manage the service:');
   console.log(`  launchctl unload ${plistPath()}    # stop`);
   console.log(`  launchctl load   ${plistPath()}    # start`);
-  console.log(`  remote-claude-agent uninstall        # remove`);
+  console.log(`  patchwire-agent uninstall        # remove`);
 }
 
 export async function runDaemonUninstall(): Promise<void> {

@@ -73,7 +73,7 @@ export function tailscaleStatus(): TailscaleStatus {
 
 /**
  * Compact peer shape consumed by the VS Code extension's setup wizard
- * (via `remote-claude setup --list-peers --json`). Intentionally distinct
+ * (via `patchwire setup --list-peers --json`). Intentionally distinct
  * from {@link TailscalePeer}: only the fields the wizard needs.
  */
 export interface PeerInfo {
