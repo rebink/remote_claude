@@ -13,7 +13,7 @@ import {
   isGitRepo,
   resetClean,
 } from './git.ts';
-import { findAiBin, makeAiRunner, runClaude } from './ai-runner.ts';
+import { findAiBin, makeAiRunner, runAi } from './ai-runner.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
 import { TurnState } from './turn-state.ts';
@@ -94,7 +94,7 @@ export function buildServer(opts: AgentOptions) {
   registerSessionStatus(app, turns);
 
   // Streaming runner configured from AgentOptions (not env). Honors `--aiCommand`
-  // / `--aiArgs` exactly the same way the `/ask` path does via `runClaude`.
+  // / `--aiArgs` exactly the same way the `/ask` path does via `runAi`.
   const aiRunner = makeAiRunner({ bin: opts.aiCommand, args: opts.aiArgs });
 
   app.addHook('onRequest', async (req, reply) => {
@@ -135,7 +135,7 @@ export function buildServer(opts: AgentOptions) {
     const start = Date.now();
     let claudeResult;
     try {
-      claudeResult = await runClaude({
+      claudeResult = await runAi({
         command: opts.aiCommand,
         args: opts.aiArgs,
         prompt,
@@ -192,7 +192,7 @@ export function buildServer(opts: AgentOptions) {
         prompt: body.prompt,
         cwd,
         store: sessionStore,
-        claude: aiRunner,
+        ai: aiRunner,
         git: { diffHead, cleanResetToHead },
         // Wrap emit to record completion in TurnState. The wrapper MUST forward
         // every event to the original `emit` — the side effect for `chat_done`

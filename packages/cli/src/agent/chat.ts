@@ -31,7 +31,7 @@ export async function runChatTurn(input: {
   prompt: string;
   cwd: string;
   store: SessionStore;
-  claude: ClaudeRunner;
+  ai: ClaudeRunner;
   git: GitOps;
   emit: (e: ChatEvent) => void;
 }): Promise<void> {
@@ -40,7 +40,7 @@ export async function runChatTurn(input: {
   input.emit({ type: 'chat_turn_start', sessionId, turnIndex: 0 });
 
   try {
-    const tokens = await input.claude.run(sessionId, input.prompt, (chunk) =>
+    const tokens = await input.ai.run(sessionId, input.prompt, (chunk) =>
       input.emit({ type: 'chat_text', chunk }),
     );
 

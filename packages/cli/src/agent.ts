@@ -71,7 +71,7 @@ program
   .option('--port <n>', 'override RC_AGENT_PORT', (v: string) => Number(v))
   .option('--host <h>', 'override RC_AGENT_HOST')
   .option('--token <t>', 'override RC_AGENT_TOKEN')
-  .option('--claude-bin <path>', 'override RC_CLAUDE_BIN')
+  .option('--ai-bin <path>', 'override PW_AI_BIN')
   .action(async (opts) => { await runDaemonInstall(opts); });
 
 program
