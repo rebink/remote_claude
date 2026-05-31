@@ -26,7 +26,7 @@ export async function runAsk(cwd: string, prompt: string, opts: AskOptions = {})
   }
 
   const client = new AgentClient(cfg);
-  log.step('Asking remote Claude…');
+  log.step('Asking Patchwire…');
   const askStart = Date.now();
   const res = await client.ask({ prompt, project: cfg.project });
   log.ok(`Remote run finished in ${res.durationMs}ms (CLI total ${Date.now() - askStart}ms)`);

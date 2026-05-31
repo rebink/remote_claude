@@ -138,7 +138,7 @@ program
 
 program
   .command('ask')
-  .description('Sync, then ask remote Claude — preview and apply the resulting diff')
+  .description('Sync, then ask Patchwire — preview and apply the resulting diff')
   .argument('<prompt...>', 'instruction for Claude')
   .option('--no-sync', 'skip sync (use last synced state on remote)')
   .option('--save-only', 'save the patch without prompting to apply')
