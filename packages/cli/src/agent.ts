@@ -19,15 +19,15 @@ async function runServe(): Promise<void> {
   const projectsRoot = envRequired('RC_PROJECTS_ROOT');
   const host = process.env.RC_AGENT_HOST ?? '127.0.0.1';
   const port = Number(process.env.RC_AGENT_PORT ?? 7878);
-  const claudeCommand = process.env.RC_CLAUDE_BIN ?? 'claude';
-  const claudeArgs = (process.env.RC_CLAUDE_ARGS ?? '--print').split(/\s+/).filter(Boolean);
+  const aiCommand = process.env.PW_AI_BIN ?? 'claude';
+  const aiArgs = (process.env.PW_AI_ARGS ?? '--print').split(/\s+/).filter(Boolean);
   const timeoutSec = Number(process.env.RC_TIMEOUT_SEC ?? 600);
 
   const app = buildServer({
     token,
     projectsRoot,
-    claudeCommand,
-    claudeArgs,
+    aiCommand,
+    aiArgs,
     timeoutSec,
     version: VERSION,
   });
