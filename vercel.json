@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd website && pnpm install --no-frozen-lockfile && pnpm build",
-  "outputDirectory": "website/dist",
+  "buildCommand": "pnpm install --no-frozen-lockfile && pnpm --filter remote-claude-docs build",
+  "outputDirectory": "packages/website/dist",
   "installCommand": "echo 'install handled by buildCommand'",
   "framework": null,
   "cleanUrls": true,
