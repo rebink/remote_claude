@@ -10,6 +10,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@remote-claude/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -53,6 +56,9 @@ importers:
 
   packages/extension:
     dependencies:
+      '@remote-claude/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       yaml:
         specifier: ^2.5.1
         version: 2.9.0

@@ -41,6 +41,7 @@
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
+    "@remote-claude/protocol": "workspace:*",
     "yaml": "^2.5.1"
   },
   "devDependencies": {
