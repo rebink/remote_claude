@@ -28,3 +28,4 @@ rc-init-*/
 
 # Editor / AI tool caches
 .qodo/
+.playwright-mcp/
