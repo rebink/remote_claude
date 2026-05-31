@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Node.js >= 20, vitest, commander (existing CLI), VS Code extension API >= 1.80, `@vscode/test-electron` for the smoke test, `pnpm` workspaces for the monorepo.
 
-**Spec:** [`docs/superpowers/specs/2026-05-03-vscode-extension-design.md`](../specs/2026-05-03-vscode-extension-design.md)
+**Spec:** [`docs/specs/2026-05-03-vscode-extension-design.md`](../specs/2026-05-03-vscode-extension-design.md)
 
 **Phases:**
 - Phase A — CLI JSON mode (Tasks 1–4). Can be released independently.

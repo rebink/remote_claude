@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript (ESM), tsup, vitest, Fastify (agent), VS Code Extension API + plain DOM webview, child_process.spawn for ssh/rsync. No new runtime dependencies.
 
-**Spec:** [`docs/superpowers/specs/2026-05-25-push-local-folder-bootstrap-design.md`](../specs/2026-05-25-push-local-folder-bootstrap-design.md)
+**Spec:** [`docs/specs/2026-05-25-push-local-folder-bootstrap-design.md`](../specs/2026-05-25-push-local-folder-bootstrap-design.md)
 
 ---
 

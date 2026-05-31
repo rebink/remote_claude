@@ -4,7 +4,7 @@ Chat with Claude on a remote Mac Mini from inside VS Code. Your workspace stays 
 
 Driving use case: Flutter developers who keep a USB device plugged into their laptop and can't run their app on the remote, but still want Claude's context-aware help.
 
-Design spec: [`../docs/superpowers/specs/2026-05-20-vscode-extension-v2-design.md`](../docs/superpowers/specs/2026-05-20-vscode-extension-v2-design.md)
+Design spec: [`../../docs/specs/2026-05-20-vscode-extension-v2-design.md`](../../docs/specs/2026-05-20-vscode-extension-v2-design.md)
 
 ---
 

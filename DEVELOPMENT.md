@@ -36,7 +36,7 @@ diff from `git`, which is far more reliable than prompt-engineering patch output
 | `extension/` | The VS Code extension (its own `package.json`, build, and tests) |
 | `test/` | Vitest suites, mirroring `src/` structure; `test/integration/` holds e2e flows |
 | `scripts/` | `smoke.sh`, `fetch-sshpass.sh`, `smoke-extension.sh` |
-| `docs/superpowers/` | Design specs and plans — read these for the "why" behind decisions |
+| `docs/specs/` & `docs/plans/` | Design specs and plans — read these for the "why" behind decisions |
 
 ## Build & dev loop
 
