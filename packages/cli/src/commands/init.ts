@@ -11,7 +11,7 @@ export async function runInit(cwd: string, opts: { force?: boolean } = {}): Prom
     return;
   }
 
-  log.step('Configuring Remote Claude for this project');
+  log.step('Configuring Patchwire for this project');
   const answers = await prompts([
     { type: 'text', name: 'project', message: 'Project name (folder name on remote)', initial: basename(cwd) },
     { type: 'text', name: 'host', message: 'Mac Mini host (IP or hostname)', initial: '192.168.1.10' },
@@ -52,7 +52,7 @@ ai:
 
   await mkdir(join(cwd, '.patchwire'), { recursive: true });
   await ensureGitignoreEntry(cwd, ['.patchwire/']);
-  log.dim(`Set ${answers.tokenEnv} in your shell before running \`remote-claude ask\`.`);
+  log.dim(`Set ${answers.tokenEnv} in your shell before running \`patchwire ask\`.`);
 }
 
 async function ensureGitignoreEntry(cwd: string, entries: string[]): Promise<void> {

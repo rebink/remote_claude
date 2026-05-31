@@ -64,8 +64,8 @@ export interface BootstrapDeps {
 }
 
 const REMOTE_BASE = '~/workspace';
-const SANDBOX_EMAIL = 'remote-claude@local';
-const SANDBOX_NAME = 'Remote Claude (sandbox)';
+const SANDBOX_EMAIL = 'patchwire@local';
+const SANDBOX_NAME = 'Patchwire (sandbox)';
 
 export const gitInitScript = (project: string, remotePath?: string): string => {
   const remote = remotePath ?? `${REMOTE_BASE}/${project}`;

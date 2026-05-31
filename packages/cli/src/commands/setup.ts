@@ -44,7 +44,7 @@ export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<vo
     return;
   }
 
-  log.step(chalk.bold('Remote Claude — one-shot setup'));
+  log.step(chalk.bold('Patchwire — one-shot setup'));
   console.log();
 
   // --host (or --no-tailscale) skips the tailnet picker entirely.
@@ -76,13 +76,13 @@ export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<vo
   console.log(`       source ~/.patchwire/env`);
   console.log();
   console.log(chalk.cyan('  2. On the Mac Mini, run:'));
-  console.log(`       pnpm add -g github:rebink/remote_claude`);
+  console.log(`       pnpm add -g github:rebink/patchwire`);
   console.log(`       export PW_AGENT_TOKEN=${answers.token}`);
   console.log(`       export PW_PROJECTS_ROOT=${answers.path.replace(/\/[^/]+$/, '')}`);
-  console.log(`       remote-claude-agent install        # registers as a launchd service`);
+  console.log(`       patchwire-agent install        # registers as a launchd service`);
   console.log();
   console.log(chalk.cyan('  3. Verify the connection:'));
-  console.log(`       remote-claude doctor`);
+  console.log(`       patchwire doctor`);
   console.log();
 }
 
@@ -294,7 +294,7 @@ export async function runSetupPasswordStdin(input: PasswordStdinInput): Promise<
       '-f',
       input.keyPath,
       '-C',
-      `remote-claude@${input.host}`,
+      `patchwire@${input.host}`,
     ]);
     if (r.status !== 0) {
       process.stdout.write(JSON.stringify({ ok: false, code: 'unknown', stderr: 'ssh-keygen failed' }));

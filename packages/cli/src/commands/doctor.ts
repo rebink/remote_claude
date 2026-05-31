@@ -29,7 +29,7 @@ export async function runDoctor(cwd: string): Promise<void> {
 
   const cfgPath = join(cwd, 'patchwire.yml');
   const hasCfg = existsSync(cfgPath);
-  checks.push({ name: 'patchwire.yml present', pass: hasCfg, detail: hasCfg ? cfgPath : 'run `remote-claude init`' });
+  checks.push({ name: 'patchwire.yml present', pass: hasCfg, detail: hasCfg ? cfgPath : 'run `patchwire init`' });
 
   if (hasCfg) {
     try {

@@ -77,7 +77,7 @@ export const DEFAULT_CONFIG_PATH = 'patchwire.yml';
 export async function loadConfig(cwd = process.cwd(), path = DEFAULT_CONFIG_PATH): Promise<Config> {
   const full = resolve(cwd, path);
   if (!existsSync(full)) {
-    throw new Error(`No ${path} found in ${cwd}. Run \`remote-claude init\` first.`);
+    throw new Error(`No ${path} found in ${cwd}. Run \`patchwire init\` first.`);
   }
   const raw = await readFile(full, 'utf8');
   const parsed = parseYaml(raw);

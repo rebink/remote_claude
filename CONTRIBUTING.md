@@ -1,12 +1,12 @@
-# Contributing to Remote Claude
+# Contributing to Patchwire
 
 Thanks for your interest! Bug reports, feature ideas, and PRs are all welcome.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/rebink/remote_claude.git
-cd remote_claude
+git clone https://github.com/rebink/patchwire.git
+cd patchwire
 pnpm install
 pnpm typecheck
 pnpm test
