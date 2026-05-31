@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Node ≥ 20, Fastify (agent), Commander (CLI), VS Code Extension API ≥ 1.80, React + Tailwind (webview), pnpm workspaces, vitest, `@vscode/test-electron`, vendored `sshpass`.
 
-**Spec:** [`docs/superpowers/specs/2026-05-20-vscode-extension-v2-design.md`](../specs/2026-05-20-vscode-extension-v2-design.md)
+**Spec:** [`docs/specs/2026-05-20-vscode-extension-v2-design.md`](../specs/2026-05-20-vscode-extension-v2-design.md)
 
 ---
 
@@ -190,7 +190,7 @@ export function deactivate(): void {}
 ```markdown
 # Remote Claude VS Code Extension
 
-See [`../docs/superpowers/specs/2026-05-20-vscode-extension-v2-design.md`](../docs/superpowers/specs/2026-05-20-vscode-extension-v2-design.md).
+See [`../specs/2026-05-20-vscode-extension-v2-design.md`](../specs/2026-05-20-vscode-extension-v2-design.md).
 ```
 
 - [ ] **Step 6: Install + build to verify**

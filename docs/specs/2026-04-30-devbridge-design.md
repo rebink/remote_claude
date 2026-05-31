@@ -137,7 +137,7 @@ dev_sync_cli/
 │       ├── git.ts            # status / diff / reset
 │       └── auth.ts
 ├── test/
-└── docs/superpowers/
+└── docs/
     ├── specs/
     └── plans/
 ```

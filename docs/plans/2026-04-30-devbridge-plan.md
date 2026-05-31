@@ -1,6 +1,6 @@
 # DevBridge — Implementation Plan
 
-Linked spec: `docs/superpowers/specs/2026-04-30-devbridge-design.md`
+Linked spec: `docs/specs/2026-04-30-devbridge-design.md`
 
 ## Build order (each step is independently runnable)
 
