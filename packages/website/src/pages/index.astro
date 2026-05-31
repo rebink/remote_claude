@@ -1124,54 +1124,232 @@ $ patchwire-agent install
       }
 
       /* ─────────────────────────────────────────────────────────
-         RESPONSIVE — collapse the bicameral split below 900px
+         RESPONSIVE
+         The bicameral identity survives at every width.
+
+         ≥ 1024px    Vertical bicameral (default).
+         768–1023px  Vertical bicameral, tightened.
+         540–767px   HORIZONTAL bicameral (paper top, ink bottom).
+                     Headline straddles a horizontal seam.
+         ≤ 539px     Same horizontal bicameral, single-col features.
          ───────────────────────────────────────────────────────── */
-      @media (max-width: 900px) {
-        :root { --seam: 100%; }
-        .topbar { grid-template-columns: 1fr auto; gap: 16px; }
-        .topnav { display: none; }
-        .hero-paper { right: 0; }
-        .hero-ink {
-          left: 0;
-          top: auto;
-          bottom: 0;
-          height: 50%;
+
+      /* ── Tablet: keep vertical bicameral, tighten typography ── */
+      @media (min-width: 768px) and (max-width: 1099px) {
+        .topnav { gap: 20px; font-size: 13px; }
+        .topnav a:nth-child(4) { display: none; } /* hide "Extension" link */
+        .rev { font-size: 11px; }
+
+        .hero-local, .hero-remote { max-width: 32ch; }
+        .hero-stanza { font-size: 17px; }
+        .hero-snippet { font-size: 11.5px; padding: 12px 14px; }
+
+        .hero-headline { font-size: clamp(36px, 6.4vw, 76px); line-height: 0.98; }
+
+        /* Keep CTAs on the cream side so they don't straddle the seam
+           (which would make ghost-button text invisible). */
+        .hero-cta {
+          grid-column: 1 / 2;
+          padding-right: clamp(20px, 4vw, 56px);
+          flex-wrap: wrap;
         }
+        .hero-cta .cta { white-space: nowrap; }
+
+        .why-title { font-size: clamp(28px, 5vw, 50px); }
+        .why-grid { grid-template-columns: 1fr; gap: 36px; }
+        .why-callout { border-left: none; border-top: 1px solid var(--rule-paper); padding: 22px 0 0; }
+
+        .three-grid { gap: 22px; }
+        .term-body { padding: 18px 18px 22px; font-size: 12px; }
+
+        .features-grid { grid-template-columns: 1fr 1fr; }
+        .feat-1 { grid-area: 1 / 1 / 2 / 2; }
+        .feat-2 { grid-area: 1 / 2 / 3 / 3; }   /* dark quote spans 2 rows in right col */
+        .feat-3 { grid-area: 2 / 1 / 3 / 2; }
+        .feat-4 { grid-area: 3 / 1 / 4 / 2; }
+        .feat-5 { grid-area: 3 / 2 / 4 / 3; }
+        .feat-6 { grid-area: 4 / 1 / 5 / 3; }
+
+        .end-grid { grid-template-columns: 1fr; gap: 36px; }
+        .end-h { font-size: clamp(34px, 6vw, 58px); }
+
+        .foot-grid { grid-template-columns: 1fr; gap: 36px; }
+      }
+
+      /* ── Mobile (≤ 767px): HORIZONTAL bicameral ─────────────── */
+      @media (max-width: 767px) {
+        :root { --seam: 100%; --gutter: clamp(18px, 5vw, 28px); }
+
+        /* Top bar: wordmark + tiny rev only */
+        .topbar { grid-template-columns: 1fr auto; gap: 12px; padding: 16px var(--gutter); }
+        .topnav { display: none; }
+        .rev { font-size: 10px; gap: 6px; }
+        .rev-dot { width: 6px; height: 6px; }
+
+        /* The full-bleed paper / ink strips behind the hero are
+           replaced by per-grid-item backgrounds with negative-margin
+           bleeds out to the viewport edge. */
+        .hero { min-height: auto; }
+        .hero-paper, .hero-ink, .wire { display: none; }
+
         .hero-grid {
           grid-template-columns: 1fr;
           grid-template-areas:
             "local"
-            "remote"
             "headline"
+            "remote"
             "cta";
-          padding-top: 32px;
+          gap: 0;
+          padding: 0;
           min-height: auto;
         }
-        .hero-local, .hero-remote {
-          padding: 0;
+
+        .hero-local, .hero-remote, .hero-headline, .hero-cta {
           max-width: 100%;
         }
-        .hero-remote { padding-top: 36px; }
-        .hero-headline {
-          margin: 8px 0 0;
-          font-size: clamp(36px, 11vw, 56px);
+
+        /* LOCAL zone (cream) — top of mobile bicameral */
+        .hero-local {
+          background: var(--paper);
+          padding: 36px var(--gutter) 28px;
         }
-        .headline-paper { clip-path: none; }
-        .headline-ink   { display: none; }
-        .hero-cta { padding: 0 0 24px; }
-        .wire { display: none; }
-        .why-grid, .three-grid, .end-grid { grid-template-columns: 1fr; gap: 36px; }
-        .features-grid { grid-template-columns: 1fr 1fr; }
-        .feat-strip { grid-column: span 2; }
-        .strip-list { grid-template-columns: 1fr 1fr; }
-        .foot-grid { grid-template-columns: 1fr; gap: 36px; }
-        .foot-nav { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .hero-stanza { font-size: 18px; line-height: 1.4; margin-bottom: 18px; }
+        .hero-snippet, .hero-snippet-light {
+          font-size: 12px;
+          padding: 12px 14px;
+          max-width: 100%;
+        }
+
+        /* HEADLINE zone — its background is the bicameral SEAM:
+           paper on top half, ink on bottom half, hard transition. */
+        .hero-headline {
+          background: linear-gradient(180deg,
+            var(--paper) 0%, var(--paper) 50%,
+            var(--ink) 50%, var(--ink) 100%);
+          padding: 16px var(--gutter);
+          /* Tight on mobile so the long line "Diffs cross the wire."
+             fits one row at narrow widths. opsz 18 narrows glyphs. */
+          font-size: clamp(30px, 8.6vw, 54px);
+          line-height: 1.05;
+          letter-spacing: -0.025em;
+          font-variation-settings: "SOFT" 30, "opsz" 18;
+        }
+        .hero-headline .hl-word { margin-right: 0.16em; }
+        .headline-paper {
+          color: var(--ink);
+          clip-path: inset(0 0 50% 0);
+        }
+        .headline-ink {
+          color: var(--bone);
+          clip-path: inset(50% 0 0 0);
+          display: block;
+        }
+        .hl-accent-amber    { color: var(--amber-dim); }
+        .hl-accent-phosphor { color: var(--phosphor); }
+
+        /* REMOTE zone (ink) — below the seam */
+        .hero-remote {
+          background: var(--ink);
+          color: var(--bone);
+          padding: 28px var(--gutter) 24px;
+        }
+        .side-label-light { color: var(--bone); opacity: 0.85; }
+        .hero-snippet-dark {
+          background: rgba(232, 226, 208, 0.04);
+          border-color: var(--hairline-ink);
+          font-size: 12px;
+          padding: 12px 14px;
+          max-width: 100%;
+        }
+
+        /* CTAs sit on the ink zone for visual continuity */
+        .hero-cta {
+          background: var(--ink);
+          padding: 4px var(--gutter) 40px;
+          gap: 10px;
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .hero-cta .cta { justify-content: center; padding: 16px 20px; }
+        /* Ghost CTA on dark background — higher specificity to beat the
+           desktop .cta-ghost color rule. */
+        .hero-cta .cta-ghost {
+          color: var(--bone);
+          border-color: rgba(232, 226, 208, 0.25);
+          background: transparent;
+        }
+        .hero-cta .cta-ghost:hover {
+          background: rgba(232, 226, 208, 0.06);
+          border-color: var(--bone);
+        }
+
+        /* Section meta rows: hide right-side kicker on narrow */
+        .kicker-end { display: none; }
+        .why-meta, .three-meta, .shape-meta, .features-meta {
+          grid-template-columns: 1fr auto;
+          margin-bottom: 36px;
+        }
+
+        /* §01 */
+        .why { padding: 64px var(--gutter); }
+        .why-title { font-size: clamp(28px, 7vw, 40px); margin-bottom: 32px; }
+        .why-grid { grid-template-columns: 1fr; gap: 28px; }
+        .why-lead { font-size: 16px; }
+        .why-callout { border-left: none; border-top: 1px solid var(--rule-paper); padding: 22px 0 0; }
+        .callout-q { font-size: 18px; }
+
+        /* §02 */
+        .three { padding: 64px var(--gutter); }
+        .three-grid { grid-template-columns: 1fr; gap: 20px; }
+        .term-body { padding: 16px 14px 20px; font-size: 11.5px; }
+        .term-header { padding: 8px 12px; font-size: 10px; }
+        .term-host { display: none; }  /* hide host badge on mobile */
+
+        /* §03 — diagram gets a fade-out shadow on right edge to hint
+           horizontal scroll */
+        .shape { padding: 64px var(--gutter); }
+        .shape-diagram {
+          font-size: 10.5px;
+          padding: 18px;
+          position: relative;
+          mask-image: linear-gradient(90deg, #000 92%, transparent 100%);
+          -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent 100%);
+        }
+
+        /* §04 Features grid: single column */
+        .features { padding: 64px var(--gutter); }
+        .features-grid { grid-template-columns: 1fr; grid-template-rows: none; }
+        .feat-1, .feat-2, .feat-3, .feat-4, .feat-5, .feat-6 { grid-area: auto; }
+        .feat { padding: 28px 22px; }
+        .feat-quote { padding: 32px 22px; }
+        .strip-list { grid-template-columns: 1fr 1fr; gap: 18px; }
+
+        /* End / final CTA */
+        .end { padding: 72px var(--gutter); }
+        .end-grid { grid-template-columns: 1fr; gap: 28px; }
+        .end-h { font-size: clamp(32px, 8vw, 48px); }
+        .end-actions { flex-direction: column; align-items: stretch; }
+        .end .cta { justify-content: center; }
+
+        /* Footer */
+        .foot { padding: 44px var(--gutter) 28px; }
+        .foot-grid { grid-template-columns: 1fr; gap: 32px; padding-bottom: 28px; }
+        .foot-nav { grid-template-columns: 1fr 1fr; gap: 24px; }
+        .foot-bottom { font-size: 10px; gap: 10px; flex-direction: column; align-items: flex-start; }
+        .foot-tag { letter-spacing: 0.04em; }
       }
-      @media (max-width: 560px) {
-        .features-grid { grid-template-columns: 1fr; }
-        .feat-strip { grid-column: span 1; }
-        .strip-list { grid-template-columns: 1fr; }
-        .foot-nav { grid-template-columns: 1fr 1fr; }
+
+      /* ── Extra-small (≤ 539px): tighter typography, single-col strip ── */
+      @media (max-width: 539px) {
+        .strip-list { grid-template-columns: 1fr; gap: 14px; }
+        .why-title { font-size: clamp(26px, 8vw, 34px); }
+        .end-h { font-size: clamp(28px, 9vw, 40px); }
+
+        /* Headline tightens further on very narrow screens. */
+        .hero-headline {
+          font-size: clamp(28px, 9vw, 40px);
+          line-height: 1.06;
+        }
       }
     </style>
   </body>
