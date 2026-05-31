@@ -1,5 +1,5 @@
 {
-  "name": "remote-claude-vscode",
+  "name": "patchwire-vscode",
   "displayName": "Remote Claude",
   "description": "Chat with Claude on a remote Mac Mini from VS Code.",
   "version": "0.1.0",
@@ -7,8 +7,8 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rebink/remote_claude.git",
-    "directory": "extension"
+    "url": "git+https://github.com/rebink/patchwire.git",
+    "directory": "packages/extension"
   },
   "license": "MIT",
   "engines": { "vscode": "^1.80.0", "node": ">=20" },
@@ -42,7 +42,7 @@
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
-    "@remote-claude/protocol": "workspace:*",
+    "@patchwire/protocol": "workspace:*",
     "yaml": "^2.5.1"
   },
   "devDependencies": {

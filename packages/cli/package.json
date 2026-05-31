@@ -1,17 +1,17 @@
 {
-  "name": "remote-claude",
+  "name": "patchwire",
   "version": "0.1.0",
   "description": "Local-first dev tool: push your project to a remote Mac Mini, run Claude Code there, and pull back a reviewable unified diff.",
   "type": "module",
   "license": "MIT",
   "author": "Mohamed Rebin K",
-  "homepage": "https://github.com/rebink/remote_claude#readme",
+  "homepage": "https://github.com/rebink/patchwire#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rebink/remote_claude.git"
+    "url": "git+https://github.com/rebink/patchwire.git"
   },
   "bugs": {
-    "url": "https://github.com/rebink/remote_claude/issues"
+    "url": "https://github.com/rebink/patchwire/issues"
   },
   "keywords": [
     "claude",
@@ -54,7 +54,7 @@
     "postinstall": "bash scripts/fetch-sshpass.sh || true"
   },
   "dependencies": {
-    "@remote-claude/protocol": "workspace:*",
+    "@patchwire/protocol": "workspace:*",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "fastify": "^4.28.1",
