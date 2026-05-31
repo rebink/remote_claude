@@ -34,7 +34,7 @@ ai:
 describe('loadConfig', () => {
   it('loads and validates a complete config', async () => {
     process.env.TEST_DEVBRIDGE_TOKEN = 'secret';
-    await writeFile(join(dir, 'remote-claude.yml'), baseYaml(), 'utf8');
+    await writeFile(join(dir, 'patchwire.yml'), baseYaml(), 'utf8');
     const cfg = await loadConfig(dir);
     expect(cfg.project).toBe('my_app');
     expect(cfg.remote.token).toBe('secret');
@@ -44,7 +44,7 @@ describe('loadConfig', () => {
   });
 
   it('throws a clear error when the env var is missing', async () => {
-    await writeFile(join(dir, 'remote-claude.yml'), baseYaml(), 'utf8');
+    await writeFile(join(dir, 'patchwire.yml'), baseYaml(), 'utf8');
     await expect(loadConfig(dir)).rejects.toThrow(/TEST_DEVBRIDGE_TOKEN/);
   });
 
@@ -54,7 +54,7 @@ describe('loadConfig', () => {
 
   it('reports zod validation issues with paths', async () => {
     await writeFile(
-      join(dir, 'remote-claude.yml'),
+      join(dir, 'patchwire.yml'),
       `project: ""
 remote:
   host: ""

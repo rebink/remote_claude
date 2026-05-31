@@ -116,7 +116,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   }
 
   private loadConfig(): SessionTarget | null {
-    const yamlPath = join(this.workspaceFolder, 'remote-claude.yml');
+    const yamlPath = join(this.workspaceFolder, 'patchwire.yml');
     if (!existsSync(yamlPath)) return null;
     try {
       const raw = readFileSync(yamlPath, 'utf8');
@@ -132,7 +132,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         remotePath: remote.path as string,
       };
     } catch (err) {
-      this.deps.output.appendLine(`Failed to read remote-claude.yml: ${(err as Error).message}`);
+      this.deps.output.appendLine(`Failed to read patchwire.yml: ${(err as Error).message}`);
       return null;
     }
   }
@@ -159,7 +159,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   private handleOpenSession(): void {
     const cfg = this.loadConfig();
     if (!cfg) {
-      vscode.window.showErrorMessage('No remote-claude.yml found — run Remote Claude: Setup first.');
+      vscode.window.showErrorMessage('No patchwire.yml found — run Patchwire: Setup first.');
       return;
     }
     openSessionTerminal(cfg);

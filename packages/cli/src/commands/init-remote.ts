@@ -71,7 +71,7 @@ export async function runInitRemote(
     return { ok: false, code: 'invalid_project_name' };
   }
 
-  // Resolve host/user from remote-claude.yml unless overridden.
+  // Resolve host/user from patchwire.yml unless overridden.
   let host = opts.host;
   let user = opts.user;
   let port = opts.sshPort ?? 22;

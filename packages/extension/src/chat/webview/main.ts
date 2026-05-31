@@ -38,7 +38,7 @@ function render(): void {
   if (!currentState.configured) {
     root.append(
       h('div', { className: 'header' }, h('h2', {}, 'Remote Claude')),
-      h('p', { className: 'empty' }, 'No remote-claude.yml in this workspace yet.'),
+      h('p', { className: 'empty' }, 'No patchwire.yml in this workspace yet.'),
       h('button', {
         className: 'primary',
         events: { click: () => vscode.postMessage({ type: 'openSetup' }) },

@@ -27,14 +27,14 @@ export async function runDoctor(cwd: string): Promise<void> {
     detail: gitRepo.status === 0 ? cwd : 'patches require a local git repo to apply',
   });
 
-  const cfgPath = join(cwd, 'remote-claude.yml');
+  const cfgPath = join(cwd, 'patchwire.yml');
   const hasCfg = existsSync(cfgPath);
-  checks.push({ name: 'remote-claude.yml present', pass: hasCfg, detail: hasCfg ? cfgPath : 'run `remote-claude init`' });
+  checks.push({ name: 'patchwire.yml present', pass: hasCfg, detail: hasCfg ? cfgPath : 'run `remote-claude init`' });
 
   if (hasCfg) {
     try {
       const cfg = await loadConfig(cwd);
-      checks.push({ name: 'remote-claude.yml valid', pass: true });
+      checks.push({ name: 'patchwire.yml valid', pass: true });
 
       const sshKeyPath = join(homedir(), '.remote-claude', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
       const ssh = spawnSync(
@@ -106,7 +106,7 @@ export async function runDoctor(cwd: string): Promise<void> {
         });
       }
     } catch (err) {
-      checks.push({ name: 'remote-claude.yml valid', pass: false, detail: (err as Error).message });
+      checks.push({ name: 'patchwire.yml valid', pass: false, detail: (err as Error).message });
     }
   }
 

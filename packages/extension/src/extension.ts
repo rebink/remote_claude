@@ -25,7 +25,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   registerCommands(context, { output, setupWizard, panel });
 
-  const configPath = join(ws, 'remote-claude.yml');
+  const configPath = join(ws, 'patchwire.yml');
   if (!existsSync(configPath)) {
     // Defer slightly so the activation hot path doesn't block on opening a tab.
     setTimeout(() => setupWizard.show(), 100);
