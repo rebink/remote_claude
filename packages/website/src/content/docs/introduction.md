@@ -1,18 +1,18 @@
 ---
 title: Introduction
-description: What Remote Claude is, what it isn't, and who it's for.
+description: What Patchwire is, what it isn't, and who it's for.
 ---
 
 ## What it is
 
-Remote Claude is a tiny CLI + HTTP agent pair that lets you run [Claude Code](https://docs.claude.com/en/docs/claude-code/) on a different machine than the one you're typing on. The local machine stays the source of truth; the remote does the AI heavy-lifting; changes come back as a **reviewable unified diff**.
+Patchwire is a tiny CLI + HTTP agent pair that lets you run [Claude Code](https://docs.claude.com/en/docs/claude-code/) on a different machine than the one you're typing on. The local machine stays the source of truth; the remote does the AI heavy-lifting; changes come back as a **reviewable unified diff**.
 
 It's two binaries:
 
 | Binary | Where it runs | What it does |
 | --- | --- | --- |
-| `remote-claude` | Your laptop | Syncs the project, calls the agent, previews diffs, runs `git apply` |
-| `remote-claude-agent` | A bigger Mac (or any Linux box) | Runs `claude --print` on a clean checkout and returns a `git diff` |
+| `patchwire` | Your laptop | Syncs the project, calls the agent, previews diffs, runs `git apply` |
+| `patchwire-agent` | A bigger Mac (or any Linux box) | Runs `claude --print` on a clean checkout and returns a `git diff` |
 
 ## Who it's for
 

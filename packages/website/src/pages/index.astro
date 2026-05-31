@@ -1,7 +1,7 @@
 ---
 import '../styles/custom.css';
 
-const repo = 'https://github.com/rebink/remote_claude';
+const repo = 'https://github.com/rebink/patchwire';
 const version = '0.1.0';
 const rev = '263e2e3';
 ---
@@ -12,13 +12,13 @@ const rev = '263e2e3';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0E0E10" />
-    <title>Remote Claude — local stays local, AI stays remote</title>
+    <title>Patchwire — local stays local, AI stays remote</title>
     <meta
       name="description"
       content="Push your project to a remote Mac. Run Claude Code there with the whole repo. Pull back a unified diff. Apply only what you want."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta property="og:title" content="Remote Claude" />
+    <meta property="og:title" content="Patchwire" />
     <meta
       property="og:description"
       content="Local-first development. AI executes remotely. Diffs come back for review."
@@ -27,13 +27,13 @@ const rev = '263e2e3';
   <body>
     <!-- ── Top bar ─────────────────────────────────────────────── -->
     <header class="topbar">
-      <a class="wordmark" href="/" aria-label="Remote Claude home">
+      <a class="wordmark" href="/" aria-label="Patchwire home">
         <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
           <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" fill="none"/>
           <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
           <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-dasharray="1 2"/>
         </svg>
-        <span>Remote Claude</span>
+        <span>Patchwire</span>
       </a>
       <nav class="topnav" aria-label="Primary">
         <a href="/quickstart/">Quickstart</a>
@@ -67,8 +67,8 @@ const rev = '263e2e3';
           <p class="hero-stanza">
             Your IDE. Your hot-reload. Your debugger. Your &mdash; everything &mdash; un&shy;touched.
           </p>
-          <pre class="hero-snippet hero-snippet-light"><code>$ remote-claude ask <span class="sn-q">"refactor login_bloc</span>
-<span class="sn-cont">                     to freezed"</span></code></pre>
+          <pre class="hero-snippet hero-snippet-light"><code>$ patchwire ask <span class="sn-q">"refactor login_bloc</span>
+<span class="sn-cont">                 to freezed"</span></code></pre>
         </div>
 
         <!-- RIGHT: remote side -->
@@ -174,13 +174,13 @@ const rev = '263e2e3';
             <span class="term-host">macbook</span>
           </header>
           <pre class="term-body"><code><span class="t-comment"># 1. install</span>
-$ pnpm add -g <span class="t-str">github:rebink/remote_claude</span>
+$ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
 
 <span class="t-comment"># 2. setup (auto-detects Tailscale peers)</span>
-$ remote-claude setup
+$ patchwire setup
 
 <span class="t-comment"># 3. ask</span>
-$ remote-claude ask <span class="t-str">"refactor login_bloc"</span>
+$ patchwire ask <span class="t-str">"refactor login_bloc"</span>
   <span class="t-out">✓ diff returned (412 lines)</span></code></pre>
         </article>
 
@@ -194,10 +194,10 @@ $ remote-claude ask <span class="t-str">"refactor login_bloc"</span>
             <span class="term-host">mac&#8209;mini</span>
           </header>
           <pre class="term-body term-body-dark"><code><span class="t-comment-d"># 1. install</span>
-$ pnpm add -g <span class="t-str-d">github:rebink/remote_claude</span>
+$ pnpm add -g <span class="t-str-d">github:rebink/patchwire</span>
 
 <span class="t-comment-d"># 2. register agent as a launchd service</span>
-$ remote-claude-agent install
+$ patchwire-agent install
   <span class="t-out-d">→ TOKEN: rc_b9f...</span>
 
 <span class="t-comment-d"># 3. nothing — the agent runs in the background</span></code></pre>
@@ -216,7 +216,7 @@ $ remote-claude-agent install
       <pre class="shape-diagram" aria-hidden="true">
 <span class="d-local">┌──────────────────────────────┐</span>          <span class="d-remote">┌──────────────────────────────┐</span>
 <span class="d-local">│ <strong>MacBook</strong>                      │</span>          <span class="d-remote">│ <strong>Mac Mini</strong>                     │</span>
-<span class="d-local">│ remote-claude (CLI)          │</span>          <span class="d-remote">│ remote-claude-agent          │</span>
+<span class="d-local">│ patchwire (CLI)              │</span>          <span class="d-remote">│ patchwire-agent              │</span>
 <span class="d-local">│                              │</span>          <span class="d-remote">│                              │</span>
 <span class="d-local">│  ◦ source of truth           │</span>  <span class="d-arrow">━━ rsync ━━▶</span>  <span class="d-remote">│  ◦ clean git checkout        │</span>
 <span class="d-local">│  ◦ rsync push (one-way)      │</span>          <span class="d-remote">│  ◦ spawn <code>claude --print</code>     │</span>
@@ -314,7 +314,7 @@ $ remote-claude-agent install
               <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
               <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-dasharray="1 2"/>
             </svg>
-            <span>Remote Claude</span>
+            <span>Patchwire</span>
           </span>
           <p class="foot-blurb">
             Built with restraint. MIT licensed. By people who like their laptops quiet.
@@ -345,7 +345,7 @@ $ remote-claude-agent install
         </nav>
       </div>
       <div class="foot-bottom">
-        <span>© {new Date().getFullYear()} Remote Claude · v{version} · rev&nbsp;{rev}</span>
+        <span>© {new Date().getFullYear()} Patchwire · v{version} · rev&nbsp;{rev}</span>
         <span class="foot-tag">local-first · ai-remote · diff-reviewable</span>
       </div>
     </footer>

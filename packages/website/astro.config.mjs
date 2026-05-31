@@ -1,15 +1,15 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-const repo = 'https://github.com/rebink/remote_claude';
+const repo = 'https://github.com/rebink/patchwire';
 
 export default defineConfig({
-  site: 'https://remote-claude.vercel.app',
+  site: 'https://patchwire.vercel.app',
   integrations: [
     starlight({
-      title: 'Remote Claude',
+      title: 'Patchwire',
       description:
-        'Local-first dev tool: push your project to a remote Mac, run Claude Code there, and pull back a reviewable unified diff.',
+        'Local-first dev tool: push your project to a remote Mac, run an AI CLI there, and pull back a reviewable unified diff.',
       logo: { src: './src/assets/logo.svg', replacesTitle: false },
       social: { github: repo },
       editLink: {
