@@ -13,7 +13,7 @@ export default defineConfig({
       logo: { src: './src/assets/logo.svg', replacesTitle: false },
       social: { github: repo },
       editLink: {
-        baseUrl: `${repo}/edit/main/website/`,
+        baseUrl: `${repo}/edit/main/packages/website/`,
       },
       lastUpdated: true,
       pagination: true,
@@ -29,6 +29,7 @@ export default defineConfig({
           label: 'Start here',
           items: [
             { label: 'Introduction', slug: 'introduction' },
+            { label: 'Install the extension', slug: 'install-extension' },
             { label: 'Quickstart', slug: 'quickstart' },
           ],
         },
