@@ -18,3 +18,13 @@ remote-claude.yml
 rc-del-*/
 tsx-501/
 node-compile-cache/
+
+# Runtime/leak directories from the CLI itself
+rc-init-*/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+.tsbuildinfo
+
+# Editor / AI tool caches
+.qodo/
