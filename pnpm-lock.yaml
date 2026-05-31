@@ -10,7 +10,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@remote-claude/protocol':
+      '@patchwire/protocol':
         specifier: workspace:*
         version: link:../protocol
       chalk:
@@ -56,7 +56,7 @@ importers:
 
   packages/extension:
     dependencies:
-      '@remote-claude/protocol':
+      '@patchwire/protocol':
         specifier: workspace:*
         version: link:../protocol
       yaml:

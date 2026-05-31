@@ -1,5 +1,5 @@
 {
-  "name": "@remote-claude/protocol",
+  "name": "@patchwire/protocol",
   "version": "0.0.0",
   "private": true,
   "description": "Shared HTTP/NDJSON wire types for the remote-claude CLI agent and the VS Code extension.",
