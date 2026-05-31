@@ -25,7 +25,7 @@ export interface AgentOptions {
   aiArgs: string[];
   timeoutSec: number;
   version: string;
-  /** Path to the persistent session-store JSON. Defaults to `~/.remote-claude/agent-sessions.json`. */
+  /** Path to the persistent session-store JSON. Defaults to `~/.patchwire/agent-sessions.json`. */
   sessionStorePath?: string;
 }
 
@@ -81,7 +81,7 @@ export function buildServer(opts: AgentOptions) {
 
   // Single SessionStore per server instance — persists uuid → claudeSessionId mapping.
   const sessionStorePath =
-    opts.sessionStorePath ?? join(homedir(), '.remote-claude', 'agent-sessions.json');
+    opts.sessionStorePath ?? join(homedir(), '.patchwire', 'agent-sessions.json');
   const sessionStore = new SessionStore(sessionStorePath);
 
   // Mount DELETE /session/:id via the exported registrar so the same route

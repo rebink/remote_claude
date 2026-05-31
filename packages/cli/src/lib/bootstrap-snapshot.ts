@@ -265,10 +265,10 @@ export const defaultRsync: RsyncRunner = async function* ({ src, dest, port, key
     // Exclude the laptop's .git/ — the Mini gets a fresh sandbox repo via
     // bootstrap-snapshot's git_init step. Copying the laptop's .git/ would
     // bring its `[remote "origin"]` config along, which the safety step
-    // then refuses (and rightly so). Also exclude .remote-claude/ since
+    // then refuses (and rightly so). Also exclude .patchwire/ since
     // that's laptop-side config the Mini shouldn't see.
     '--exclude=.git/',
-    '--exclude=.remote-claude/',
+    '--exclude=.patchwire/',
     '-e',
     `ssh -i ${quoteForShell(keyPath)} -p ${port} -o StrictHostKeyChecking=accept-new -o BatchMode=yes`,
     src,

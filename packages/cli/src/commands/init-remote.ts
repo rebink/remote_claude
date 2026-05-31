@@ -87,7 +87,7 @@ export async function runInitRemote(
     }
   }
 
-  const keyPath = opts.keyPath ?? join(homedir(), '.remote-claude', 'keys', `${host}-${user}`);
+  const keyPath = opts.keyPath ?? join(homedir(), '.patchwire', 'keys', `${host}-${user}`);
   const localPath = opts.localPath ?? process.cwd();
 
   let lastFailure: Extract<BootstrapEvent, { type: 'step'; status: 'fail' }> | undefined;

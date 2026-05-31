@@ -58,12 +58,12 @@ export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<vo
     : await manualFlow(cwd, ts, opts);
 
   await writeYaml(cwd, answers);
-  await mkdir(join(cwd, '.remote-claude'), { recursive: true });
-  await ensureGitignoreEntry(cwd, ['.remote-claude/']);
+  await mkdir(join(cwd, '.patchwire'), { recursive: true });
+  await ensureGitignoreEntry(cwd, ['.patchwire/']);
 
-  const envFile = join(homedir(), '.remote-claude', 'env');
-  await mkdir(join(homedir(), '.remote-claude'), { recursive: true });
-  await writeFile(envFile, `export RC_TOKEN=${answers.token}\n`, 'utf8');
+  const envFile = join(homedir(), '.patchwire', 'env');
+  await mkdir(join(homedir(), '.patchwire'), { recursive: true });
+  await writeFile(envFile, `export PW_TOKEN=${answers.token}\n`, 'utf8');
   await chmod(envFile, 0o600);
 
   console.log();
@@ -72,13 +72,13 @@ export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<vo
   console.log();
   log.step('Next steps:');
   console.log(chalk.cyan('  1. Load the token in your shell:'));
-  console.log(`       echo 'source ~/.remote-claude/env' >> ~/.zshrc`);
-  console.log(`       source ~/.remote-claude/env`);
+  console.log(`       echo 'source ~/.patchwire/env' >> ~/.zshrc`);
+  console.log(`       source ~/.patchwire/env`);
   console.log();
   console.log(chalk.cyan('  2. On the Mac Mini, run:'));
   console.log(`       pnpm add -g github:rebink/remote_claude`);
-  console.log(`       export RC_AGENT_TOKEN=${answers.token}`);
-  console.log(`       export RC_PROJECTS_ROOT=${answers.path.replace(/\/[^/]+$/, '')}`);
+  console.log(`       export PW_AGENT_TOKEN=${answers.token}`);
+  console.log(`       export PW_PROJECTS_ROOT=${answers.path.replace(/\/[^/]+$/, '')}`);
   console.log(`       remote-claude-agent install        # registers as a launchd service`);
   console.log();
   console.log(chalk.cyan('  3. Verify the connection:'));
@@ -201,7 +201,7 @@ remote:
   path: ${a.path}
   sshPort: ${a.sshPort}
   agentUrl: ${a.agentUrl}
-  token: \${RC_TOKEN}
+  token: \${PW_TOKEN}
 sync:
   exclude:
     - build/

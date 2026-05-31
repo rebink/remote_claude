@@ -22,7 +22,7 @@ export interface SyncOpts {
  * files made it to the Mini regardless; the HEAD-tracking just won't update).
  */
 async function commitPostPush(cfg: Config): Promise<void> {
-  const keyPath = join(homedir(), '.remote-claude', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+  const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
   if (!existsSync(keyPath)) return;
   // `git add -A`: stage everything including untracked and deletions.
   // `--allow-empty`: commit even when no changes (rsync was a no-op).

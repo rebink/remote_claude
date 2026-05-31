@@ -34,16 +34,16 @@ export type Config = z.infer<typeof ConfigSchema>;
 const ENV_INTERPOLATION = /\$\{([A-Z0-9_]+)\}/g;
 
 /**
- * Load `~/.remote-claude/env` (KEY=VALUE lines, optional `export` prefix) into
+ * Load `~/.patchwire/env` (KEY=VALUE lines, optional `export` prefix) into
  * process.env for keys not already set. Idempotent. Lets GUI-launched callers
- * like the VS Code extension pick up RC_TOKEN even when their PATH-stripped
+ * like the VS Code extension pick up PW_TOKEN even when their PATH-stripped
  * environment doesn't have it set.
  */
 let rcEnvLoaded = false;
 function ensureRcEnvLoaded(): void {
   if (rcEnvLoaded) return;
   rcEnvLoaded = true;
-  const envPath = join(homedir(), '.remote-claude', 'env');
+  const envPath = join(homedir(), '.patchwire', 'env');
   if (!existsSync(envPath)) return;
   for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
     const m = line.match(/^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)=(.*)$/);

@@ -15,13 +15,13 @@ function envRequired(name: string): string {
 }
 
 async function runServe(): Promise<void> {
-  const token = envRequired('RC_AGENT_TOKEN');
-  const projectsRoot = envRequired('RC_PROJECTS_ROOT');
-  const host = process.env.RC_AGENT_HOST ?? '127.0.0.1';
-  const port = Number(process.env.RC_AGENT_PORT ?? 7878);
+  const token = envRequired('PW_AGENT_TOKEN');
+  const projectsRoot = envRequired('PW_PROJECTS_ROOT');
+  const host = process.env.PW_AGENT_HOST ?? '127.0.0.1';
+  const port = Number(process.env.PW_AGENT_PORT ?? 7878);
   const aiCommand = process.env.PW_AI_BIN ?? 'claude';
   const aiArgs = (process.env.PW_AI_ARGS ?? '--print').split(/\s+/).filter(Boolean);
-  const timeoutSec = Number(process.env.RC_TIMEOUT_SEC ?? 600);
+  const timeoutSec = Number(process.env.PW_TIMEOUT_SEC ?? 600);
 
   const app = buildServer({
     token,
@@ -67,10 +67,10 @@ program
 program
   .command('install')
   .description('Install as a launchd LaunchAgent so it starts on login (macOS)')
-  .option('--projects-root <path>', 'override RC_PROJECTS_ROOT')
-  .option('--port <n>', 'override RC_AGENT_PORT', (v: string) => Number(v))
-  .option('--host <h>', 'override RC_AGENT_HOST')
-  .option('--token <t>', 'override RC_AGENT_TOKEN')
+  .option('--projects-root <path>', 'override PW_PROJECTS_ROOT')
+  .option('--port <n>', 'override PW_AGENT_PORT', (v: string) => Number(v))
+  .option('--host <h>', 'override PW_AGENT_HOST')
+  .option('--token <t>', 'override PW_AGENT_TOKEN')
   .option('--ai-bin <path>', 'override PW_AI_BIN')
   .action(async (opts) => { await runDaemonInstall(opts); });
 

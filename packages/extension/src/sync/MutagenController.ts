@@ -38,7 +38,7 @@ const IGNORE_PATTERNS = [
   // Lock files we don't care about syncing live
   '.DS_Store',
   // Our own scratch
-  '.remote-claude',
+  '.patchwire',
   '.devbridge',
 ];
 
@@ -94,7 +94,7 @@ export class MutagenController {
     const cfgPath = join(sshDir, 'config');
     mkdirSync(sshDir, { recursive: true });
     chmodSync(sshDir, 0o700);
-    const keyPath = join(homedir(), '.remote-claude', 'keys', `${this.target.host}-${this.target.user}`);
+    const keyPath = join(homedir(), '.patchwire', 'keys', `${this.target.host}-${this.target.user}`);
     if (!existsSync(keyPath)) return;
 
     const marker = `# === Remote Claude managed: ${this.target.host} ===`;
