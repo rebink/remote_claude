@@ -40,7 +40,7 @@ interface InstallOptions {
   port?: number;
   host?: string;
   token?: string;
-  claudeBin?: string;
+  aiBin?: string;
 }
 
 export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void> {
@@ -62,14 +62,14 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
   const port = opts.port ?? Number(process.env.RC_AGENT_PORT ?? 7878);
   const host = opts.host ?? process.env.RC_AGENT_HOST ?? '0.0.0.0';
   const token = opts.token ?? process.env.RC_AGENT_TOKEN ?? randomBytes(32).toString('hex');
-  const claudeBin = opts.claudeBin ?? process.env.RC_CLAUDE_BIN ?? 'claude';
+  const aiBin = opts.aiBin ?? process.env.PW_AI_BIN ?? 'claude';
 
   await mkdir(logDir(), { recursive: true });
   await mkdir(join(homedir(), '.remote-claude'), { recursive: true });
 
   await writeFile(
     envFile(),
-    `# remote-claude-agent environment\nexport RC_AGENT_TOKEN=${token}\nexport RC_PROJECTS_ROOT=${projectsRoot}\nexport RC_AGENT_HOST=${host}\nexport RC_AGENT_PORT=${port}\nexport RC_CLAUDE_BIN=${claudeBin}\n`,
+    `# remote-claude-agent environment\nexport RC_AGENT_TOKEN=${token}\nexport RC_PROJECTS_ROOT=${projectsRoot}\nexport RC_AGENT_HOST=${host}\nexport RC_AGENT_PORT=${port}\nexport PW_AI_BIN=${aiBin}\n`,
     'utf8',
   );
   await chmod(envFile(), 0o600);
@@ -96,7 +96,7 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
     <key>RC_PROJECTS_ROOT</key><string>${escape(projectsRoot)}</string>
     <key>RC_AGENT_HOST</key><string>${escape(host)}</string>
     <key>RC_AGENT_PORT</key><string>${escape(String(port))}</string>
-    <key>RC_CLAUDE_BIN</key><string>${escape(claudeBin)}</string>
+    <key>PW_AI_BIN</key><string>${escape(aiBin)}</string>
   </dict>
 </dict>
 </plist>

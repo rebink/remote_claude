@@ -28,7 +28,7 @@ export function findAiBin(command: string): { found: boolean; path?: string } {
   return { found: false };
 }
 
-export function runClaude(opts: {
+export function runAi(opts: {
   command: string;
   args: string[];
   prompt: string;

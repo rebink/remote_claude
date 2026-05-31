@@ -27,7 +27,7 @@ describe('runChatTurn', () => {
       prompt: 'do thing',
       cwd: '/tmp/p',
       store: fakeStore as any,
-      claude: fakeClaude as any,
+      ai: fakeClaude as any,
       git: fakeGit as any,
       emit,
     });
@@ -58,7 +58,7 @@ describe('runChatTurn', () => {
         prompt: 'x',
         cwd: '/tmp/p',
         store: fakeStore as any,
-        claude: fakeClaude as any,
+        ai: fakeClaude as any,
         git: fakeGit as any,
         emit: (e: any) => events.push(e),
       }),
