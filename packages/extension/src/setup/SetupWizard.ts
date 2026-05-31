@@ -101,10 +101,10 @@ export class SetupWizard {
           return this.postState();
         }
 
-        // Derive a per-project SSH key path: ~/.remote-claude/keys/<host>-<user>
+        // Derive a per-project SSH key path: ~/.patchwire/keys/<host>-<user>
         const os = await import('node:os');
         const path = await import('node:path');
-        const keyPath = path.join(os.homedir(), '.remote-claude', 'keys', `${host}-${user}`);
+        const keyPath = path.join(os.homedir(), '.patchwire', 'keys', `${host}-${user}`);
 
         this.state = { ...this.state, busy: true, error: undefined, user, keyPath };
         this.postState();
@@ -207,19 +207,19 @@ export class SetupWizard {
         }
 
         // 2. Generate or reuse the agent token
-        const envPath = path.join(os.homedir(), '.remote-claude', 'env');
+        const envPath = path.join(os.homedir(), '.patchwire', 'env');
         let token: string;
         if (fs.existsSync(envPath)) {
           const envText = fs.readFileSync(envPath, 'utf8');
-          const match = envText.match(/^RC_TOKEN=(.+)$/m);
+          const match = envText.match(/^PW_TOKEN=(.+)$/m);
           token = match ? match[1] : crypto.randomBytes(32).toString('hex');
         } else {
           token = crypto.randomBytes(32).toString('hex');
           fs.mkdirSync(path.dirname(envPath), { recursive: true });
-          fs.writeFileSync(envPath, `RC_TOKEN=${token}\n`, { mode: 0o600 });
+          fs.writeFileSync(envPath, `PW_TOKEN=${token}\n`, { mode: 0o600 });
           this.output.appendLine(
             `Generated agent token at ${envPath} (mode 0600). ` +
-              `Set RC_AGENT_TOKEN=${token} on the Mac Mini's launchd agent for it to take effect.`,
+              `Set PW_AGENT_TOKEN=${token} on the Mac Mini's launchd agent for it to take effect.`,
           );
         }
 
@@ -244,7 +244,7 @@ export class SetupWizard {
                 sshPort,
                 path: remotePathOnMini,
                 agentUrl: `http://${host}:7878`,
-                token: '${RC_TOKEN}',
+                token: '${PW_TOKEN}',
               },
               sync: { exclude: ['build/', '.dart_tool/', 'ios/Pods/', 'node_modules/', '.git/'] },
               ai: { command: 'claude', args: ['--print'], timeoutSec: 600 },

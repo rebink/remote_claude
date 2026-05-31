@@ -36,7 +36,7 @@ export async function runDoctor(cwd: string): Promise<void> {
       const cfg = await loadConfig(cwd);
       checks.push({ name: 'patchwire.yml valid', pass: true });
 
-      const sshKeyPath = join(homedir(), '.remote-claude', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+      const sshKeyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
       const ssh = spawnSync(
         'ssh',
         [
@@ -70,7 +70,7 @@ export async function runDoctor(cwd: string): Promise<void> {
       // Safety: remote project has no git remotes configured.
       try {
         const { runSsh } = await import('../lib/ssh-runner.ts');
-        const keyPath = join(homedir(), '.remote-claude', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+        const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
         const remotePath = cfg.remote.path;
         const r = await runSsh({
           host: cfg.remote.host,

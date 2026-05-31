@@ -7,18 +7,18 @@ import { randomBytes } from 'node:crypto';
 import chalk from 'chalk';
 import { log } from '../lib/log.ts';
 
-const SERVICE_LABEL = 'com.remote-claude.agent';
+const SERVICE_LABEL = 'com.patchwire.agent';
 
 function plistPath(): string {
   return join(homedir(), 'Library', 'LaunchAgents', `${SERVICE_LABEL}.plist`);
 }
 
 function logDir(): string {
-  return join(homedir(), '.remote-claude', 'logs');
+  return join(homedir(), '.patchwire', 'logs');
 }
 
 function envFile(): string {
-  return join(homedir(), '.remote-claude', 'agent.env');
+  return join(homedir(), '.patchwire', 'agent.env');
 }
 
 function which(bin: string): string | undefined {
@@ -58,18 +58,18 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
   }
 
   const nodeBin = which('node') ?? '/usr/bin/env node';
-  const projectsRoot = opts.projectsRoot ?? process.env.RC_PROJECTS_ROOT ?? join(homedir(), 'workspace');
-  const port = opts.port ?? Number(process.env.RC_AGENT_PORT ?? 7878);
-  const host = opts.host ?? process.env.RC_AGENT_HOST ?? '0.0.0.0';
-  const token = opts.token ?? process.env.RC_AGENT_TOKEN ?? randomBytes(32).toString('hex');
+  const projectsRoot = opts.projectsRoot ?? process.env.PW_PROJECTS_ROOT ?? join(homedir(), 'workspace');
+  const port = opts.port ?? Number(process.env.PW_AGENT_PORT ?? 7878);
+  const host = opts.host ?? process.env.PW_AGENT_HOST ?? '0.0.0.0';
+  const token = opts.token ?? process.env.PW_AGENT_TOKEN ?? randomBytes(32).toString('hex');
   const aiBin = opts.aiBin ?? process.env.PW_AI_BIN ?? 'claude';
 
   await mkdir(logDir(), { recursive: true });
-  await mkdir(join(homedir(), '.remote-claude'), { recursive: true });
+  await mkdir(join(homedir(), '.patchwire'), { recursive: true });
 
   await writeFile(
     envFile(),
-    `# remote-claude-agent environment\nexport RC_AGENT_TOKEN=${token}\nexport RC_PROJECTS_ROOT=${projectsRoot}\nexport RC_AGENT_HOST=${host}\nexport RC_AGENT_PORT=${port}\nexport PW_AI_BIN=${aiBin}\n`,
+    `# patchwire-agent environment\nexport PW_AGENT_TOKEN=${token}\nexport PW_PROJECTS_ROOT=${projectsRoot}\nexport PW_AGENT_HOST=${host}\nexport PW_AGENT_PORT=${port}\nexport PW_AI_BIN=${aiBin}\n`,
     'utf8',
   );
   await chmod(envFile(), 0o600);
@@ -92,10 +92,10 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>${escape(path)}</string>
-    <key>RC_AGENT_TOKEN</key><string>${escape(token)}</string>
-    <key>RC_PROJECTS_ROOT</key><string>${escape(projectsRoot)}</string>
-    <key>RC_AGENT_HOST</key><string>${escape(host)}</string>
-    <key>RC_AGENT_PORT</key><string>${escape(String(port))}</string>
+    <key>PW_AGENT_TOKEN</key><string>${escape(token)}</string>
+    <key>PW_PROJECTS_ROOT</key><string>${escape(projectsRoot)}</string>
+    <key>PW_AGENT_HOST</key><string>${escape(host)}</string>
+    <key>PW_AGENT_PORT</key><string>${escape(String(port))}</string>
     <key>PW_AI_BIN</key><string>${escape(aiBin)}</string>
   </dict>
 </dict>
@@ -121,7 +121,7 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
   log.step('Token (share with the laptop):');
   console.log(`  ${chalk.bold(token)}`);
   console.log();
-  log.dim('On the laptop, set: export RC_TOKEN=<token-above>');
+  log.dim('On the laptop, set: export PW_TOKEN=<token-above>');
   console.log();
   log.step('Manage the service:');
   console.log(`  launchctl unload ${plistPath()}    # stop`);

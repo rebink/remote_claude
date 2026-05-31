@@ -4,11 +4,11 @@
  * REQUIRES:
  *   - `ssh user@127.0.0.1` works without a password prompt (pubkey installed in
  *     ~/.ssh/authorized_keys for the test user).
- *   - `RC_E2E=1` set in env.
+ *   - `PW_E2E=1` set in env.
  *   - Test user is the one running the test (or override with E2E_USER).
  *
  * Run:
- *   RC_E2E=1 pnpm test test/integration/bootstrap.e2e.test.ts
+ *   PW_E2E=1 pnpm test test/integration/bootstrap.e2e.test.ts
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { runInitRemote } from '../../src/commands/init-remote.ts';
 
-const ENABLED = process.env.RC_E2E === '1';
+const ENABLED = process.env.PW_E2E === '1';
 const E2E_USER = process.env.E2E_USER ?? userInfo().username;
 
 let projectDir: string;
@@ -43,7 +43,7 @@ afterAll(async () => {
 
 describe.skipIf(!ENABLED)('bootstrap e2e (localhost)', () => {
   it('bootstraps a populated project and leaves no git remotes', async () => {
-    // The CLI needs a key at ~/.remote-claude/keys/127.0.0.1-<user> for default path resolution.
+    // The CLI needs a key at ~/.patchwire/keys/127.0.0.1-<user> for default path resolution.
     // We point it at ~/.ssh/id_rsa or id_ed25519 via --key-path instead.
     const keyPath = process.env.E2E_KEY_PATH ?? join(homedir(), '.ssh', 'id_rsa');
     const r = await runInitRemote({

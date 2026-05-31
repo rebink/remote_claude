@@ -19,7 +19,7 @@ export async function runInit(cwd: string, opts: { force?: boolean } = {}): Prom
     { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' },
     { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 },
     { type: 'text', name: 'agentUrl', message: 'Agent URL', initial: 'http://${host}:7878' },
-    { type: 'text', name: 'tokenEnv', message: 'Env var holding bearer token', initial: 'RC_TOKEN' },
+    { type: 'text', name: 'tokenEnv', message: 'Env var holding bearer token', initial: 'PW_TOKEN' },
   ], { onCancel: () => process.exit(1) });
 
   const remotePath = String(answers.path).replace('${project}', String(answers.project));
@@ -50,8 +50,8 @@ ai:
   await writeFile(target, yaml, 'utf8');
   log.ok(`Wrote ${target}`);
 
-  await mkdir(join(cwd, '.remote-claude'), { recursive: true });
-  await ensureGitignoreEntry(cwd, ['.remote-claude/']);
+  await mkdir(join(cwd, '.patchwire'), { recursive: true });
+  await ensureGitignoreEntry(cwd, ['.patchwire/']);
   log.dim(`Set ${answers.tokenEnv} in your shell before running \`remote-claude ask\`.`);
 }
 

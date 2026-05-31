@@ -78,7 +78,7 @@ program
   .option('--host <host>', 'override host from patchwire.yml')
   .option('--user <user>', 'override user from patchwire.yml')
   .option('--ssh-port <n>', 'override SSH port', (v) => Number(v))
-  .option('--key-path <path>', 'per-project SSH key (default: ~/.remote-claude/keys/<host>-<user>)')
+  .option('--key-path <path>', 'per-project SSH key (default: ~/.patchwire/keys/<host>-<user>)')
   .option('--remote-path <path>', 'override remote project path (default: ~/workspace/<project>)')
   .option('--overwrite', 'if the remote path exists, rm -rf it first', false)
   .option('--use-existing', 'if the remote path exists, skip mkdir + rsync (config-only bootstrap)', false)
@@ -152,7 +152,7 @@ program
 
 program
   .command('apply')
-  .description('Apply a previously saved patch (default: .remote-claude/last.patch)')
+  .description('Apply a previously saved patch (default: .patchwire/last.patch)')
   .argument('[patch]', 'path to a patch file')
   .action(async (patch?: string) => {
     await runApply(process.cwd(), patch);
@@ -207,6 +207,6 @@ program
 
 program.parseAsync(process.argv).catch((err: Error) => {
   log.err(err.message);
-  if (process.env.RC_VERBOSE === '1') console.error(err.stack);
+  if (process.env.PW_VERBOSE === '1') console.error(err.stack);
   process.exit(1);
 });
