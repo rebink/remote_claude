@@ -54,8 +54,8 @@ describe('agent server', () => {
     const app = buildServer({
       token: TOKEN,
       projectsRoot,
-      claudeCommand: 'definitely-not-installed-xyz',
-      claudeArgs: [],
+      aiCommand: 'definitely-not-installed-xyz',
+      aiArgs: [],
       timeoutSec: 5,
       version: '0.0.0-test',
     });
@@ -69,7 +69,7 @@ describe('agent server', () => {
 
   it('rejects /ask without bearer token', async () => {
     const app = buildServer({
-      token: TOKEN, projectsRoot, claudeCommand: 'sh', claudeArgs: [], timeoutSec: 5, version: 'x',
+      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -82,7 +82,7 @@ describe('agent server', () => {
 
   it('returns 404 when project directory is missing', async () => {
     const app = buildServer({
-      token: TOKEN, projectsRoot, claudeCommand: 'sh', claudeArgs: [], timeoutSec: 5, version: 'x',
+      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -95,7 +95,7 @@ describe('agent server', () => {
 
   it('rejects malicious project names', async () => {
     const app = buildServer({
-      token: TOKEN, projectsRoot, claudeCommand: 'sh', claudeArgs: [], timeoutSec: 5, version: 'x',
+      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -115,7 +115,7 @@ printf 'brand new\\n' > c.txt`,
 
     const app = buildServer({
       token: TOKEN, projectsRoot,
-      claudeCommand: fakeClaudeBin, claudeArgs: [],
+      aiCommand: fakeClaudeBin, aiArgs: [],
       timeoutSec: 10, version: 'x',
     });
 
@@ -144,7 +144,7 @@ printf 'brand new\\n' > c.txt`,
     await writeFile(join(noGitDir, 'x.txt'), 'x', 'utf8');
 
     const app = buildServer({
-      token: TOKEN, projectsRoot, claudeCommand: 'sh', claudeArgs: [], timeoutSec: 5, version: 'x',
+      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -159,7 +159,7 @@ printf 'brand new\\n' > c.txt`,
     await writeFile(join(projectDir, 'a.txt'), 'changed by user\n', 'utf8');
 
     const app = buildServer({
-      token: TOKEN, projectsRoot, claudeCommand: 'sh', claudeArgs: [], timeoutSec: 5, version: 'x',
+      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',

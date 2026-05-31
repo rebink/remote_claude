@@ -13,7 +13,7 @@ import {
   isGitRepo,
   resetClean,
 } from './git.ts';
-import { findClaude, makeClaudeRunner, runClaude } from './claude.ts';
+import { findAiBin, makeAiRunner, runClaude } from './ai-runner.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
 import { TurnState } from './turn-state.ts';
@@ -21,8 +21,8 @@ import { TurnState } from './turn-state.ts';
 export interface AgentOptions {
   token: string;
   projectsRoot: string;
-  claudeCommand: string;
-  claudeArgs: string[];
+  aiCommand: string;
+  aiArgs: string[];
   timeoutSec: number;
   version: string;
   /** Path to the persistent session-store JSON. Defaults to `~/.remote-claude/agent-sessions.json`. */
@@ -93,9 +93,9 @@ export function buildServer(opts: AgentOptions) {
   const turns = new TurnState();
   registerSessionStatus(app, turns);
 
-  // Streaming runner configured from AgentOptions (not env). Honors `--claudeCommand`
-  // / `--claudeArgs` exactly the same way the `/ask` path does via `runClaude`.
-  const claudeRunner = makeClaudeRunner({ bin: opts.claudeCommand, args: opts.claudeArgs });
+  // Streaming runner configured from AgentOptions (not env). Honors `--aiCommand`
+  // / `--aiArgs` exactly the same way the `/ask` path does via `runClaude`.
+  const aiRunner = makeAiRunner({ bin: opts.aiCommand, args: opts.aiArgs });
 
   app.addHook('onRequest', async (req, reply) => {
     if (req.url === '/health') return;
@@ -106,7 +106,7 @@ export function buildServer(opts: AgentOptions) {
   });
 
   app.get('/health', async () => {
-    const claude = findClaude(opts.claudeCommand);
+    const claude = findAiBin(opts.aiCommand);
     return { ok: true, version: opts.version, claude };
   });
 
@@ -136,8 +136,8 @@ export function buildServer(opts: AgentOptions) {
     let claudeResult;
     try {
       claudeResult = await runClaude({
-        command: opts.claudeCommand,
-        args: opts.claudeArgs,
+        command: opts.aiCommand,
+        args: opts.aiArgs,
         prompt,
         cwd: projectDir,
         timeoutMs: opts.timeoutSec * 1000,
@@ -184,7 +184,7 @@ export function buildServer(opts: AgentOptions) {
 
     // TODO (M3 Task 24): wire client-disconnect cancellation by listening on
     //   req.raw.on('close') and aborting the spawned claude child via AbortSignal.
-    //   Requires plumbing an AbortSignal through claudeRunner.run.
+    //   Requires plumbing an AbortSignal through aiRunner.run.
     turns.start(body.uuid);
     try {
       await runChatTurn({
@@ -192,7 +192,7 @@ export function buildServer(opts: AgentOptions) {
         prompt: body.prompt,
         cwd,
         store: sessionStore,
-        claude: claudeRunner,
+        claude: aiRunner,
         git: { diffHead, cleanResetToHead },
         // Wrap emit to record completion in TurnState. The wrapper MUST forward
         // every event to the original `emit` — the side effect for `chat_done`

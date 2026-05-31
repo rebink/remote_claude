@@ -9,7 +9,7 @@ export interface ClaudeResult {
   exitCode: number;
 }
 
-export function findClaude(command: string): { found: boolean; path?: string } {
+export function findAiBin(command: string): { found: boolean; path?: string } {
   if (command.includes('/')) {
     if (existsSync(command)) return { found: true, path: command };
     return { found: false };
@@ -61,13 +61,13 @@ export function runClaude(opts: {
 
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      settleReject(new Error(`claude execution timed out after ${opts.timeoutMs}ms`));
+      settleReject(new Error(`AI command timed out after ${opts.timeoutMs}ms`));
     }, opts.timeoutMs);
 
     child.stdin.on('error', (err: Error) => {
-      // EPIPE if claude exits before we finish writing — surface as a process-level failure.
+      // EPIPE if AI command exits before we finish writing — surface as a process-level failure.
       clearTimeout(timer);
-      settleReject(new Error(`claude stdin error: ${err.message}`));
+      settleReject(new Error(`AI command stdin error: ${err.message}`));
     });
     child.on('error', (err) => {
       clearTimeout(timer);
@@ -82,15 +82,15 @@ export function runClaude(opts: {
   });
 }
 
-export function probeClaudeVersion(commandPath: string): string | undefined {
+export function probeAiVersion(commandPath: string): string | undefined {
   const r = spawnSync(commandPath, ['--version'], { encoding: 'utf8', timeout: 5000 });
   if (r.status === 0 && r.stdout) return r.stdout.trim();
   return undefined;
 }
 
 /**
- * Streaming Claude runner used by `runChatTurn`. Constructed via {@link makeClaudeRunner}
- * with the configured binary path + base args. Resumes a Claude session by id
+ * Streaming AI runner used by `runChatTurn`. Constructed via {@link makeAiRunner}
+ * with the configured binary path + base args. Resumes an AI session by id
  * and streams stdout chunks via `onText`. Resolves when the child exits 0.
  */
 export interface ClaudeStreamingOptions {
@@ -99,7 +99,7 @@ export interface ClaudeStreamingOptions {
   args: string[];
 }
 
-export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
+export function makeAiRunner(opts: ClaudeStreamingOptions) {
   return {
     async run(
       sessionId: string,
@@ -127,7 +127,7 @@ export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
         const child = spawn(opts.bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
         child.stdin.on('error', (err: Error) =>
-          settleReject(new Error(`claude stdin error: ${err.message}`)),
+          settleReject(new Error(`AI command stdin error: ${err.message}`)),
         );
 
         let out = '';
@@ -147,10 +147,10 @@ export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
           // and propagate a remediation message.
           if (isNotLoggedIn(out)) {
             tryDisableKeychainAutoLock();
-            settleReject(new Error(`claude exited ${code} (auth-locked).\n${NOT_LOGGED_IN_REMEDIATION}`));
+            settleReject(new Error(`AI command exited ${code} (auth-locked).\n${NOT_LOGGED_IN_REMEDIATION}`));
             return;
           }
-          settleReject(new Error(`claude exited ${code}`));
+          settleReject(new Error(`AI command exited ${code}`));
         });
 
         child.stdin.write(prompt);
@@ -164,10 +164,10 @@ export function makeClaudeRunner(opts: ClaudeStreamingOptions) {
  * Env-based fallback runner used by tests / contexts without {@link AgentOptions}.
  *
  * Configurable via env:
- *   RC_CLAUDE_BIN  — path to the claude binary (default: "claude")
- *   RC_CLAUDE_ARGS — space-separated args (default: "--print")
+ *   PW_AI_BIN  — path to the AI binary (default: "claude")
+ *   PW_AI_ARGS — space-separated args (default: "--print")
  */
-export const claudeRunner = makeClaudeRunner({
-  bin: process.env.RC_CLAUDE_BIN || 'claude',
-  args: process.env.RC_CLAUDE_ARGS?.split(' ').filter(Boolean) ?? ['--print'],
+export const aiRunner = makeAiRunner({
+  bin: process.env.PW_AI_BIN || 'claude',
+  args: process.env.PW_AI_ARGS?.split(' ').filter(Boolean) ?? ['--print'],
 });
