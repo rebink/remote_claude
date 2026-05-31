@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import type { CliEvent } from './events.ts';
+import type { CliEvent } from '@remote-claude/protocol';
 
 export function parseJsonl(onEvent: (e: CliEvent) => void): (chunk: string) => void {
   let buf = '';
