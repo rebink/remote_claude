@@ -32,8 +32,8 @@
     "node": ">=20"
   },
   "bin": {
-    "remote-claude": "./dist/cli.js",
-    "remote-claude-agent": "./dist/agent.js"
+    "patchwire": "./dist/cli.js",
+    "patchwire-agent": "./dist/agent.js"
   },
   "files": [
     "dist",
