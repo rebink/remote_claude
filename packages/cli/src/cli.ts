@@ -18,7 +18,7 @@ program
 program
   .command('setup')
   .description('One-shot setup: auto-detect Tailscale peers, generate token, write config')
-  .option('-f, --force', 'overwrite existing remote-claude.yml')
+  .option('-f, --force', 'overwrite existing patchwire.yml')
   .option('--no-tailscale', 'skip Tailscale auto-detection')
   .option('--host <host>', 'Mac Mini IP/hostname (skips Tailscale picker)')
   .option('--user <user>', 'remote SSH user')
@@ -65,7 +65,7 @@ program
 program
   .command('init')
   .description('Minimal config (alias for setup --no-tailscale; rarely needed)')
-  .option('-f, --force', 'overwrite existing remote-claude.yml')
+  .option('-f, --force', 'overwrite existing patchwire.yml')
   .action(async (opts) => {
     await runInit(process.cwd(), opts);
   });
@@ -75,8 +75,8 @@ program
   .description('Bootstrap a project on the remote Mac Mini by pushing the local working directory')
   .requiredOption('--from-local', 'push the current working directory (the only supported mode)')
   .requiredOption('--project <name>', 'project directory name on the remote ([a-zA-Z0-9._-]+)')
-  .option('--host <host>', 'override host from remote-claude.yml')
-  .option('--user <user>', 'override user from remote-claude.yml')
+  .option('--host <host>', 'override host from patchwire.yml')
+  .option('--user <user>', 'override user from patchwire.yml')
   .option('--ssh-port <n>', 'override SSH port', (v) => Number(v))
   .option('--key-path <path>', 'per-project SSH key (default: ~/.remote-claude/keys/<host>-<user>)')
   .option('--remote-path <path>', 'override remote project path (default: ~/workspace/<project>)')

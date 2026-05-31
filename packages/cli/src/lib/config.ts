@@ -58,7 +58,7 @@ function interpolateEnv(value: unknown): unknown {
     return value.replace(ENV_INTERPOLATION, (_, name) => {
       const v = process.env[name];
       if (v === undefined) {
-        throw new Error(`Environment variable ${name} is not set (referenced in remote-claude.yml)`);
+        throw new Error(`Environment variable ${name} is not set (referenced in patchwire.yml)`);
       }
       return v;
     });
@@ -72,7 +72,7 @@ function interpolateEnv(value: unknown): unknown {
   return value;
 }
 
-export const DEFAULT_CONFIG_PATH = 'remote-claude.yml';
+export const DEFAULT_CONFIG_PATH = 'patchwire.yml';
 
 export async function loadConfig(cwd = process.cwd(), path = DEFAULT_CONFIG_PATH): Promise<Config> {
   const full = resolve(cwd, path);
@@ -86,7 +86,7 @@ export async function loadConfig(cwd = process.cwd(), path = DEFAULT_CONFIG_PATH
   const result = ConfigSchema.safeParse(interpolated);
   if (!result.success) {
     const issues = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
-    throw new Error(`Invalid remote-claude.yml:\n${issues}`);
+    throw new Error(`Invalid patchwire.yml:\n${issues}`);
   }
   return result.data;
 }

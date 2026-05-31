@@ -231,8 +231,8 @@ export class SetupWizard {
         const localUser = rawLocalUser.replace(/[^a-z0-9._-]/g, '-').replace(/^-+|-+$/g, '') || 'shared';
         const remotePathOnMini = `~/workspace/${localUser}/${projectName}`;
 
-        // 3. Write remote-claude.yml in the local folder
-        const yamlPath = path.join(expandedLocalPath, 'remote-claude.yml');
+        // 3. Write patchwire.yml in the local folder
+        const yamlPath = path.join(expandedLocalPath, 'patchwire.yml');
         try {
           fs.writeFileSync(
             yamlPath,
@@ -254,7 +254,7 @@ export class SetupWizard {
           this.state = { ...this.state, busy: false };
           this.panel?.webview.postMessage({
             type: 'step3Result',
-            result: { ok: false, where: 'local', stderr: `Failed to write remote-claude.yml: ${(err as Error).message}` },
+            result: { ok: false, where: 'local', stderr: `Failed to write patchwire.yml: ${(err as Error).message}` },
           });
           return this.postState();
         }
@@ -405,7 +405,7 @@ export class SetupWizard {
       }
       case 'step4Finish': {
         this.panel?.dispose();
-        // Reload the window so the extension reactivates and picks up the new remote-claude.yml.
+        // Reload the window so the extension reactivates and picks up the new patchwire.yml.
         await vscode.commands.executeCommand('workbench.action.reloadWindow');
         return;
       }

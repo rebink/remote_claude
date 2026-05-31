@@ -38,9 +38,9 @@ export interface SetupOptions {
 }
 
 export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<void> {
-  const target = join(cwd, 'remote-claude.yml');
+  const target = join(cwd, 'patchwire.yml');
   if (existsSync(target) && !opts.force) {
-    log.warn(`remote-claude.yml already exists. Use --force to overwrite.`);
+    log.warn(`patchwire.yml already exists. Use --force to overwrite.`);
     return;
   }
 
@@ -215,7 +215,7 @@ ai:
     - --print
   timeoutSec: 600
 `;
-  await writeFile(join(cwd, 'remote-claude.yml'), yaml, 'utf8');
+  await writeFile(join(cwd, 'patchwire.yml'), yaml, 'utf8');
 }
 
 async function ensureGitignoreEntry(cwd: string, entries: string[]): Promise<void> {

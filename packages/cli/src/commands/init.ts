@@ -5,9 +5,9 @@ import prompts from 'prompts';
 import { log } from '../lib/log.ts';
 
 export async function runInit(cwd: string, opts: { force?: boolean } = {}): Promise<void> {
-  const target = join(cwd, 'remote-claude.yml');
+  const target = join(cwd, 'patchwire.yml');
   if (existsSync(target) && !opts.force) {
-    log.warn(`remote-claude.yml already exists at ${target}. Use --force to overwrite.`);
+    log.warn(`patchwire.yml already exists at ${target}. Use --force to overwrite.`);
     return;
   }
 
