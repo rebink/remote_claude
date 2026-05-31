@@ -37,7 +37,7 @@ function render(): void {
 
   if (!currentState.configured) {
     root.append(
-      h('div', { className: 'header' }, h('h2', {}, 'Remote Claude')),
+      h('div', { className: 'header' }, h('h2', {}, 'Patchwire')),
       h('p', { className: 'empty' }, 'No patchwire.yml in this workspace yet.'),
       h('button', {
         className: 'primary',
@@ -52,7 +52,7 @@ function render(): void {
 
 function renderHeader(): HTMLElement {
   return h('div', { className: 'header' },
-    h('h2', {}, currentState.project ?? 'Remote Claude'),
+    h('h2', {}, currentState.project ?? 'Patchwire'),
     h('div', { className: 'subtitle' }, `${currentState.user}@${currentState.host}`),
     h('div', { className: 'subtitle' }, currentState.remotePath ?? ''),
   );

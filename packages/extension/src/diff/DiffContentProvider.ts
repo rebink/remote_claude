@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { spawnSync } from 'node:child_process';
 
-export const SCHEME = 'remote-claude';
+export const SCHEME = 'patchwire';
 
 export class DiffContentProvider implements vscode.TextDocumentContentProvider {
   private emitter = new vscode.EventEmitter<vscode.Uri>();

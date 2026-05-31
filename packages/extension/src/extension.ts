@@ -7,12 +7,12 @@ import { registerCommands } from './commands.ts';
 import { SetupWizard } from './setup/SetupWizard.ts';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const output = vscode.window.createOutputChannel('Remote Claude');
+  const output = vscode.window.createOutputChannel('Patchwire');
   context.subscriptions.push(output);
-  output.appendLine('Remote Claude activated.');
+  output.appendLine('Patchwire activated.');
 
   const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  if (!ws) { output.appendLine('No workspace open — Remote Claude is idle.'); return; }
+  if (!ws) { output.appendLine('No workspace open — Patchwire is idle.'); return; }
 
   const diff = new DiffContentProvider();
   context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(SCHEME, diff));

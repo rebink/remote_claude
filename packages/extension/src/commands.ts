@@ -10,11 +10,11 @@ export interface ExtensionDeps {
 
 export function registerCommands(context: vscode.ExtensionContext, deps: ExtensionDeps): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('remoteClaude.viewOutput', () => deps.output.show()),
-    vscode.commands.registerCommand('remoteClaude.openSetup', () => deps.setupWizard.show()),
+    vscode.commands.registerCommand('patchwire.viewOutput', () => deps.output.show()),
+    vscode.commands.registerCommand('patchwire.openSetup', () => deps.setupWizard.show()),
     // Kept for any user keybindings that still reference these — both now
     // just refresh the panel since live-sync is automatic via Mutagen.
-    vscode.commands.registerCommand('remoteClaude.toggleLiveSync', () => deps.panel.refresh()),
-    vscode.commands.registerCommand('remoteClaude.newChat', () => deps.panel.refresh()),
+    vscode.commands.registerCommand('patchwire.toggleLiveSync', () => deps.panel.refresh()),
+    vscode.commands.registerCommand('patchwire.newChat', () => deps.panel.refresh()),
   );
 }

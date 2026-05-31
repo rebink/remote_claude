@@ -1,9 +1,9 @@
 {
   "name": "patchwire-vscode",
-  "displayName": "Remote Claude",
-  "description": "Chat with Claude on a remote Mac Mini from VS Code.",
+  "displayName": "Patchwire",
+  "description": "Chat with an AI on a remote Mac from VS Code. Diffs come back for review.",
   "version": "0.1.0",
-  "publisher": "remote-claude",
+  "publisher": "patchwire",
   "private": true,
   "repository": {
     "type": "git",
@@ -17,19 +17,19 @@
   "activationEvents": ["onStartupFinished"],
   "contributes": {
     "commands": [
-      { "command": "remoteClaude.openSetup", "title": "Remote Claude: Setup…" },
-      { "command": "remoteClaude.newChat", "title": "Remote Claude: New Chat" },
-      { "command": "remoteClaude.toggleLiveSync", "title": "Remote Claude: Toggle Live Sync" },
-      { "command": "remoteClaude.viewOutput", "title": "Remote Claude: Show Output" }
+      { "command": "patchwire.openSetup", "title": "Patchwire: Setup…" },
+      { "command": "patchwire.newChat", "title": "Patchwire: New Chat" },
+      { "command": "patchwire.toggleLiveSync", "title": "Patchwire: Toggle Live Sync" },
+      { "command": "patchwire.viewOutput", "title": "Patchwire: Show Output" }
     ],
     "viewsContainers": {
       "activitybar": [
-        { "id": "remoteClaude", "title": "Remote Claude", "icon": "$(comment-discussion)" }
+        { "id": "patchwire", "title": "Patchwire", "icon": "$(comment-discussion)" }
       ]
     },
     "views": {
-      "remoteClaude": [
-        { "type": "webview", "id": "remoteClaude.chatPanel", "name": "Chat" }
+      "patchwire": [
+        { "type": "webview", "id": "patchwire.chatPanel", "name": "Chat" }
       ]
     }
   },
@@ -54,7 +54,7 @@
     "typescript": "^5.5.3",
     "vitest": "^2.0.4"
   },
-  "remoteClaude": {
+  "patchwire": {
     "minimumCliVersion": "0.2.0"
   }
 }
