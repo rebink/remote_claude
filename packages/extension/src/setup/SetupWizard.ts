@@ -33,8 +33,8 @@ export class SetupWizard {
       return this.panel;
     }
     const panel = vscode.window.createWebviewPanel(
-      'remoteClaude.setup',
-      'Remote Claude — Setup',
+      'patchwire.setup',
+      'Patchwire — Setup',
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -70,7 +70,7 @@ export class SetupWizard {
         // since the runJsonl helper is for streaming subcommands. See M5.T30.
         try {
           const cp = await import('node:child_process');
-          const r = cp.spawnSync('remote-claude', ['setup', '--list-peers', '--json'], { encoding: 'utf8' });
+          const r = cp.spawnSync('patchwire', ['setup', '--list-peers', '--json'], { encoding: 'utf8' });
           const peers = r.status === 0 ? JSON.parse(r.stdout || '[]') : [];
           this.panel?.webview.postMessage({ type: 'step1Peers', peers });
         } catch (err) {
@@ -109,7 +109,7 @@ export class SetupWizard {
         this.state = { ...this.state, busy: true, error: undefined, user, keyPath };
         this.postState();
 
-        // Spawn `remote-claude setup --password-stdin --host ... --user ... --ssh-port ... --key-path ... [--trust-new-key]`
+        // Spawn `patchwire setup --password-stdin --host ... --user ... --ssh-port ... --key-path ... [--trust-new-key]`
         const cp = await import('node:child_process');
         const args = [
           'setup', '--password-stdin',
@@ -120,7 +120,7 @@ export class SetupWizard {
         ];
         if (trustNewKey) args.push('--trust-new-key');
 
-        const child = cp.spawn('remote-claude', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+        const child = cp.spawn('patchwire', args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
         const pwBuf = Buffer.from(password + '\n');
         child.stdin.write(pwBuf);
@@ -148,7 +148,7 @@ export class SetupWizard {
 
         let result: { ok: boolean; code?: string; stderr?: string };
         if (spawnError) {
-          result = { ok: false, code: 'spawn_failed', stderr: `Failed to spawn remote-claude: ${spawnError.message}. Is it on PATH?` };
+          result = { ok: false, code: 'spawn_failed', stderr: `Failed to spawn patchwire: ${spawnError.message}. Is it on PATH?` };
         } else {
           try {
             result = JSON.parse(stdout || '{"ok":false,"code":"unknown"}');
@@ -259,13 +259,13 @@ export class SetupWizard {
           return this.postState();
         }
 
-        // 4. Spawn `remote-claude init-remote --from-local --json` and stream NDJSON
+        // 4. Spawn `patchwire init-remote --from-local --json` and stream NDJSON
         this.output.appendLine(`Pushing ${expandedLocalPath} → ${remotePathOnMini}…`);
         const args = ['init-remote', '--from-local', '--project', projectName, '--host', host, '--user', user, '--ssh-port', String(sshPort), '--remote-path', remotePathOnMini, '--json'];
         if (overwrite) args.push('--overwrite');
         if (useExisting) args.push('--use-existing');
 
-        const child = cp.spawn('remote-claude', args, { cwd: expandedLocalPath, stdio: ['ignore', 'pipe', 'pipe'] });
+        const child = cp.spawn('patchwire', args, { cwd: expandedLocalPath, stdio: ['ignore', 'pipe', 'pipe'] });
         let stdoutBuf = '';
         let stderrBuf = '';
         let lastFailure: { code?: string; stderr?: string; name?: string } | undefined;
@@ -302,7 +302,7 @@ export class SetupWizard {
           child.on('error', (err) => {
             if (settled) return;
             settled = true;
-            this.output.appendLine(`Failed to spawn remote-claude: ${err.message}. Is it on PATH?`);
+            this.output.appendLine(`Failed to spawn patchwire: ${err.message}. Is it on PATH?`);
             resolve(null);
           });
           child.on('close', (code) => {
@@ -376,7 +376,7 @@ export class SetupWizard {
           : localPath;
 
         const r = await new Promise<{ ok: boolean; stdout: string; stderr: string }>((resolve) => {
-          const child = cp.spawn('remote-claude', ['doctor'], { cwd: expandedLocalPath });
+          const child = cp.spawn('patchwire', ['doctor'], { cwd: expandedLocalPath });
           let stdout = '';
           let stderr = '';
           child.stdout?.on('data', (c: Buffer) => { stdout += c.toString(); });
@@ -388,7 +388,7 @@ export class SetupWizard {
             resolve({
               ok: false,
               stdout: '',
-              stderr: `Failed to spawn remote-claude: ${err.message}. Is it on PATH?`,
+              stderr: `Failed to spawn patchwire: ${err.message}. Is it on PATH?`,
             });
           });
           child.on('close', (code) => {

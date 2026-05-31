@@ -10,7 +10,7 @@ export interface SessionTarget {
   remotePath: string;
 }
 
-/** Returns the active Remote Claude terminal if one exists. */
+/** Returns the active Patchwire terminal if one exists. */
 export function findExistingSessionTerminal(project: string): vscode.Terminal | undefined {
   const name = `${TERMINAL_NAME_PREFIX} ${project}`;
   return vscode.window.terminals.find((t) => t.name === name && t.exitStatus === undefined);
@@ -65,7 +65,7 @@ export function openSessionTerminal(target: SessionTarget): vscode.Terminal {
   // can sneak in.
   const remoteCmd = [
     `cd ${target.remotePath}`,
-    `printf '\\033[36m── Remote Claude · %s:%s\\033[0m\\n' "$(hostname)" "$(pwd)"`,
+    `printf '\\033[36m── Patchwire · %s:%s\\033[0m\\n' "$(hostname)" "$(pwd)"`,
     `exec zsh -lic claude`,
   ].join(' && ');
   sshArgs.push(remoteCmd);

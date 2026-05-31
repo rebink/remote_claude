@@ -32,7 +32,7 @@ export interface ChatPanelDeps {
 }
 
 /**
- * Sidebar panel for the terminal-based Remote Claude session.
+ * Sidebar panel for the terminal-based Patchwire session.
  *
  * Phase 2 architecture: bidirectional sync is handled by Mutagen
  * (`MutagenController`). The panel just shows session controls and the
@@ -40,7 +40,7 @@ export interface ChatPanelDeps {
  * mirrored automatically.
  */
 export class ChatPanel implements vscode.WebviewViewProvider {
-  static readonly viewId = 'remoteClaude.chatPanel';
+  static readonly viewId = 'patchwire.chatPanel';
   private view?: vscode.WebviewView;
   private mutagen?: MutagenController;
   private syncStatus: MutagenStatus = { kind: 'no_session' };
@@ -97,7 +97,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     view.webview.onDidReceiveMessage(async (msg: { type: string; [k: string]: unknown }) => {
       switch (msg.type) {
         case 'ready':           return this.postState();
-        case 'openSetup':       return vscode.commands.executeCommand('remoteClaude.openSetup');
+        case 'openSetup':       return vscode.commands.executeCommand('patchwire.openSetup');
         case 'openSession':     return this.handleOpenSession();
         case 'flushSync':       return this.mutagen?.flush();
         case 'pauseSync':       this.mutagen?.pause(); return;

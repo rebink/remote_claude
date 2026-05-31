@@ -97,8 +97,8 @@ export class MutagenController {
     const keyPath = join(homedir(), '.patchwire', 'keys', `${this.target.host}-${this.target.user}`);
     if (!existsSync(keyPath)) return;
 
-    const marker = `# === Remote Claude managed: ${this.target.host} ===`;
-    const endMarker = `# === Remote Claude managed: ${this.target.host} end ===`;
+    const marker = `# === Patchwire managed: ${this.target.host} ===`;
+    const endMarker = `# === Patchwire managed: ${this.target.host} end ===`;
     const block = [
       marker,
       `Host ${this.target.host}`,

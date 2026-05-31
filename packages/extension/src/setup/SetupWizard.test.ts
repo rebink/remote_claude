@@ -72,7 +72,7 @@ afterEach(() => {
 });
 
 describe('SetupWizard step3Submit', () => {
-  it('spawns remote-claude init-remote --from-local --json with parsed inputs', async () => {
+  it('spawns patchwire init-remote --from-local --json with parsed inputs', async () => {
     stubChild = makeChild(
       [
         JSON.stringify({ type: 'step', name: 'probe', status: 'start' }),
@@ -103,7 +103,7 @@ describe('SetupWizard step3Submit', () => {
       projectName: 'demo',
     });
 
-    const call = spawnCalls.find((c) => c.cmd === 'remote-claude');
+    const call = spawnCalls.find((c) => c.cmd === 'patchwire');
     expect(call).toBeDefined();
     expect(call!.args).toContain('init-remote');
     expect(call!.args).toContain('--from-local');
