@@ -34,7 +34,7 @@
     }
   },
   "scripts": {
-    "build": "tsup && tsup --config tsup.webview.config.ts && tsup --config tsup.setup-webview.config.ts && cp src/chat/webview/index.html src/chat/webview/styles.css dist/webview/ && cp src/setup/webview/index.html src/setup/webview/styles.css dist/setup-webview/",
+    "build": "tsup",
     "dev": "pnpm build --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
