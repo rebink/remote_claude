@@ -38,6 +38,7 @@
     "dev": "pnpm build --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "smoke": "bash scripts/smoke-extension.sh",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {

@@ -51,8 +51,7 @@
     "lint": "tsc --noEmit",
     "prepare": "[ -f tsup.config.ts ] && tsup || echo 'no source — skipping build'",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build",
-    "postinstall": "bash scripts/fetch-sshpass.sh || true",
-    "smoke:extension": "bash scripts/smoke-extension.sh"
+    "postinstall": "bash scripts/fetch-sshpass.sh || true"
   },
   "dependencies": {
     "@remote-claude/protocol": "workspace:*",
