@@ -44,13 +44,22 @@ async function runServe(): Promise<void> {
   });
 
   if (migration.migrated) {
-    const projectsMigration = migrateProjectsToDefault({ projectsRoot });
-    app.log.info(
-      `migrated v0.1 → v0.2: created 'default' user from PW_AGENT_TOKEN, ` +
-        `moved ${projectsMigration.moved.length} project(s) into ${projectsRoot}/default/`,
-    );
-    if (projectsMigration.moved.length > 0) {
-      app.log.info(`moved projects: ${projectsMigration.moved.join(', ')}`);
+    try {
+      const projectsMigration = migrateProjectsToDefault({ projectsRoot });
+      app.log.info(
+        `migrated v0.1 → v0.2: created 'default' user from PW_AGENT_TOKEN, ` +
+          `moved ${projectsMigration.moved.length} project(s) into ${projectsRoot}/default/`,
+      );
+      if (projectsMigration.moved.length > 0) {
+        app.log.info(`moved projects: ${projectsMigration.moved.join(', ')}`);
+      }
+    } catch (err) {
+      // A migration conflict (e.g., PROJECTS_ROOT/default/<name> already exists)
+      // must not silently corrupt state. Surface a clear error and refuse to start
+      // so the operator can resolve the collision by hand before retrying.
+      app.log.error(`v0.1 → v0.2 project migration failed: ${(err as Error).message}`);
+      app.log.error(`refusing to start; resolve the conflict manually and rerun`);
+      process.exit(1);
     }
   }
   if (usersStore.list().length === 0) {
