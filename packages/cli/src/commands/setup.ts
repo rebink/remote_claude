@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import * as fs from 'node:fs';
 import { writeFile, mkdir, readFile, chmod } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
-import { homedir } from 'node:os';
+import { homedir, userInfo } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import chalk from 'chalk';
@@ -21,6 +21,7 @@ interface SetupAnswers {
   sshPort: number;
   agentUrl: string;
   token: string;
+  username: string;
 }
 
 export interface SetupOptions {
@@ -35,6 +36,7 @@ export interface SetupOptions {
   sshPort?: number;
   agentPort?: number;
   token?: string;
+  username?: string;
 }
 
 export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<void> {
@@ -47,6 +49,8 @@ export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<vo
   log.step(chalk.bold('Patchwire — one-shot setup'));
   console.log();
 
+  const username = opts.username ?? userInfo().username;
+
   // --host (or --no-tailscale) skips the tailnet picker entirely.
   const skipTailscale = opts.noTailscale === true || typeof opts.host === 'string';
   const ts = skipTailscale
@@ -56,6 +60,7 @@ export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<vo
   const answers = !skipTailscale && ts.running && ts.peers.length > 0
     ? await tailnetFlow(cwd, ts.peers, opts)
     : await manualFlow(cwd, ts, opts);
+  answers.username = username;
 
   await writeYaml(cwd, answers);
   await mkdir(join(cwd, '.patchwire'), { recursive: true });
@@ -63,7 +68,11 @@ export async function runSetup(cwd: string, opts: SetupOptions = {}): Promise<vo
 
   const envFile = join(homedir(), '.patchwire', 'env');
   await mkdir(join(homedir(), '.patchwire'), { recursive: true });
-  await writeFile(envFile, `export PW_TOKEN=${answers.token}\n`, 'utf8');
+  await writeFile(
+    envFile,
+    `export PW_TOKEN=${answers.token}\nexport PW_USER=${answers.username}\n`,
+    'utf8',
+  );
   await chmod(envFile, 0o600);
 
   console.log();
@@ -118,7 +127,7 @@ async function tailnetFlow(cwd: string, peers: TailscalePeer[], opts: SetupOptio
   const questions = [
     maybeAsk(!!opts.project, { type: 'text', name: 'project', message: 'Project name on remote', initial: basename(cwd) }),
     maybeAsk(!!opts.user, { type: 'text', name: 'user', message: 'Remote user (SSH)', initial: process.env.USER ?? 'rebin' }),
-    maybeAsk(!!opts.path, { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' }),
+    maybeAsk(!!opts.path, { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${PW_USER}/${project}' }),
     maybeAsk(opts.sshPort !== undefined, { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 }),
   ].filter((q): q is prompts.PromptObject<string> => q !== null);
 
@@ -138,6 +147,7 @@ async function tailnetFlow(cwd: string, peers: TailscalePeer[], opts: SetupOptio
     sshPort,
     agentUrl: `http://${host}:${agentPort}`,
     token: opts.token ?? generateToken(),
+    username: '',
   };
 }
 
@@ -163,7 +173,7 @@ async function manualFlow(
     maybeAsk(!!opts.project, { type: 'text', name: 'project', message: 'Project name on remote', initial: basename(cwd) }),
     maybeAsk(!!opts.host, { type: 'text', name: 'host', message: 'Mac Mini host (IP or hostname)', initial: '192.168.1.10' }),
     maybeAsk(!!opts.user, { type: 'text', name: 'user', message: 'Remote user (SSH)', initial: process.env.USER ?? 'rebin' }),
-    maybeAsk(!!opts.path, { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${project}' }),
+    maybeAsk(!!opts.path, { type: 'text', name: 'path', message: 'Remote project path', initial: '~/workspace/${PW_USER}/${project}' }),
     maybeAsk(opts.sshPort !== undefined, { type: 'number', name: 'sshPort', message: 'SSH port', initial: 22 }),
     maybeAsk(opts.agentPort !== undefined, { type: 'number', name: 'agentPort', message: 'Agent HTTP port', initial: 7878 }),
   ].filter((q): q is prompts.PromptObject<string> => q !== null);
@@ -186,6 +196,7 @@ async function manualFlow(
     sshPort,
     agentUrl: `http://${host}:${agentPort}`,
     token: opts.token ?? generateToken(),
+    username: '',
   };
 }
 

@@ -27,6 +27,7 @@ program
   .option('--ssh-port <n>', 'SSH port', (v: string) => Number(v))
   .option('--agent-port <n>', 'agent HTTP port', (v: string) => Number(v))
   .option('--token <token>', 'bearer token (default: random 32-byte hex)')
+  .option('--username <name>', "the agent's name for you (default: os.userInfo().username)")
   .option('--list-peers', 'print Tailscale peers and exit')
   .option('--json', 'machine-readable output (for --list-peers)')
   .option('--password-stdin', 'read SSH password from stdin and run ssh-copy-id (used by the wizard)')
@@ -59,6 +60,7 @@ program
       sshPort: opts.sshPort,
       agentPort: opts.agentPort,
       token: opts.token,
+      username: opts.username,
     });
   });
 
