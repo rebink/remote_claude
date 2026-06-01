@@ -6,6 +6,7 @@ import { UsersStore } from './agent/users-store.ts';
 import { migrateIfNeeded } from './agent/migrate-v01.ts';
 import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
+import { registerUserCommands } from './commands/user.ts';
 
 const VERSION = '0.1.0';
 
@@ -97,6 +98,8 @@ program
   .command('uninstall')
   .description('Remove the launchd LaunchAgent')
   .action(async () => { await runDaemonUninstall(); });
+
+registerUserCommands(program);
 
 program.parseAsync(process.argv).catch((err: Error) => {
   console.error(err.message);
