@@ -4,19 +4,18 @@ import '../styles/custom.css';
 const repo = 'https://github.com/rebink/patchwire';
 const version = '0.1.0';
 const rev = '263e2e3';
-const date = 'Mon, 01 Jun 2026';
 ---
 
 <!doctype html>
-<html lang="en" class="rc-brand">
+<html lang="en" class="rc-brand rc-dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#F5F1E8" />
+    <meta name="theme-color" content="#0E0E10" />
     <title>Patchwire — local stays local, AI stays remote</title>
     <meta
       name="description"
-      content="Push your project to a remote Mac. Run an AI CLI there with the whole repo. Pull back a unified diff. Apply only what you want."
+      content="Push your project to a remote Mac. Run an AI CLI there. Pull back a unified diff. Apply only what you want."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:title" content="Patchwire" />
@@ -25,7 +24,7 @@ const date = 'Mon, 01 Jun 2026';
       content="Local-first development. AI executes remotely. Diffs come back for review."
     />
   </head>
-  <body>
+  <body class="page">
     <!-- ───────── TOP BAR ───────── -->
     <header class="topbar">
       <a class="wordmark" href="/" aria-label="Patchwire home">
@@ -43,247 +42,293 @@ const date = 'Mon, 01 Jun 2026';
         <a href="/install-extension/">Extension</a>
         <a href={repo} class="topnav-ext">GitHub ↗</a>
       </nav>
-      <span class="patch-meta">
-        <span class="patch-no">PATCH 0001</span>
-        <span class="patch-sep">·</span>
-        <span class="patch-rev">rev {rev}</span>
+      <span class="meta-pill">
+        <span class="meta-dot"></span>
+        v{version}
       </span>
     </header>
 
-    <!-- ───────── HERO: Patch #1 cover ───────── -->
-    <section class="cover">
-      <div class="cover-grid">
-        <!-- Email-style patch header (left rail) -->
-        <aside class="patch-email" aria-hidden="true">
-          <div class="patch-row"><span class="patch-key">From:</span> <span class="patch-val">patchwire &lt;hi@patchwire.dev&gt;</span></div>
-          <div class="patch-row"><span class="patch-key">Date:</span> <span class="patch-val">{date}</span></div>
-          <div class="patch-row"><span class="patch-key">Subject:</span> <span class="patch-val">[PATCH 0001] Welcome.</span></div>
-          <div class="patch-row patch-row-meta">
-            <span class="patch-key">In-Reply-To:</span>
-            <span class="patch-val patch-val-dim">your-workflow@{rev}</span>
+    <!-- ───────── HERO ───────── -->
+    <section class="hero" id="hero">
+      <!-- background atmospherics -->
+      <div class="hero-bg" aria-hidden="true">
+        <div class="hero-grid-bg"></div>
+        <div class="hero-spotlight" id="spotlight"></div>
+        <div class="hero-glow hero-glow-phos"></div>
+        <div class="hero-glow hero-glow-amber"></div>
+      </div>
+
+      <div class="hero-inner">
+        <div class="hero-eyebrow reveal">
+          <span class="eyebrow-tag">0.1.0 / 2026</span>
+          <span class="eyebrow-sep">·</span>
+          <span class="eyebrow-rev">rev {rev}</span>
+          <span class="eyebrow-sep">·</span>
+          <span class="eyebrow-status"><span class="eyebrow-pulse"></span>shipping</span>
+        </div>
+
+        <h1 class="hero-h reveal">
+          <span class="hero-h-line">We&nbsp;pulled</span>
+          <span class="hero-h-line">AI off your</span>
+          <span class="hero-h-line"><em>laptop.</em></span>
+        </h1>
+
+        <p class="hero-sub reveal">
+          Push your code to the heavier Mac. The AI runs there with the
+          whole repo. You get back a unified diff. Nothing else crosses the wire.
+        </p>
+
+        <!-- ── The animated terminal centerpiece ── -->
+        <div class="term reveal" id="term">
+          <header class="term-bar">
+            <span class="term-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+            <span class="term-path">~/projects/your-app</span>
+            <span class="term-host">macbook · zsh</span>
+          </header>
+          <div class="term-body" aria-live="polite">
+            <div class="term-line" data-typewrite='$ patchwire ask "refactor login_bloc to freezed"' data-after="800"></div>
+            <div class="term-line term-line-step" data-step="rsync" data-step-detail="14 files · 84 ms"           data-after="700"></div>
+            <div class="term-line term-line-step" data-step="POST"  data-step-detail="/ask · 187 bytes"           data-after="900"></div>
+            <div class="term-line term-line-step" data-step="spawn" data-step-detail="claude --print · 4.7 s"     data-after="1400"></div>
+            <div class="term-line term-line-step" data-step="diff"  data-step-detail="captured · 31 lines · 6 files" data-after="700"></div>
+            <div class="term-spacer"></div>
+            <div class="term-diff" id="termDiff">
+              <div class="diff-rail">@@ <span class="rail-path">lib/auth/login_bloc.dart</span></div>
+              <div class="diff-row diff-minus"><span class="num">142</span><span class="sign">−</span><span class="content">  return BlocBase.fromJson(json);</span></div>
+              <div class="diff-row diff-plus" ><span class="num">142</span><span class="sign">+</span><span class="content">  return Freezed.fromJson(json);</span></div>
+              <div class="diff-row diff-context"><span class="num">143</span><span class="sign">&nbsp;</span><span class="content">{`}`}</span></div>
+              <div class="diff-row diff-minus"><span class="num">147</span><span class="sign">−</span><span class="content">class LoginBloc extends BlocBase {`{`}</span></div>
+              <div class="diff-row diff-plus" ><span class="num">147</span><span class="sign">+</span><span class="content">@freezed</span></div>
+              <div class="diff-row diff-plus" ><span class="num">148</span><span class="sign">+</span><span class="content">class LoginState with _$LoginState {`{`}</span></div>
+            </div>
+            <div class="term-actions" id="termActions">
+              <button class="term-btn term-btn-primary" type="button">git apply <span class="term-btn-kbd">↵</span></button>
+              <button class="term-btn" type="button">preview <span class="term-btn-kbd">p</span></button>
+              <button class="term-btn term-btn-ghost" type="button">tweak <span class="term-btn-kbd">t</span></button>
+            </div>
           </div>
-        </aside>
+        </div>
 
-        <!-- Body -->
-        <div class="cover-body">
-          <span class="kicker"><span class="kicker-dot"></span>0001-welcome.patch · 4 insertions(+), 2 deletions(−)</span>
+        <div class="hero-cta reveal">
+          <a href="/quickstart/" class="cta cta-primary magnet">
+            <span>Try Patchwire</span>
+            <span class="cta-arrow">→</span>
+          </a>
+          <a href={repo} class="cta cta-ghost magnet">
+            <span>View on GitHub</span>
+            <span class="cta-arrow">↗</span>
+          </a>
+        </div>
 
-          <h1 class="cover-h">
-            <span class="cover-h-w" style="--i:0">Welcome</span>
-            <span class="cover-h-w" style="--i:1">to</span>
-            <span class="cover-h-w cover-h-mark" style="--i:2">Patchwire.</span>
-          </h1>
-
-          <p class="cover-lede">
-            Push your project to a faster machine. Run an AI there with
-            the whole&nbsp;repo. Pull back a <em>diff</em> you preview
-            and <code>git apply</code> &mdash; nothing else crosses the wire.
-          </p>
-
-          <!-- ── The hero diff ── -->
-          <pre class="diff diff-hero" aria-label="Welcome patch">
-<span class="diff-meta"><span class="diff-meta-key">diff --git</span> <span class="diff-meta-path">a/your-workflow.md</span> <span class="diff-meta-path">b/your-workflow.md</span></span>
-<span class="diff-meta diff-meta-dim">index 0000000..{rev} 100644</span>
-<span class="diff-hunk">@@ -1,4 +1,5 @@ how AI fits into your workflow</span>
-<span class="diff-line diff-context" style="--i:1"><span class="num">1</span><span class="sign"> </span><span class="content">You keep coding on your laptop.</span></span>
-<span class="diff-line diff-minus"   style="--i:2"><span class="num">2</span><span class="sign">-</span><span class="content">Your AI lives in your editor &mdash; slow over SSH.</span></span>
-<span class="diff-line diff-plus"    style="--i:3"><span class="num">2</span><span class="sign">+</span><span class="content">Your AI runs on the Mac, with the whole repo.</span></span>
-<span class="diff-line diff-minus"   style="--i:4"><span class="num">3</span><span class="sign">-</span><span class="content">It edits files. You hope it didn't break anything.</span></span>
-<span class="diff-line diff-plus"    style="--i:5"><span class="num">3</span><span class="sign">+</span><span class="content">It returns a diff. You preview. You <strong>git apply</strong>.</span></span>
-<span class="diff-line diff-context" style="--i:6"><span class="num">4</span><span class="sign"> </span><span class="content">Diffs come back. You review them. You apply them.</span></span>
-<span class="diff-line diff-plus"    style="--i:7"><span class="num">5</span><span class="sign">+</span><span class="content">&mdash; Patchwire</span></span>
-</pre>
-
-          <div class="cover-cta">
-            <a href="/quickstart/" class="cta cta-primary">
-              <span class="cta-cursor"></span>
-              <span>Apply patch</span>
-              <span class="cta-arrow">→</span>
-            </a>
-            <a href={repo} class="cta cta-ghost">
-              <span>View on GitHub</span>
-              <span class="cta-arrow">↗</span>
-            </a>
-          </div>
+        <div class="hero-byline reveal" aria-hidden="true">
+          <span>↓ scroll</span>
+          <span class="byline-line"></span>
+          <span>3 minutes to install</span>
         </div>
       </div>
     </section>
 
-    <!-- ───────── HUNK 1: The local-first stance ───────── -->
-    <section class="hunk">
-      <div class="hunk-marker">@@ HUNK 1 · the local-first stance @@</div>
-      <div class="hunk-grid">
-        <div class="hunk-prose">
-          <h2 class="hunk-h">Local stays local. <em>AI stays remote.</em></h2>
-          <p>
-            Code-server over SSH is laggy. Cursor wants to edit in place.
-            Mounted filesystems are a coin flip. Patchwire picks the
-            difficult cut: <strong>your code never leaves your laptop's
-            editor, and the AI never touches it directly.</strong> Only
-            the result crosses the wire.
-          </p>
-        </div>
-
-        <!-- Side-by-side LOCAL vs REMOTE -->
-        <div class="splitcard">
-          <article class="splitcard-side splitcard-local">
-            <header class="splitcard-head">
-              <span class="splitcard-dot splitcard-dot-amber" aria-hidden="true"></span>
-              <span class="splitcard-label">LOCAL</span>
-              <span class="splitcard-host">macbook&nbsp;~</span>
-            </header>
-            <ul class="splitcard-list">
-              <li>Your IDE, hot-reload, debugger</li>
-              <li>Source of truth — never edited remotely</li>
-              <li>Diff preview &amp; selective <code>git apply</code></li>
-            </ul>
-          </article>
-          <article class="splitcard-side splitcard-remote">
-            <header class="splitcard-head splitcard-head-dark">
-              <span class="splitcard-dot splitcard-dot-phosphor" aria-hidden="true"></span>
-              <span class="splitcard-label">REMOTE</span>
-              <span class="splitcard-host">mac&#8209;mini&nbsp;~</span>
-            </header>
-            <ul class="splitcard-list splitcard-list-dark">
-              <li>Clean checkout per request</li>
-              <li>Runs <code>claude --print</code> (or any AI CLI)</li>
-              <li>Captures <code>git diff</code>, resets the tree</li>
-            </ul>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ───────── HUNK 2: One install per side ───────── -->
-    <section class="hunk">
-      <div class="hunk-marker">@@ HUNK 2 · one install per side @@</div>
-      <h2 class="hunk-h hunk-h-center">
-        Three commands. <em>Forever.</em>
+    <!-- ───────── SECTION: THE BIG CLAIM ───────── -->
+    <section class="claim">
+      <span class="kicker reveal"><span class="kicker-bar"></span>01 · the stance</span>
+      <h2 class="claim-h reveal">
+        Your laptop&nbsp;was <em>never</em> meant to&nbsp;host the AI.
       </h2>
-      <p class="hunk-lede">
-        Patchwire isn't a SaaS. Install one binary on each Mac, drop a
-        YAML in your project, you're done.
+      <p class="claim-sub reveal">
+        Code-server is laggy. In-editor AI is forgetful. Mounted FS is a coin flip.
+        Patchwire picks a different cut: <strong>local stays local,
+        AI stays remote, only diffs cross the wire.</strong>
       </p>
 
-      <pre class="diff diff-install" aria-label="Install commands">
-<span class="diff-meta"><span class="diff-meta-key">diff --git</span> <span class="diff-meta-path">a/install.sh</span> <span class="diff-meta-path">b/install.sh</span></span>
-<span class="diff-hunk">@@ on the Mac Mini @@</span>
-<span class="diff-line diff-plus"   ><span class="num">1</span><span class="sign">+</span><span class="content">pnpm add -g github:rebink/patchwire</span></span>
-<span class="diff-line diff-plus"   ><span class="num">2</span><span class="sign">+</span><span class="content">patchwire-agent install   # launchd, prints a token</span></span>
-<span class="diff-hunk">@@ on your laptop @@</span>
-<span class="diff-line diff-plus"   ><span class="num">1</span><span class="sign">+</span><span class="content">pnpm add -g github:rebink/patchwire</span></span>
-<span class="diff-line diff-plus"   ><span class="num">2</span><span class="sign">+</span><span class="content">patchwire setup           # auto-detects Tailscale peers</span></span>
-<span class="diff-line diff-plus"   ><span class="num">3</span><span class="sign">+</span><span class="content">patchwire ask "refactor login_bloc to freezed"</span></span>
-</pre>
+      <div class="parallel reveal">
+        <article class="par-card par-old">
+          <header class="par-head">
+            <span class="par-dot par-dot-amber"></span>
+            <span class="par-label">THE OLD WAY</span>
+          </header>
+          <ul>
+            <li>AI edits files in your editor</li>
+            <li>You hope it didn't break anything</li>
+            <li>You git-reset half the time</li>
+            <li>Locked to one provider's tools</li>
+          </ul>
+        </article>
+        <article class="par-card par-new">
+          <header class="par-head">
+            <span class="par-dot par-dot-phos"></span>
+            <span class="par-label">PATCHWIRE</span>
+          </header>
+          <ul>
+            <li>AI edits a clean checkout on the remote</li>
+            <li>You read the diff before it lands</li>
+            <li>git apply selectively, or never</li>
+            <li>Any CLI: Claude, Codex, aider, custom</li>
+          </ul>
+        </article>
+      </div>
     </section>
 
-    <!-- ───────── HUNK 3: The request lifecycle ───────── -->
-    <section class="hunk">
-      <div class="hunk-marker">@@ HUNK 3 · the request lifecycle @@</div>
-      <h2 class="hunk-h">One HTTP call. <em>End&#8209;to&#8209;end.</em></h2>
+    <!-- ───────── SECTION: HOW IT WORKS ───────── -->
+    <section class="flow">
+      <span class="kicker reveal"><span class="kicker-bar"></span>02 · the flow</span>
+      <h2 class="flow-h reveal">
+        One HTTP call. <em>End-to-end.</em>
+      </h2>
 
-      <ol class="lifecycle">
-        <li class="lifecycle-step">
-          <span class="lifecycle-no">01</span>
-          <div class="lifecycle-body">
-            <h3 class="lifecycle-h">Read the config.</h3>
-            <p>CLI reads <code>patchwire.yml</code> for host, user, project path, agent URL, AI command.</p>
+      <div class="flowdiagram reveal" aria-hidden="true">
+        <div class="flowbox flowbox-laptop">
+          <span class="flowbox-icon">⌘</span>
+          <span class="flowbox-title">Laptop</span>
+          <span class="flowbox-sub">patchwire CLI</span>
+        </div>
+        <div class="flowwire">
+          <svg viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
+            <line x1="0" y1="30" x2="400" y2="30" stroke="rgba(232,226,208,0.18)" stroke-width="1" stroke-dasharray="2 4"/>
+          </svg>
+          <span class="flowparticle"></span>
+          <span class="flowlabel">rsync · HTTP · diff back</span>
+        </div>
+        <div class="flowbox flowbox-mac">
+          <span class="flowbox-icon">▣</span>
+          <span class="flowbox-title">Mac Mini</span>
+          <span class="flowbox-sub">patchwire-agent</span>
+        </div>
+      </div>
+
+      <ol class="steps">
+        <li class="step reveal">
+          <span class="step-no">01</span>
+          <div class="step-body">
+            <h3>Push code over rsync.</h3>
+            <p>One-way. Your laptop is the source of truth. The remote always mirrors local — never the other direction.</p>
           </div>
         </li>
-        <li class="lifecycle-step">
-          <span class="lifecycle-no">02</span>
-          <div class="lifecycle-body">
-            <h3 class="lifecycle-h">Push code over rsync.</h3>
-            <p>One-way push with your excludes. The remote always mirrors your local; never the other direction.</p>
+        <li class="step reveal">
+          <span class="step-no">02</span>
+          <div class="step-body">
+            <h3>HTTP <code>/ask</code> with bearer token.</h3>
+            <p>The agent verifies the project is a clean git tree, then spawns the configured AI CLI with the prompt on stdin.</p>
           </div>
         </li>
-        <li class="lifecycle-step">
-          <span class="lifecycle-no">03</span>
-          <div class="lifecycle-body">
-            <h3 class="lifecycle-h">HTTP <code>/ask</code> with bearer token.</h3>
-            <p>Agent verifies the project is a clean git tree, then spawns the configured AI CLI with the prompt on stdin.</p>
-          </div>
-        </li>
-        <li class="lifecycle-step">
-          <span class="lifecycle-no">04</span>
-          <div class="lifecycle-body">
-            <h3 class="lifecycle-h">AI edits files. Agent captures <code>git diff</code>.</h3>
+        <li class="step reveal">
+          <span class="step-no">03</span>
+          <div class="step-body">
+            <h3>AI edits files. Agent captures <code>git diff</code>.</h3>
             <p>The AI edits a clean checkout natively. The agent derives the diff from git, then resets the tree. Robust, no prompt fragility.</p>
           </div>
         </li>
-        <li class="lifecycle-step">
-          <span class="lifecycle-no">05</span>
-          <div class="lifecycle-body">
-            <h3 class="lifecycle-h">Diff returns. You decide.</h3>
+        <li class="step reveal">
+          <span class="step-no">04</span>
+          <div class="step-body">
+            <h3>Diff returns. <em>You</em> decide.</h3>
             <p>Colorized preview. <code>git apply</code> selectively. Nothing lands without your hand on it.</p>
           </div>
         </li>
       </ol>
     </section>
 
-    <!-- ───────── HUNK 4: What's added vs removed ───────── -->
-    <section class="hunk hunk-changelog">
-      <div class="hunk-marker">@@ HUNK 4 · summary of changes @@</div>
-      <h2 class="hunk-h">Compared to the alternatives.</h2>
+    <!-- ───────── SECTION: SETUP ───────── -->
+    <section class="setup">
+      <span class="kicker reveal"><span class="kicker-bar"></span>03 · setup</span>
+      <h2 class="setup-h reveal">
+        Three commands per side. <em>Forever.</em>
+      </h2>
 
-      <div class="changelog">
-        <div class="changelog-col changelog-removed">
-          <header class="changelog-head">
-            <span class="changelog-sign">−</span>
-            <span class="changelog-label">REMOVED</span>
+      <div class="setup-grid">
+        <article class="termcard reveal" data-tilt>
+          <header class="termcard-bar">
+            <span class="term-dots"><span></span><span></span><span></span></span>
+            <span class="termcard-host">on the Mac Mini</span>
           </header>
-          <ul>
-            <li>SSH-mounted filesystems with editor lag</li>
-            <li>Edit-in-place AI that commits on its own</li>
-            <li>Lock-in to one AI provider</li>
-            <li>Bidirectional sync &amp; conflict hell</li>
-            <li>SaaS billing for "AI compute"</li>
-          </ul>
-        </div>
-        <div class="changelog-col changelog-added">
-          <header class="changelog-head">
-            <span class="changelog-sign">+</span>
-            <span class="changelog-label">ADDED</span>
+          <pre class="termcard-body"><span class="t-com"># once</span>
+$ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
+$ patchwire-agent install
+  <span class="t-ok">→ TOKEN: pw_b9f...</span>
+  <span class="t-ok">→ launchd: com.patchwire.agent</span></pre>
+        </article>
+        <article class="termcard termcard-laptop reveal" data-tilt>
+          <header class="termcard-bar">
+            <span class="term-dots"><span></span><span></span><span></span></span>
+            <span class="termcard-host">on your laptop</span>
           </header>
-          <ul>
-            <li>Full-repo context on a heavier machine</li>
-            <li>Unified diffs, reviewed before they land</li>
-            <li>AI-agnostic: Claude, Codex, aider, anything</li>
-            <li>One-way rsync push (no surprises locally)</li>
-            <li>Self-hosted. MIT. Two binaries.</li>
-          </ul>
-        </div>
+          <pre class="termcard-body"><span class="t-com"># once</span>
+$ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
+$ patchwire setup
+  <span class="t-ok">→ Tailscale peer: mac-mini.tail-xyz.ts.net</span>
+
+<span class="t-com"># forever</span>
+$ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre>
+        </article>
       </div>
-
-      <p class="changelog-stat">
-        <span class="changelog-stat-key">1 file changed,</span>
-        <span class="changelog-plus">5 insertions(+),</span>
-        <span class="changelog-minus">5 deletions(−)</span>
-      </p>
     </section>
 
-    <!-- ───────── APPLY: final CTA ───────── -->
-    <section class="apply">
-      <div class="apply-meta">
-        <span class="patch-key">Subject:</span>
-        <span class="patch-val">[PATCH 0002] You're ready.</span>
-      </div>
-      <h2 class="apply-h">
-        Apply <em>patch</em>.
+    <!-- ───────── SECTION: FEATURES ───────── -->
+    <section class="feats">
+      <span class="kicker reveal"><span class="kicker-bar"></span>04 · the gains</span>
+      <h2 class="feats-h reveal">
+        Built different on&nbsp;purpose.
       </h2>
-      <p class="apply-lede">
-        Three commands per side, one YAML, five minutes. Reviewable diffs the whole way.
-      </p>
-      <div class="apply-cta">
-        <a href="/quickstart/" class="cta cta-primary cta-dark">
-          <span class="cta-cursor"></span>
-          <span>Start the Quickstart</span>
-          <span class="cta-arrow">→</span>
-        </a>
-        <a href="/install-extension/" class="cta cta-ghost cta-ghost-dark">
-          <span>Install the VS Code extension</span>
-          <span class="cta-arrow">→</span>
-        </a>
+
+      <div class="featgrid">
+        <article class="feat-card reveal feat-card-tall">
+          <span class="feat-no">+</span>
+          <h3>Full-repo context.</h3>
+          <p>Claude (or Codex, or aider, or your shell script) runs on a clean checkout with the entire tree visible. No 8&#8209;k-token truncation, no "missing import" loops.</p>
+          <div class="feat-glow" aria-hidden="true"></div>
+        </article>
+        <article class="feat-card reveal">
+          <span class="feat-no">+</span>
+          <h3>Reviewable diffs.</h3>
+          <p><code>git diff</code> derived, never AI-imagined. Apply selectively.</p>
+        </article>
+        <article class="feat-card reveal">
+          <span class="feat-no">+</span>
+          <h3>AI-agnostic.</h3>
+          <p>Any CLI that reads stdin and edits files. Swap providers in one line of YAML.</p>
+        </article>
+        <article class="feat-card reveal">
+          <span class="feat-no">+</span>
+          <h3>One-way sync.</h3>
+          <p>rsync push. Your laptop's filesystem is the source of truth. The remote can't surprise you.</p>
+        </article>
+        <article class="feat-card reveal feat-card-quote">
+          <p class="feat-q">
+            "Your laptop should be quiet. <em>Your AI</em> should run somewhere bigger."
+          </p>
+          <p class="feat-q-meta">— patchwire@0.1.0</p>
+        </article>
+        <article class="feat-card reveal feat-card-strip">
+          <ul class="strip">
+            <li><strong>MIT</strong><span>open source</span></li>
+            <li><strong>Tailscale</strong><span>recommended transport</span></li>
+            <li><strong>Two bins</strong><span>cli + agent</span></li>
+            <li><strong>YAML</strong><span>one file, one project</span></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- ───────── SECTION: CTA ───────── -->
+    <section class="endcta">
+      <div class="endcta-inner">
+        <span class="kicker reveal">↓ apply</span>
+        <h2 class="endcta-h reveal">
+          Three&nbsp;minutes.<br/>
+          One YAML.<br/>
+          <em>Diffs forever.</em>
+        </h2>
+        <div class="endcta-actions reveal">
+          <a href="/quickstart/" class="cta cta-primary magnet cta-lg">
+            <span>Read the Quickstart</span>
+            <span class="cta-arrow">→</span>
+          </a>
+          <a href="/install-extension/" class="cta cta-ghost magnet cta-lg">
+            <span>Install the VS Code extension</span>
+            <span class="cta-arrow">↗</span>
+          </a>
+        </div>
       </div>
     </section>
 
@@ -333,289 +378,516 @@ const date = 'Mon, 01 Jun 2026';
       </div>
     </footer>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         INTERACTIVE JS — built with safe DOM methods
+         ═══════════════════════════════════════════════════════════ -->
+    <script>
+      // ─── 1. Cursor-tracking spotlight on hero ───
+      (() => {
+        const spot = document.getElementById('spotlight');
+        const hero = document.getElementById('hero');
+        if (!spot || !hero || matchMedia('(pointer: coarse)').matches) return;
+        let raf = 0, tx = 50, ty = 30;
+        function update(e) {
+          const r = hero.getBoundingClientRect();
+          tx = ((e.clientX - r.left) / r.width) * 100;
+          ty = ((e.clientY - r.top) / r.height) * 100;
+          if (!raf) raf = requestAnimationFrame(apply);
+        }
+        function apply() {
+          spot.style.setProperty('--x', tx + '%');
+          spot.style.setProperty('--y', ty + '%');
+          raf = 0;
+        }
+        hero.addEventListener('pointermove', update);
+        hero.addEventListener('pointerleave', () => {
+          tx = 50; ty = 30; apply();
+        });
+      })();
+
+      // ─── 2. Scroll reveal ───
+      (() => {
+        const els = document.querySelectorAll('.reveal');
+        if (!('IntersectionObserver' in window)) {
+          els.forEach(e => e.classList.add('is-in'));
+          return;
+        }
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              e.target.classList.add('is-in');
+              io.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+        els.forEach(e => io.observe(e));
+      })();
+
+      // ─── 3. Magnetic CTA ───
+      (() => {
+        if (matchMedia('(pointer: coarse)').matches) return;
+        document.querySelectorAll('.magnet').forEach(el => {
+          let raf = 0, tx = 0, ty = 0;
+          el.addEventListener('pointermove', (e) => {
+            const r = el.getBoundingClientRect();
+            tx = ((e.clientX - r.left) / r.width - 0.5) * 14;
+            ty = ((e.clientY - r.top) / r.height - 0.5) * 10;
+            if (!raf) raf = requestAnimationFrame(() => {
+              el.style.transform = 'translate(' + tx + 'px, ' + ty + 'px)';
+              raf = 0;
+            });
+          });
+          el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+        });
+      })();
+
+      // ─── 4. Terminal typewriter (built with safe DOM methods) ───
+      (() => {
+        const term = document.getElementById('term');
+        if (!term) return;
+        const lines = term.querySelectorAll('.term-line');
+        const diff = document.getElementById('termDiff');
+        const actions = document.getElementById('termActions');
+        let started = false;
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function makeEl(tag, cls, text) {
+          const el = document.createElement(tag);
+          if (cls) el.className = cls;
+          if (text != null) el.textContent = text;
+          return el;
+        }
+
+        async function typeLine(el) {
+          const text = el.dataset.typewrite;
+          if (!text) return 0;
+          el.textContent = '';
+          const caret = makeEl('span', 'caret');
+          el.appendChild(caret);
+          for (let i = 0; i < text.length; i++) {
+            el.insertBefore(document.createTextNode(text[i]), caret);
+            await sleep(text.length > 30 ? 18 : 28);
+          }
+          caret.remove();
+          return parseInt(el.dataset.after || '500', 10);
+        }
+
+        function renderStep(el) {
+          const step = el.dataset.step || '';
+          const detail = el.dataset.stepDetail || '';
+          el.textContent = '';
+          el.appendChild(makeEl('span', 'step-arrow', '→'));
+          el.appendChild(makeEl('span', 'step-key', step));
+          el.appendChild(makeEl('span', 'step-dot'));
+          el.appendChild(makeEl('span', 'step-detail', detail));
+          el.appendChild(makeEl('span', 'step-ok', '✓'));
+          el.classList.add('is-in');
+          return parseInt(el.dataset.after || '600', 10);
+        }
+
+        async function play() {
+          if (started) return;
+          started = true;
+          for (const line of lines) {
+            let wait;
+            if (line.classList.contains('term-line-step')) wait = renderStep(line);
+            else wait = await typeLine(line);
+            await sleep(wait);
+          }
+          diff.classList.add('is-in');
+          await sleep(900);
+          actions.classList.add('is-in');
+        }
+
+        if ('IntersectionObserver' in window) {
+          const io = new IntersectionObserver((entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) { play(); io.disconnect(); break; }
+            }
+          }, { threshold: 0.2 });
+          io.observe(term);
+        } else {
+          play();
+        }
+      })();
+
+      // ─── 5. Tilt cards (lightweight 3D hover) ───
+      (() => {
+        if (matchMedia('(pointer: coarse)').matches) return;
+        document.querySelectorAll('[data-tilt]').forEach(card => {
+          let raf = 0, rx = 0, ry = 0;
+          card.addEventListener('pointermove', (e) => {
+            const r = card.getBoundingClientRect();
+            const px = (e.clientX - r.left) / r.width - 0.5;
+            const py = (e.clientY - r.top) / r.height - 0.5;
+            ry = px * 8;
+            rx = -py * 6;
+            if (!raf) raf = requestAnimationFrame(() => {
+              card.style.transform = 'perspective(900px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) translateZ(2px)';
+              raf = 0;
+            });
+          });
+          card.addEventListener('pointerleave', () => { card.style.transform = ''; });
+        });
+      })();
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         STYLES
+         ═══════════════════════════════════════════════════════════ -->
     <style>
-      /* ═══════════════════════════════════════════════════════════
-         PAGE TOKENS
-         ═══════════════════════════════════════════════════════════ */
+      /* ─── tokens / page ─── */
       :root {
-        --gutter: clamp(20px, 4vw, 56px);
-        --max: 1200px;
-        --rc-line-num: rgba(14, 14, 16, 0.32);
+        --gutter: clamp(20px, 4.5vw, 64px);
+        --max: 1240px;
       }
+      /* Win over custom.css's .rc-brand body cream bg with higher specificity */
+      html.rc-brand body.page {
+        background: var(--rc-ink);
+        color: var(--rc-bone);
+        font-family: var(--rc-font-body);
+        font-feature-settings: 'ss01','ss02','cv11';
+        -webkit-font-smoothing: antialiased;
+        margin: 0;
+      }
+      html.rc-brand.rc-dark { background: var(--rc-ink); }
+      .page ::selection { background: var(--rc-phosphor); color: var(--rc-ink); }
+
+      /* ─── reveal animation ─── */
+      .reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+        will-change: opacity, transform;
+      }
+      .reveal.is-in { opacity: 1; transform: none; }
 
       /* ═══════════════════════════════════════════════════════════
          TOP BAR
          ═══════════════════════════════════════════════════════════ */
       .topbar {
-        position: relative;
-        z-index: 10;
+        position: sticky;
+        top: 0;
+        z-index: 50;
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 32px;
-        padding: 22px var(--gutter);
-        border-bottom: 1px solid var(--rc-hairline-paper);
-        background: var(--rc-paper);
+        padding: 18px var(--gutter);
+        background: rgba(14, 14, 16, 0.72);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--rc-hairline-ink);
       }
       .wordmark {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
+        display: inline-flex; align-items: center; gap: 10px;
         font-family: var(--rc-font-display);
-        font-weight: 500;
-        font-size: 17px;
-        letter-spacing: -0.01em;
-        color: var(--rc-ink);
+        font-weight: 500; font-size: 17px; letter-spacing: -0.01em;
+        color: var(--rc-bone);
       }
-      .topnav {
-        display: flex;
-        justify-content: center;
-        gap: 28px;
-        font-size: 14px;
-      }
+      .topnav { display: flex; justify-content: center; gap: 28px; font-size: 14px; }
       .topnav a {
-        color: var(--rc-charcoal);
-        opacity: 0.78;
-        transition: opacity 0.15s ease;
-      }
-      .topnav a:hover { opacity: 1; }
-
-      .patch-meta {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-family: var(--rc-font-mono);
-        font-size: 11px;
-        color: var(--rc-charcoal);
-        opacity: 0.66;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-      .patch-no  { color: var(--rc-ink); opacity: 0.9; }
-      .patch-sep { opacity: 0.5; }
-      .patch-rev { color: var(--rc-charcoal); }
-
-      /* ═══════════════════════════════════════════════════════════
-         COVER (HERO)
-         ═══════════════════════════════════════════════════════════ */
-      .cover {
-        padding: clamp(48px, 7vw, 96px) var(--gutter) clamp(60px, 9vw, 120px);
-        max-width: var(--max);
-        margin: 0 auto;
+        color: var(--rc-bone);
+        opacity: 0.72;
         position: relative;
+        transition: opacity 0.2s ease;
       }
-      /* Hairline corner registration marks — editorial flourish */
-      .cover::before,
-      .cover::after {
+      .topnav a::after {
         content: '';
         position: absolute;
-        width: 18px;
-        height: 18px;
-        border-color: var(--rc-rule-paper);
-        border-style: solid;
+        bottom: -6px; left: 0; right: 100%;
+        height: 1px;
+        background: var(--rc-phosphor);
+        transition: right 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
       }
-      .cover::before {
-        top: clamp(28px, 4vw, 56px);
-        left: clamp(8px, 1.5vw, 24px);
-        border-width: 1px 0 0 1px;
-      }
-      .cover::after {
-        bottom: clamp(28px, 4vw, 56px);
-        right: clamp(8px, 1.5vw, 24px);
-        border-width: 0 1px 1px 0;
-      }
+      .topnav a:hover { opacity: 1; }
+      .topnav a:hover::after { right: 0; }
 
-      .cover-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: clamp(28px, 4vw, 56px);
-      }
-      @media (min-width: 1000px) {
-        .cover-grid {
-          grid-template-columns: 220px minmax(0, 1fr);
-          gap: 64px;
-        }
-      }
-
-      /* Email-style patch header (left rail) */
-      .patch-email {
-        font-family: var(--rc-font-mono);
-        font-size: 11.5px;
-        line-height: 1.85;
-        color: var(--rc-charcoal-dim);
-        border-left: 1px solid var(--rc-amber);
-        padding: 4px 0 4px 16px;
-        align-self: start;
-      }
-      .patch-row { display: block; }
-      .patch-row-meta { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--rc-hairline-paper); }
-      .patch-key {
-        display: inline-block;
-        min-width: 78px;
-        color: var(--rc-amber-dim);
-        opacity: 0.9;
-      }
-      .patch-val { color: var(--rc-charcoal); }
-      .patch-val-dim { color: var(--rc-charcoal-dim); }
-
-      /* Cover body */
-      .cover-body { min-width: 0; }
-
-      .kicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
+      .meta-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(232, 226, 208, 0.05);
+        border: 1px solid var(--rc-hairline-ink);
         font-family: var(--rc-font-mono);
         font-size: 11px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--rc-charcoal);
-        opacity: 0.68;
-        margin-bottom: 28px;
+        color: var(--rc-bone-dim);
       }
-      .kicker-dot {
-        width: 6px; height: 6px;
-        background: var(--rc-phosphor-dim);
+      .meta-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--rc-phosphor);
+        box-shadow: 0 0 0 3px rgba(201, 245, 100, 0.18);
+        animation: pulse 2.2s ease-in-out infinite;
+      }
+      @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+      /* ═══════════════════════════════════════════════════════════
+         HERO
+         ═══════════════════════════════════════════════════════════ */
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: clamp(72px, 9vw, 132px) var(--gutter) clamp(72px, 9vw, 120px);
+      }
+      .hero-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+      .hero-grid-bg {
+        position: absolute; inset: 0;
+        background:
+          linear-gradient(rgba(232, 226, 208, 0.025) 1px, transparent 1px) 0 0 / 100% 80px,
+          linear-gradient(90deg, rgba(232, 226, 208, 0.025) 1px, transparent 1px) 0 0 / 80px 100%;
+        mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 0%, transparent 90%);
+        -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 0%, transparent 90%);
+      }
+      .hero-spotlight {
+        --x: 50%; --y: 30%;
+        position: absolute; inset: 0;
+        background: radial-gradient(
+          480px circle at var(--x) var(--y),
+          rgba(201, 245, 100, 0.06),
+          transparent 50%
+        );
+        transition: background 0.18s linear;
+      }
+      .hero-glow {
+        position: absolute;
+        width: 520px; height: 520px;
         border-radius: 50%;
-        box-shadow: 0 0 0 3px rgba(142, 174, 63, 0.12);
-        animation: kicker-pulse 2.2s ease-in-out infinite;
+        filter: blur(140px);
+        opacity: 0.14;
       }
-      @keyframes kicker-pulse {
-        0%, 100% { opacity: 0.7; }
-        50%      { opacity: 1; }
+      .hero-glow-phos { background: var(--rc-phosphor); top: -220px; right: -220px; }
+      .hero-glow-amber { background: var(--rc-amber-dim); bottom: -240px; left: -260px; opacity: 0.10; }
+
+      .hero-inner {
+        position: relative;
+        z-index: 1;
+        max-width: var(--max);
+        margin: 0 auto;
+        display: grid;
+        gap: clamp(28px, 3.5vw, 40px);
       }
 
-      .cover-h {
+      .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--rc-bone-dim);
+        flex-wrap: wrap;
+      }
+      .eyebrow-tag {
+        padding: 4px 10px;
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 4px;
+        color: var(--rc-phosphor);
+        background: rgba(201, 245, 100, 0.06);
+      }
+      .eyebrow-sep { opacity: 0.4; }
+      .eyebrow-status { display: inline-flex; align-items: center; gap: 6px; }
+      .eyebrow-pulse {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--rc-phosphor);
+        box-shadow: 0 0 0 3px rgba(201, 245, 100, 0.18);
+        animation: pulse 2.2s ease-in-out infinite;
+      }
+
+      .hero-h {
         font-family: var(--rc-font-display);
         font-weight: 400;
-        font-size: clamp(40px, 7.8vw, 112px);
-        line-height: 0.96;
-        letter-spacing: -0.035em;
-        color: var(--rc-ink);
-        margin: 0 0 32px;
+        font-size: clamp(48px, 9.6vw, 148px);
+        line-height: 0.92;
+        letter-spacing: -0.04em;
+        color: var(--rc-bone);
+        margin: 0;
         font-variation-settings: 'SOFT' 30, 'opsz' 144;
-        text-wrap: balance;
+        max-width: 14ch;
       }
-      .cover-h-w {
-        display: inline-block;
+      .hero-h-line {
+        display: block;
         opacity: 0;
-        transform: translateY(0.35em);
-        animation: word-rise 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-        animation-delay: calc(var(--i) * 0.08s + 0.05s);
-        margin-right: 0.22em;
+        transform: translateY(0.4em);
+        animation: hero-rise 0.85s cubic-bezier(0.16, 0.85, 0.3, 1) forwards;
       }
-      @keyframes word-rise {
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .cover-h-mark {
+      .hero-h-line:nth-child(1) { animation-delay: 0.12s; }
+      .hero-h-line:nth-child(2) { animation-delay: 0.24s; }
+      .hero-h-line:nth-child(3) { animation-delay: 0.36s; }
+      .hero-h em {
         font-style: italic;
         font-weight: 380;
+        color: var(--rc-phosphor);
         font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144;
-        color: var(--rc-amber-dim);
+      }
+      @keyframes hero-rise { to { opacity: 1; transform: none; } }
+
+      .hero-sub {
+        font-size: clamp(17px, 1.55vw, 22px);
+        line-height: 1.5;
+        color: var(--rc-bone-dim);
+        margin: 0;
+        max-width: 52ch;
       }
 
-      .cover-lede {
-        font-family: var(--rc-font-display);
-        font-weight: 380;
-        font-size: clamp(18px, 1.5vw, 22px);
-        line-height: 1.55;
-        color: var(--rc-charcoal);
-        margin: 0 0 36px;
-        max-width: 48ch;
-        font-variation-settings: 'SOFT' 60;
-        text-wrap: pretty;
+      /* ─── Terminal ─── */
+      .term {
+        background: #131318;
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        overflow: hidden;
+        max-width: 880px;
+        box-shadow:
+          0 1px 0 rgba(232, 226, 208, 0.04) inset,
+          0 30px 80px -30px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(201, 245, 100, 0.04);
       }
-      .cover-lede em {
-        font-style: italic;
-        color: var(--rc-ink);
-        font-variation-settings: 'SOFT' 100, 'WONK' 1;
-      }
-      .cover-lede code {
-        font-family: var(--rc-font-mono);
-        font-size: 0.86em;
-        background: rgba(201, 245, 100, 0.20);
-        padding: 0.1em 0.45em;
-        border-radius: 4px;
-        color: var(--rc-ink);
-      }
-
-      /* ─────────── DIFF BLOCK (the recurring unit) ─────────── */
-      .diff {
-        font-family: var(--rc-font-mono);
-        font-size: clamp(11.5px, 1.05vw, 13.5px);
-        line-height: 1.7;
-        background: var(--rc-paper-warm);
-        border: 1px solid var(--rc-hairline-paper);
-        border-radius: var(--rc-radius-md);
-        margin: 0 0 36px;
-        overflow-x: auto;
-        padding: 16px 0;
-        white-space: pre;
-        color: var(--rc-charcoal);
-      }
-      .diff > * { display: block; }
-      .diff-meta {
-        padding: 1px clamp(14px, 2vw, 22px);
-        color: var(--rc-charcoal-dim);
-        opacity: 0.82;
-      }
-      .diff-meta-dim { opacity: 0.5; }
-      .diff-meta-key { color: var(--rc-amber-dim); font-weight: 500; }
-      .diff-meta-path { color: var(--rc-charcoal); }
-      .diff-hunk {
-        margin: 10px 0;
-        padding: 4px clamp(14px, 2vw, 22px);
-        color: var(--rc-charcoal-dim);
-        background: rgba(14, 14, 16, 0.025);
-        border-block: 1px solid var(--rc-hairline-paper);
-        font-size: 0.92em;
-        opacity: 0.85;
-      }
-      .diff-line {
+      .term-bar {
         display: grid;
-        grid-template-columns: 38px 22px 1fr;
-        align-items: baseline;
-        padding: 0 clamp(8px, 1.6vw, 18px);
-        column-gap: 0;
-      }
-      .diff-line .num {
-        color: var(--rc-line-num);
-        font-size: 0.86em;
-        text-align: right;
-        padding-right: 12px;
-        user-select: none;
-      }
-      .diff-line .sign { font-weight: 600; text-align: center; }
-      .diff-line .content { padding-left: 8px; }
-      .diff-line .content strong {
-        font-weight: 600;
-        color: var(--rc-ink);
-      }
-      .diff-context { background: transparent; }
-      .diff-plus    { background: rgba(201, 245, 100, 0.18); }
-      .diff-plus .sign  { color: var(--rc-phosphor-dim); }
-      .diff-minus   { background: rgba(255, 140, 66, 0.10); }
-      .diff-minus .sign { color: var(--rc-amber-dim); }
-      .diff-minus .content { color: var(--rc-charcoal-dim); }
-
-      /* Hero diff: line reveal cascade */
-      .diff-hero .diff-line {
-        opacity: 0;
-        transform: translateX(-4px);
-        animation: line-reveal 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        animation-delay: calc(var(--i) * 0.09s + 0.35s);
-      }
-      @keyframes line-reveal {
-        to { opacity: 1; transform: translateX(0); }
-      }
-
-      .cover-cta {
-        display: flex;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
         gap: 14px;
-        flex-wrap: wrap;
-        margin-top: 8px;
-        animation: word-rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 1.1s both;
+        padding: 10px 16px;
+        background: #0F0F12;
+        border-bottom: 1px solid var(--rc-hairline-ink);
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px;
+        color: var(--rc-bone-dim);
       }
+      .term-dots { display: inline-flex; gap: 6px; }
+      .term-dots span {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        background: rgba(232, 226, 208, 0.16);
+      }
+      .term-dots span:nth-child(1) { background: #FF5F57; opacity: 0.85; }
+      .term-dots span:nth-child(2) { background: #FEBC2E; opacity: 0.85; }
+      .term-dots span:nth-child(3) { background: #28C840; opacity: 0.85; }
+      .term-path { text-align: center; opacity: 0.7; }
+      .term-host { font-size: 10.5px; opacity: 0.4; letter-spacing: 0.04em; text-transform: uppercase; }
+
+      .term-body {
+        padding: 22px 22px 24px;
+        font-family: var(--rc-font-mono);
+        font-size: clamp(12.5px, 1.05vw, 14px);
+        line-height: 1.75;
+        color: var(--rc-bone);
+        position: relative;
+        min-height: 360px;
+      }
+      .term-line { display: block; min-height: 1.75em; color: var(--rc-bone); }
+      .term-line-step {
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        display: grid;
+        grid-template-columns: 18px 80px 14px 1fr auto;
+        align-items: center;
+        gap: 8px;
+      }
+      .term-line-step.is-in { opacity: 1; transform: none; }
+      .step-arrow { color: var(--rc-bone-dim); opacity: 0.55; }
+      .step-key { color: var(--rc-phosphor); font-weight: 500; }
+      .step-dot { width: 4px; height: 4px; background: var(--rc-bone-dim); border-radius: 50%; opacity: 0.35; }
+      .step-detail { color: var(--rc-bone-dim); }
+      .step-ok {
+        color: var(--rc-phosphor);
+        font-size: 1.1em;
+        animation: pop-in 0.4s cubic-bezier(0.2, 1.4, 0.5, 1) both;
+      }
+      @keyframes pop-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+      .caret {
+        display: inline-block;
+        width: 7px; height: 1em;
+        vertical-align: -2px;
+        background: var(--rc-phosphor);
+        margin-left: 1px;
+        animation: blink 1.1s steps(2) infinite;
+      }
+      @keyframes blink { 50% { opacity: 0; } }
+      .term-spacer { height: 12px; }
+      .term-diff {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--rc-hairline-ink);
+        opacity: 0;
+        transition: opacity 0.6s ease;
+      }
+      .term-diff.is-in { opacity: 1; }
+      .diff-rail {
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+        color: var(--rc-bone-dim);
+        opacity: 0.55;
+        margin-bottom: 8px;
+      }
+      .rail-path { color: var(--rc-amber); opacity: 0.85; }
+      .diff-row {
+        display: grid;
+        grid-template-columns: 38px 18px 1fr;
+        align-items: baseline;
+        gap: 6px;
+        padding: 1px 6px;
+        margin: 0 -6px;
+        font-size: 12.5px;
+      }
+      .diff-row .num { color: rgba(232, 226, 208, 0.28); text-align: right; font-size: 10.5px; }
+      .diff-row .sign { font-weight: 600; text-align: center; }
+      .diff-context  { color: var(--rc-bone); opacity: 0.65; }
+      .diff-plus     { background: rgba(201, 245, 100, 0.08); }
+      .diff-plus .sign { color: var(--rc-phosphor); }
+      .diff-minus    { background: rgba(255, 140, 66, 0.07); }
+      .diff-minus .sign { color: var(--rc-amber); }
+      .diff-minus .content { color: var(--rc-bone-dim); }
+
+      .term-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.6s ease, transform 0.6s ease;
+      }
+      .term-actions.is-in { opacity: 1; transform: none; }
+      .term-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 14px;
+        font-family: var(--rc-font-mono);
+        font-size: 12px;
+        color: var(--rc-bone);
+        background: rgba(232, 226, 208, 0.04);
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+      .term-btn:hover {
+        background: rgba(232, 226, 208, 0.07);
+        border-color: rgba(232, 226, 208, 0.32);
+      }
+      .term-btn-primary {
+        background: var(--rc-phosphor);
+        color: var(--rc-ink);
+        border-color: var(--rc-phosphor);
+      }
+      .term-btn-primary:hover { background: #d4f878; }
+      .term-btn-ghost { color: var(--rc-bone-dim); }
+      .term-btn-kbd {
+        font-size: 10.5px;
+        padding: 1px 5px;
+        background: rgba(14, 14, 16, 0.5);
+        border-radius: 3px;
+        color: inherit;
+        opacity: 0.7;
+      }
+      .term-btn-primary .term-btn-kbd { background: rgba(14, 14, 16, 0.15); }
+
+      /* ─── CTAs ─── */
+      .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
       .cta {
         display: inline-flex;
         align-items: center;
@@ -625,248 +897,47 @@ const date = 'Mon, 01 Jun 2026';
         font-size: 13px;
         letter-spacing: 0.01em;
         border: 1px solid transparent;
-        transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-        border-radius: var(--rc-radius-sm);
+        border-radius: 6px;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.25s ease;
         white-space: nowrap;
+        will-change: transform;
       }
-      .cta:hover { transform: translateY(-1px); }
-      .cta-arrow { transition: transform 0.18s ease; }
+      .cta-arrow { transition: transform 0.2s ease; }
       .cta:hover .cta-arrow { transform: translate(2px, -1px); }
       .cta-primary {
         background: var(--rc-phosphor);
         color: var(--rc-ink);
         border-color: var(--rc-phosphor);
+        box-shadow: 0 0 0 0 rgba(201, 245, 100, 0.5);
       }
-      .cta-primary:hover { background: #d4f878; }
+      .cta-primary:hover { background: #d4f878; box-shadow: 0 0 0 6px rgba(201, 245, 100, 0.15); }
       .cta-ghost {
-        background: transparent;
-        color: var(--rc-ink);
-        border-color: var(--rc-rule-paper);
-      }
-      .cta-ghost:hover { background: rgba(14,14,16,0.04); border-color: var(--rc-ink); }
-      .cta-ghost-dark { color: var(--rc-bone); border-color: rgba(232,226,208,0.25); }
-      .cta-ghost-dark:hover { background: rgba(232,226,208,0.06); border-color: var(--rc-bone); }
-      .cta-dark { background: var(--rc-phosphor); color: var(--rc-ink); }
-      .cta-cursor {
-        width: 8px; height: 14px;
-        background: currentColor;
-        opacity: 0.85;
-        animation: blink 1.1s steps(2) infinite;
-      }
-      @keyframes blink { 50% { opacity: 0; } }
-
-      /* ═══════════════════════════════════════════════════════════
-         HUNKS (the recurring section)
-         ═══════════════════════════════════════════════════════════ */
-      .hunk {
-        padding: clamp(56px, 8vw, 110px) var(--gutter);
-        max-width: var(--max);
-        margin: 0 auto;
-        position: relative;
-      }
-      .hunk + .hunk { border-top: 1px solid var(--rc-hairline-paper); }
-
-      .hunk-marker {
-        font-family: var(--rc-font-mono);
-        font-size: 11px;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--rc-charcoal);
-        opacity: 0.55;
-        margin-bottom: 32px;
-        padding: 6px 12px;
-        background: rgba(14, 14, 16, 0.04);
-        border-radius: var(--rc-radius-sm);
-        display: inline-block;
-      }
-      .hunk-h {
-        font-family: var(--rc-font-display);
-        font-weight: 400;
-        font-size: clamp(30px, 4.6vw, 60px);
-        line-height: 1.04;
-        letter-spacing: -0.025em;
-        color: var(--rc-ink);
-        margin: 0 0 24px;
-        font-variation-settings: 'SOFT' 30, 'opsz' 144;
-        max-width: 22ch;
-        text-wrap: balance;
-      }
-      .hunk-h-center { text-align: center; margin-inline: auto; }
-      .hunk-h em {
-        font-style: italic;
-        font-weight: 380;
-        color: var(--rc-amber-dim);
-        font-variation-settings: 'SOFT' 100, 'WONK' 1;
-      }
-      .hunk-lede {
-        font-size: 17px;
-        line-height: 1.55;
-        color: var(--rc-charcoal);
-        max-width: 56ch;
-        margin: 0 auto 36px;
-        text-align: center;
-      }
-
-      /* ─── HUNK 1 (split card) ─── */
-      .hunk-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 36px;
-        align-items: start;
-      }
-      @media (min-width: 900px) {
-        .hunk-grid { grid-template-columns: 1.05fr 1fr; gap: 64px; }
-      }
-      .hunk-prose p {
-        font-size: 17px;
-        line-height: 1.6;
-        color: var(--rc-charcoal);
-        margin: 0;
-      }
-      .hunk-prose p strong { color: var(--rc-ink); font-weight: 600; }
-
-      .splitcard {
-        display: grid;
-        grid-template-columns: 1fr;
-        border: 1px solid var(--rc-hairline-paper);
-        border-radius: var(--rc-radius-md);
-        overflow: hidden;
-      }
-      @media (min-width: 600px) {
-        .splitcard { grid-template-columns: 1fr 1fr; }
-      }
-      .splitcard-side {
-        padding: 22px 24px 26px;
-      }
-      .splitcard-local  { background: var(--rc-paper-warm); }
-      .splitcard-remote {
-        background: var(--rc-ink);
+        background: rgba(232, 226, 208, 0.04);
         color: var(--rc-bone);
-        border-top: 1px solid var(--rc-hairline-ink);
+        border-color: var(--rc-hairline-ink);
       }
-      @media (min-width: 600px) {
-        .splitcard-remote { border-top: none; border-left: 1px solid var(--rc-hairline-ink); }
+      .cta-ghost:hover {
+        background: rgba(232, 226, 208, 0.08);
+        border-color: rgba(232, 226, 208, 0.4);
       }
-      .splitcard-head {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
+      .cta-lg { padding: 18px 28px; font-size: 14px; }
+
+      .hero-byline {
+        display: inline-flex; align-items: center; gap: 14px;
+        margin-top: 18px;
         font-family: var(--rc-font-mono);
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--rc-charcoal);
-        margin-bottom: 16px;
+        color: var(--rc-bone-dim);
+        opacity: 0.7;
       }
-      .splitcard-head-dark { color: var(--rc-bone-dim); }
-      .splitcard-dot {
-        width: 6px; height: 6px;
-        border-radius: 50%;
-      }
-      .splitcard-dot-amber    { background: var(--rc-amber); }
-      .splitcard-dot-phosphor { background: var(--rc-phosphor); box-shadow: 0 0 6px rgba(201,245,100,0.55); }
-      .splitcard-host {
-        font-family: var(--rc-font-mono);
-        font-size: 10.5px;
-        margin-left: auto;
-        opacity: 0.55;
-        text-transform: none;
-        letter-spacing: 0;
-      }
-      .splitcard-label { letter-spacing: 0.12em; }
-      .splitcard-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        font-size: 14.5px;
-        line-height: 1.5;
-      }
-      .splitcard-list li {
-        padding: 6px 0;
-        border-bottom: 1px dashed var(--rc-hairline-paper);
-      }
-      .splitcard-list li:last-child { border-bottom: none; }
-      .splitcard-list-dark li { border-bottom-color: var(--rc-hairline-ink); }
-      .splitcard-list code {
-        font-family: var(--rc-font-mono);
-        font-size: 0.88em;
-        background: rgba(201,245,100,0.22);
-        padding: 1px 4px;
-        border-radius: 3px;
-        color: var(--rc-ink);
-      }
-      .splitcard-list-dark code {
-        background: rgba(201,245,100,0.15);
-        color: var(--rc-phosphor);
-      }
+      .byline-line { width: 60px; height: 1px; background: rgba(232, 226, 208, 0.2); }
 
-      /* ─── HUNK 3 (lifecycle) ─── */
-      .lifecycle {
-        list-style: none;
-        margin: 36px 0 0;
-        padding: 0;
-        display: grid;
-        gap: 0;
-        max-width: 720px;
-      }
-      .lifecycle-step {
-        display: grid;
-        grid-template-columns: 56px 1fr;
-        gap: 24px;
-        padding: 22px 0;
-        border-bottom: 1px solid var(--rc-hairline-paper);
-        position: relative;
-      }
-      .lifecycle-step:last-child { border-bottom: none; }
-      .lifecycle-no {
-        font-family: var(--rc-font-mono);
-        font-size: 13px;
-        color: var(--rc-amber-dim);
-        letter-spacing: 0.06em;
-        padding-top: 4px;
-      }
-      .lifecycle-h {
-        font-family: var(--rc-font-display);
-        font-weight: 500;
-        font-size: 22px;
-        line-height: 1.2;
-        letter-spacing: -0.015em;
-        color: var(--rc-ink);
-        margin: 0 0 6px;
-      }
-      .lifecycle-body p {
-        font-size: 15.5px;
-        line-height: 1.55;
-        color: var(--rc-charcoal);
-        margin: 0;
-      }
-      .lifecycle-h code,
-      .lifecycle-body p code {
-        font-family: var(--rc-font-mono);
-        font-size: 0.86em;
-        background: rgba(201, 245, 100, 0.20);
-        padding: 1px 5px;
-        border-radius: 3px;
-        color: var(--rc-ink);
-      }
-
-      /* ─── HUNK 4 (changelog) ─── */
-      .changelog {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 28px;
-        margin-top: 36px;
-      }
-      @media (min-width: 760px) {
-        .changelog { grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rc-hairline-paper); border: 1px solid var(--rc-hairline-paper); border-radius: var(--rc-radius-md); overflow: hidden; }
-      }
-      .changelog-col {
-        background: var(--rc-paper);
-        padding: 30px 28px;
-      }
-      .changelog-removed { background: rgba(255, 140, 66, 0.05); }
-      .changelog-added   { background: rgba(201, 245, 100, 0.07); }
-      .changelog-head {
+      /* ═══════════════════════════════════════════════════════════
+         SECTION : CLAIM
+         ═══════════════════════════════════════════════════════════ */
+      .kicker {
         display: inline-flex;
         align-items: center;
         gap: 10px;
@@ -874,125 +945,450 @@ const date = 'Mon, 01 Jun 2026';
         font-size: 11px;
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        margin-bottom: 16px;
+        color: var(--rc-bone-dim);
+        margin-bottom: 28px;
       }
-      .changelog-removed .changelog-head { color: var(--rc-amber-dim); }
-      .changelog-added   .changelog-head { color: var(--rc-phosphor-dim); }
-      .changelog-sign {
-        font-size: 18px;
-        line-height: 1;
-        font-weight: 700;
-      }
-      .changelog-col ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        font-size: 15.5px;
-        line-height: 1.55;
-      }
-      .changelog-col li {
-        padding: 8px 0;
-        position: relative;
-        padding-left: 22px;
-        border-bottom: 1px dashed var(--rc-hairline-paper);
-      }
-      .changelog-col li:last-child { border-bottom: none; }
-      .changelog-col li::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 18px;
-        width: 12px;
-        height: 1px;
-        background: currentColor;
-        opacity: 0.4;
-      }
-      .changelog-removed li { color: var(--rc-charcoal-dim); }
-      .changelog-added   li { color: var(--rc-charcoal); }
-      .changelog-added   li::before { background: var(--rc-phosphor-dim); opacity: 0.7; }
-      .changelog-removed li::before { background: var(--rc-amber-dim); opacity: 0.7; }
+      .kicker-bar { width: 24px; height: 1px; background: var(--rc-phosphor); }
 
-      .changelog-stat {
-        font-family: var(--rc-font-mono);
-        font-size: 12px;
-        letter-spacing: 0.04em;
-        color: var(--rc-charcoal);
-        opacity: 0.78;
-        margin: 28px 0 0;
-        text-align: center;
+      .claim {
+        padding: clamp(80px, 11vw, 140px) var(--gutter);
+        max-width: var(--max);
+        margin: 0 auto;
+        border-top: 1px solid var(--rc-hairline-ink);
       }
-      .changelog-plus  { color: var(--rc-phosphor-dim); }
-      .changelog-minus { color: var(--rc-amber-dim); }
+      .claim-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(38px, 6.6vw, 92px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        color: var(--rc-bone);
+        margin: 0 0 28px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        max-width: 22ch;
+        text-wrap: balance;
+      }
+      .claim-h em {
+        font-style: italic;
+        font-weight: 380;
+        color: var(--rc-amber);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+      .claim-sub {
+        font-size: 18px;
+        line-height: 1.6;
+        color: var(--rc-bone-dim);
+        max-width: 60ch;
+        margin: 0 0 48px;
+      }
+      .claim-sub strong { color: var(--rc-bone); font-weight: 600; }
+
+      .parallel { display: grid; grid-template-columns: 1fr; gap: 22px; }
+      @media (min-width: 760px) {
+        .parallel { grid-template-columns: 1fr 1fr; gap: 28px; }
+      }
+      .par-card {
+        background: rgba(232, 226, 208, 0.025);
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        padding: 28px;
+        transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+      }
+      .par-card:hover {
+        background: rgba(232, 226, 208, 0.05);
+        border-color: rgba(232, 226, 208, 0.18);
+        transform: translateY(-2px);
+      }
+      .par-head {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+      }
+      .par-dot { width: 6px; height: 6px; border-radius: 50%; }
+      .par-dot-amber { background: var(--rc-amber); }
+      .par-dot-phos  { background: var(--rc-phosphor); box-shadow: 0 0 8px rgba(201, 245, 100, 0.55); }
+      .par-old .par-label { color: var(--rc-amber); opacity: 0.85; }
+      .par-new .par-label { color: var(--rc-phosphor); }
+      .par-card ul { list-style: none; margin: 0; padding: 0; font-size: 15.5px; line-height: 1.5; }
+      .par-card li { padding: 10px 0; border-bottom: 1px dashed var(--rc-hairline-ink); }
+      .par-card li:last-child { border-bottom: none; }
+      .par-old li {
+        color: var(--rc-bone-dim);
+        text-decoration: line-through;
+        text-decoration-color: rgba(255, 140, 66, 0.55);
+      }
+      .par-new li { color: var(--rc-bone); }
 
       /* ═══════════════════════════════════════════════════════════
-         APPLY (final CTA on ink)
+         SECTION : FLOW
          ═══════════════════════════════════════════════════════════ */
-      .apply {
-        background: var(--rc-ink);
+      .flow {
+        padding: clamp(80px, 11vw, 140px) var(--gutter);
+        max-width: var(--max);
+        margin: 0 auto;
+        border-top: 1px solid var(--rc-hairline-ink);
+      }
+      .flow-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(36px, 6vw, 84px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
         color: var(--rc-bone);
-        padding: clamp(72px, 11vw, 140px) var(--gutter);
-        text-align: center;
+        margin: 0 0 56px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+      }
+      .flow-h em {
+        font-style: italic;
+        font-weight: 380;
+        color: var(--rc-phosphor);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+
+      .flowdiagram {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 24px;
+        padding: 28px 28px 36px;
+        background: rgba(232, 226, 208, 0.025);
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        margin-bottom: 56px;
         position: relative;
         overflow: hidden;
       }
-      .apply::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-          radial-gradient(50% 80% at 70% 30%, rgba(201,245,100,0.06) 0%, transparent 70%),
-          radial-gradient(40% 60% at 20% 80%, rgba(255,140,66,0.04) 0%, transparent 70%);
-        pointer-events: none;
+      .flowbox {
+        display: grid; gap: 4px;
+        text-align: center;
+        padding: 14px 18px;
+        min-width: 120px;
       }
-      .apply-meta {
-        position: relative;
+      .flowbox-icon { font-family: var(--rc-font-mono); font-size: 22px; color: var(--rc-bone); opacity: 0.7; }
+      .flowbox-title { font-family: var(--rc-font-display); font-size: 17px; font-weight: 500; color: var(--rc-bone); }
+      .flowbox-sub {
         font-family: var(--rc-font-mono);
-        font-size: 11px;
+        font-size: 10.5px;
+        color: var(--rc-bone-dim);
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: var(--rc-bone-dim);
-        margin-bottom: 32px;
       }
-      .apply-meta .patch-key { color: var(--rc-phosphor); opacity: 1; }
-      .apply-meta .patch-val { color: var(--rc-bone); }
-      .apply-h {
+      .flowbox-laptop .flowbox-icon { color: var(--rc-amber); }
+      .flowbox-mac    .flowbox-icon { color: var(--rc-phosphor); }
+
+      .flowwire {
         position: relative;
-        font-family: var(--rc-font-display);
-        font-weight: 400;
-        font-size: clamp(48px, 9vw, 124px);
-        line-height: 1.0;
-        letter-spacing: -0.035em;
-        color: var(--rc-bone);
-        margin: 0 0 24px;
-        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        height: 60px;
+        display: flex; align-items: center; justify-content: center;
       }
-      .apply-h em {
-        font-style: italic;
-        font-weight: 380;
-        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      .flowwire svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .flowparticle {
+        position: absolute;
+        top: 50%; left: 0;
+        transform: translate(0, -50%);
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--rc-phosphor);
+        box-shadow: 0 0 12px rgba(201, 245, 100, 0.75);
+        animation: travel 3.4s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+      }
+      @keyframes travel {
+        0%   { left: 4%; opacity: 0; }
+        15%  { opacity: 1; }
+        85%  { opacity: 1; }
+        100% { left: 96%; opacity: 0; }
+      }
+      .flowlabel {
+        position: relative;
+        z-index: 1;
+        font-family: var(--rc-font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--rc-bone-dim);
+        background: rgba(14, 14, 16, 0.7);
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--rc-hairline-ink);
+      }
+
+      .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+      .step {
+        display: grid;
+        grid-template-columns: 64px 1fr;
+        gap: 28px;
+        padding: 28px 0;
+        border-bottom: 1px solid var(--rc-hairline-ink);
+      }
+      .step:last-child { border-bottom: none; }
+      .step-no {
+        font-family: var(--rc-font-mono);
+        font-size: 14px;
+        color: var(--rc-phosphor);
+        letter-spacing: 0.06em;
+        padding-top: 4px;
+      }
+      .step-body h3 {
+        font-family: var(--rc-font-display);
+        font-weight: 500;
+        font-size: clamp(20px, 2vw, 26px);
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        color: var(--rc-bone);
+        margin: 0 0 6px;
+      }
+      .step-body h3 em { font-style: italic; font-weight: 380; color: var(--rc-amber); }
+      .step-body p { font-size: 16px; line-height: 1.55; color: var(--rc-bone-dim); margin: 0; }
+      .step-body code {
+        font-family: var(--rc-font-mono);
+        font-size: 0.86em;
+        background: rgba(201, 245, 100, 0.10);
+        padding: 1px 5px;
+        border-radius: 3px;
         color: var(--rc-phosphor);
       }
-      .apply-lede {
-        position: relative;
-        font-size: 17px;
-        line-height: 1.55;
-        color: var(--rc-bone-dim);
-        max-width: 56ch;
-        margin: 0 auto 40px;
+
+      /* ═══════════════════════════════════════════════════════════
+         SECTION : SETUP
+         ═══════════════════════════════════════════════════════════ */
+      .setup {
+        padding: clamp(80px, 11vw, 140px) var(--gutter);
+        max-width: var(--max);
+        margin: 0 auto;
+        border-top: 1px solid var(--rc-hairline-ink);
       }
-      .apply-cta {
-        position: relative;
-        display: flex;
+      .setup-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(36px, 6vw, 84px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        color: var(--rc-bone);
+        margin: 0 0 56px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+      }
+      .setup-h em {
+        font-style: italic;
+        font-weight: 380;
+        color: var(--rc-phosphor);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+      .setup-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
+      @media (min-width: 860px) { .setup-grid { grid-template-columns: 1fr 1fr; gap: 28px; } }
+      .termcard {
+        background: #131318;
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: border-color 0.25s ease, background 0.25s ease;
+        will-change: transform;
+      }
+      .termcard:hover {
+        border-color: rgba(232, 226, 208, 0.2);
+        background: #17171c;
+      }
+      .termcard-bar {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
         gap: 14px;
-        flex-wrap: wrap;
-        justify-content: center;
+        padding: 10px 16px;
+        background: #0F0F12;
+        border-bottom: 1px solid var(--rc-hairline-ink);
       }
+      .termcard-host {
+        text-align: right;
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        color: var(--rc-bone-dim);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .termcard-body {
+        padding: 22px 22px 26px;
+        font-family: var(--rc-font-mono);
+        font-size: clamp(12px, 1vw, 13.5px);
+        line-height: 1.85;
+        color: var(--rc-bone);
+        margin: 0;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+      }
+      .t-com { color: var(--rc-bone-dim); opacity: 0.55; }
+      .t-str { color: var(--rc-amber); }
+      .t-ok  { color: var(--rc-phosphor); }
+
+      /* ═══════════════════════════════════════════════════════════
+         SECTION : FEATURES
+         ═══════════════════════════════════════════════════════════ */
+      .feats {
+        padding: clamp(80px, 11vw, 140px) var(--gutter);
+        max-width: var(--max);
+        margin: 0 auto;
+        border-top: 1px solid var(--rc-hairline-ink);
+      }
+      .feats-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(36px, 6vw, 84px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        color: var(--rc-bone);
+        margin: 0 0 56px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        max-width: 18ch;
+      }
+
+      .featgrid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+      @media (min-width: 760px) {
+        .featgrid {
+          grid-template-columns: 1.4fr 1fr 1fr;
+          grid-template-rows: auto auto auto;
+          gap: 18px;
+        }
+        .feat-card-tall { grid-column: span 1; grid-row: span 2; }
+        .feat-card-quote { grid-column: span 2; }
+        .feat-card-strip { grid-column: span 3; }
+      }
+      .feat-card {
+        position: relative;
+        background: rgba(232, 226, 208, 0.025);
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        padding: 28px;
+        overflow: hidden;
+        transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+      }
+      .feat-card:hover {
+        background: rgba(232, 226, 208, 0.05);
+        border-color: rgba(232, 226, 208, 0.22);
+        transform: translateY(-3px);
+      }
+      .feat-no {
+        font-family: var(--rc-font-mono);
+        font-size: 22px;
+        color: var(--rc-phosphor);
+        line-height: 1;
+        margin-bottom: 22px;
+        display: inline-block;
+      }
+      .feat-card h3 {
+        font-family: var(--rc-font-display);
+        font-weight: 500;
+        font-size: 22px;
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        color: var(--rc-bone);
+        margin: 0 0 10px;
+      }
+      .feat-card p { font-size: 15px; line-height: 1.55; color: var(--rc-bone-dim); margin: 0; }
+      .feat-card code {
+        font-family: var(--rc-font-mono);
+        font-size: 0.86em;
+        background: rgba(201, 245, 100, 0.10);
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--rc-phosphor);
+      }
+      .feat-glow {
+        position: absolute;
+        bottom: -120px; right: -100px;
+        width: 280px; height: 280px;
+        background: radial-gradient(circle, rgba(201, 245, 100, 0.16), transparent 70%);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      .feat-card-tall:hover .feat-glow { opacity: 1; }
+
+      .feat-card-quote {
+        background: linear-gradient(135deg, rgba(201, 245, 100, 0.04), rgba(255, 140, 66, 0.04));
+      }
+      .feat-q {
+        font-family: var(--rc-font-display);
+        font-style: italic;
+        font-weight: 380;
+        font-size: clamp(18px, 1.8vw, 24px);
+        line-height: 1.35;
+        color: var(--rc-bone);
+        margin: 0 0 14px;
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+        text-wrap: balance;
+      }
+      .feat-q em { font-style: italic; color: var(--rc-phosphor); }
+      .feat-q-meta {
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--rc-bone-dim);
+        margin: 0;
+      }
+
+      .feat-card-strip { padding: 24px 28px; }
+      .strip {
+        list-style: none; margin: 0; padding: 0;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+      }
+      @media (max-width: 760px) { .strip { grid-template-columns: 1fr 1fr; gap: 18px; } }
+      .strip li {
+        display: flex; flex-direction: column; gap: 2px;
+        font-family: var(--rc-font-mono);
+        font-size: 13px;
+        border-left: 2px solid var(--rc-phosphor);
+        padding-left: 14px;
+      }
+      .strip li strong { color: var(--rc-bone); font-weight: 500; }
+      .strip li span { color: var(--rc-bone-dim); font-size: 11px; opacity: 0.7; }
+
+      /* ═══════════════════════════════════════════════════════════
+         SECTION : END CTA
+         ═══════════════════════════════════════════════════════════ */
+      .endcta {
+        padding: clamp(96px, 14vw, 180px) var(--gutter);
+        border-top: 1px solid var(--rc-hairline-ink);
+        position: relative;
+        overflow: hidden;
+      }
+      .endcta::before {
+        content: '';
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(60% 80% at 70% 30%, rgba(201,245,100,0.10) 0%, transparent 70%),
+          radial-gradient(40% 70% at 20% 80%, rgba(255,140,66,0.06) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .endcta-inner { position: relative; max-width: var(--max); margin: 0 auto; text-align: center; }
+      .endcta .kicker { color: var(--rc-phosphor); opacity: 0.85; }
+      .endcta-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(44px, 8.5vw, 124px);
+        line-height: 0.96;
+        letter-spacing: -0.035em;
+        color: var(--rc-bone);
+        margin: 0 auto 44px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        max-width: 14ch;
+      }
+      .endcta-h em {
+        font-style: italic;
+        font-weight: 380;
+        color: var(--rc-phosphor);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+      .endcta-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 
       /* ═══════════════════════════════════════════════════════════
          FOOTER
          ═══════════════════════════════════════════════════════════ */
       .foot {
-        background: var(--rc-ink);
+        background: #0A0A0C;
         color: var(--rc-bone);
         padding: 56px var(--gutter) 32px;
         border-top: 1px solid var(--rc-hairline-ink);
@@ -1014,11 +1410,7 @@ const date = 'Mon, 01 Jun 2026';
         line-height: 1.55;
         color: var(--rc-bone-dim);
       }
-      .foot-nav {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 36px;
-      }
+      .foot-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
       .foot-nav h4 {
         font-family: var(--rc-font-mono);
         font-size: 11px;
@@ -1048,54 +1440,61 @@ const date = 'Mon, 01 Jun 2026';
         font-size: 11px;
         color: rgba(232, 226, 208, 0.4);
       }
-      .foot-tag {
-        letter-spacing: 0.06em;
-        color: var(--rc-phosphor);
-        opacity: 0.7;
-      }
+      .foot-tag { letter-spacing: 0.06em; color: var(--rc-phosphor); opacity: 0.7; }
 
       /* ═══════════════════════════════════════════════════════════
          REDUCED MOTION
          ═══════════════════════════════════════════════════════════ */
       @media (prefers-reduced-motion: reduce) {
-        .cover-h-w, .cover-cta, .diff-hero .diff-line {
-          animation: none; opacity: 1; transform: none;
-        }
-        .kicker-dot, .cta-cursor { animation: none; }
+        .reveal { opacity: 1; transform: none; transition: none; }
+        .hero-h-line, .meta-dot, .eyebrow-pulse,
+        .flowparticle, .caret, .step-ok { animation: none; }
       }
 
       /* ═══════════════════════════════════════════════════════════
          RESPONSIVE
          ═══════════════════════════════════════════════════════════ */
       @media (max-width: 900px) {
-        .topbar { grid-template-columns: 1fr auto; gap: 12px; padding: 16px var(--gutter); }
+        .topbar { grid-template-columns: auto auto; gap: 12px; padding: 14px var(--gutter); }
         .topnav { display: none; }
-        .patch-meta { font-size: 10px; }
+        .meta-pill { font-size: 10px; padding: 5px 10px; }
 
-        .cover { padding-top: 36px; padding-bottom: 60px; }
-        .cover::before, .cover::after { display: none; }
-        .patch-email { font-size: 11px; }
-        .patch-key { min-width: 64px; }
-        .cover-cta { flex-direction: column; align-items: stretch; }
-        .cover-cta .cta { justify-content: center; }
+        .hero { padding-block: 56px; }
+        .hero-h { font-size: clamp(40px, 11vw, 64px); line-height: 0.96; max-width: 100%; }
+        .hero-sub { font-size: 16px; }
+        .term { box-shadow: 0 12px 40px -20px rgba(0,0,0,0.7); }
+        .term-body { padding: 16px 14px 20px; min-height: 320px; font-size: 11.5px; }
+        .term-line-step { grid-template-columns: 14px 60px 8px 1fr auto; gap: 6px; }
+        .step-detail { font-size: 0.95em; }
 
-        .hunk { padding-block: 56px; }
-        .hunk-h { font-size: clamp(28px, 7.5vw, 40px); }
-        .hunk-h-center { text-align: left; margin: 0 0 24px; }
-        .hunk-lede { text-align: left; margin-inline: 0; }
+        .hero-cta { flex-direction: column; align-items: stretch; }
+        .hero-cta .cta { justify-content: center; }
 
-        .lifecycle-step { grid-template-columns: 38px 1fr; gap: 16px; padding-block: 18px; }
-        .lifecycle-h { font-size: 18px; }
+        .claim-h, .flow-h, .setup-h, .feats-h, .endcta-h {
+          font-size: clamp(32px, 9vw, 48px);
+        }
 
-        .changelog-stat { text-align: left; }
+        .flowdiagram { grid-template-columns: 1fr; gap: 14px; padding: 22px; }
+        .flowwire { height: 40px; }
 
-        .apply-h { font-size: clamp(40px, 12vw, 64px); }
-        .apply-cta { flex-direction: column; align-items: stretch; }
-        .apply-cta .cta { justify-content: center; }
+        .step { grid-template-columns: 44px 1fr; gap: 16px; padding-block: 20px; }
+        .step-body h3 { font-size: 18px; }
 
-        .foot-grid { grid-template-columns: 1fr; gap: 36px; }
+        .featgrid { grid-template-columns: 1fr; }
+        .feat-card-tall, .feat-card-quote, .feat-card-strip { grid-column: auto; grid-row: auto; }
+
+        .endcta-actions { flex-direction: column; align-items: stretch; }
+        .endcta-actions .cta {
+          justify-content: center;
+          white-space: normal;
+          text-align: center;
+          line-height: 1.3;
+        }
+        .endcta-actions .cta span:first-child { flex: 1; }
+
+        .foot-grid { grid-template-columns: 1fr; gap: 32px; }
         .foot-nav { grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .foot-bottom { font-size: 10px; flex-direction: column; align-items: flex-start; gap: 8px; }
+        .foot-bottom { flex-direction: column; align-items: flex-start; gap: 8px; font-size: 10px; }
       }
       @media (max-width: 540px) {
         .foot-nav { grid-template-columns: 1fr 1fr; }
