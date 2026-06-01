@@ -205,6 +205,14 @@ program
     await runDoctor(process.cwd());
   });
 
+program
+  .command('whoami')
+  .description('Show which user the agent recognizes you as')
+  .action(async () => {
+    const { runWhoami } = await import('./commands/whoami.ts');
+    await runWhoami(process.cwd());
+  });
+
 program.parseAsync(process.argv).catch((err: Error) => {
   log.err(err.message);
   if (process.env.PW_VERBOSE === '1') console.error(err.stack);
