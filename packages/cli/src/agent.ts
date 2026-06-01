@@ -5,6 +5,7 @@ import { buildServer } from './agent/server.ts';
 import { UsersStore } from './agent/users-store.ts';
 import { migrateIfNeeded } from './agent/migrate-v01.ts';
 import { migrateProjectsToDefault } from './agent/migrate-projects.ts';
+import { ConcurrencyManager } from './agent/concurrency.ts';
 import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 import { registerUserCommands } from './commands/user.ts';
@@ -34,6 +35,18 @@ async function runServe(): Promise<void> {
   const migration = migrateIfNeeded({ usersJsonPath, legacyToken });
   const usersStore = new UsersStore(usersJsonPath);
 
+  const globalCap = Number(process.env.PW_MAX_CONCURRENT_TOTAL ?? 3);
+  const perUserCap = Number(process.env.PW_MAX_CONCURRENT_PER_USER ?? 1);
+  if (!Number.isInteger(globalCap) || globalCap < 1) {
+    console.error(`PW_MAX_CONCURRENT_TOTAL must be a positive integer (got ${process.env.PW_MAX_CONCURRENT_TOTAL})`);
+    process.exit(1);
+  }
+  if (!Number.isInteger(perUserCap) || perUserCap < 1) {
+    console.error(`PW_MAX_CONCURRENT_PER_USER must be a positive integer (got ${process.env.PW_MAX_CONCURRENT_PER_USER})`);
+    process.exit(1);
+  }
+  const concurrency = new ConcurrencyManager({ globalCap, perUserCap });
+
   const app = buildServer({
     usersStore,
     projectsRoot,
@@ -41,6 +54,7 @@ async function runServe(): Promise<void> {
     aiArgs,
     timeoutSec,
     version: VERSION,
+    concurrency,
   });
 
   if (migration.migrated) {
@@ -84,6 +98,7 @@ async function runServe(): Promise<void> {
   try {
     const addr = await app.listen({ host, port });
     app.log.info(`patchwire-agent listening on ${addr}`);
+    app.log.info(`concurrency: global=${globalCap}, per_user=${perUserCap}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
