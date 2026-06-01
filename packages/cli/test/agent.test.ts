@@ -43,7 +43,7 @@ async function makeFakeClaude(script: string): Promise<string> {
 
 beforeEach(async () => {
   projectsRoot = await mkdtemp(join(tmpdir(), 'devbridge-agent-'));
-  projectDir = join(projectsRoot, 'sample');
+  projectDir = join(projectsRoot, 'tester', 'sample');
   await makeProject();
 });
 afterEach(async () => {
@@ -146,8 +146,8 @@ printf 'brand new\\n' > c.txt`,
   });
 
   it('returns 412 when project is not a git repo', async () => {
-    const noGitDir = join(projectsRoot, 'plain');
-    await mkdir(noGitDir);
+    const noGitDir = join(projectsRoot, 'tester', 'plain');
+    await mkdir(noGitDir, { recursive: true });
     await writeFile(join(noGitDir, 'x.txt'), 'x', 'utf8');
 
     const app = buildServer({

@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { ChatBody } from '@patchwire/protocol';
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { z } from 'zod';
 import type { UsersStore } from './users-store.ts';
@@ -141,7 +141,13 @@ export function buildServer(opts: AgentOptions) {
       return { error: 'invalid body', issues: parsed.error.issues };
     }
     const { prompt, project } = parsed.data;
-    const projectDir = resolve(opts.projectsRoot, project);
+    const username = req.username!;
+    const userRoot = resolve(opts.projectsRoot, username);
+    const projectDir = resolve(userRoot, project);
+    if (!projectDir.startsWith(userRoot + sep)) {
+      reply.code(400);
+      return { error: 'invalid project name' };
+    }
     if (!existsSync(projectDir)) {
       reply.code(404);
       return { error: `project not found: ${projectDir}` };
@@ -197,7 +203,12 @@ export function buildServer(opts: AgentOptions) {
         .send({ ok: false, code: 'missing_fields', errors: parsed.error.format() });
     }
     const body = parsed.data;
-    const cwd = resolve(opts.projectsRoot, body.projectName);
+    const username = req.username!;
+    const userRoot = resolve(opts.projectsRoot, username);
+    const cwd = resolve(userRoot, body.projectName);
+    if (!cwd.startsWith(userRoot + sep)) {
+      return reply.status(400).send({ ok: false, code: 'invalid_project_name' });
+    }
     if (!existsSync(cwd)) {
       return reply.status(404).send({ ok: false, code: 'project_not_found', path: cwd });
     }
