@@ -69,6 +69,8 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 | `PW_AI_BIN` | no | `claude` | Path to the Claude CLI. |
 | `PW_AI_ARGS` | no | `--print` | Space-separated args. |
 | `PW_TIMEOUT_SEC` | no | `600` | Hard kill timeout for `claude`. |
+| `PW_MAX_CONCURRENT_TOTAL` | no | `3` | Maximum simultaneous Claude runs across all users. Requests beyond this cap wait FIFO. |
+| `PW_MAX_CONCURRENT_PER_USER` | no | `1` | Maximum simultaneous Claude runs from any one user. Prevents single-user hogging when the global cap allows it. |
 
 ## Laptop environment variables
 

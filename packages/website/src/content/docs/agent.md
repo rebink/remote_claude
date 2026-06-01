@@ -86,6 +86,30 @@ moves any top-level `PROJECTS_ROOT/<project>/` into `PROJECTS_ROOT/default/<proj
 automatically, so existing single-user setups keep working without manual
 file moves.
 
+### Concurrency + queue (v0.2.2+)
+
+The agent caps simultaneous Claude runs to avoid melting the box under team load:
+
+- `PW_MAX_CONCURRENT_TOTAL` (default `3`) — global ceiling.
+- `PW_MAX_CONCURRENT_PER_USER` (default `1`) — per-user ceiling so no single
+  developer hogs all slots while teammates wait.
+
+Requests that exceed either cap wait in arrival order (FIFO). The response carries:
+
+- `X-Patchwire-Queue-Wait-Ms` — how long the request waited (always present).
+- `X-Patchwire-Queue-Position-At-Entry` — position in the global queue at entry (only when wait > 0).
+
+A read-only `GET /queue` endpoint returns the current snapshot:
+
+```json
+{
+  "globalCap": 3,
+  "perUserCap": 1,
+  "inFlight": ["alice"],
+  "queued": [{"user": "bob", "position": 1}]
+}
+```
+
 ## macOS or Linux: foreground (for testing)
 
 ```bash
