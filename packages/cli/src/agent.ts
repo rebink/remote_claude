@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { buildServer } from './agent/server.ts';
 import { UsersStore } from './agent/users-store.ts';
 import { migrateIfNeeded } from './agent/migrate-v01.ts';
+import { migrateProjectsToDefault } from './agent/migrate-projects.ts';
 import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 import { registerUserCommands } from './commands/user.ts';
@@ -43,7 +44,14 @@ async function runServe(): Promise<void> {
   });
 
   if (migration.migrated) {
-    app.log.info(`migrated v0.1 → v0.2: created 'default' user from PW_AGENT_TOKEN`);
+    const projectsMigration = migrateProjectsToDefault({ projectsRoot });
+    app.log.info(
+      `migrated v0.1 → v0.2: created 'default' user from PW_AGENT_TOKEN, ` +
+        `moved ${projectsMigration.moved.length} project(s) into ${projectsRoot}/default/`,
+    );
+    if (projectsMigration.moved.length > 0) {
+      app.log.info(`moved projects: ${projectsMigration.moved.join(', ')}`);
+    }
   }
   if (usersStore.list().length === 0) {
     app.log.warn(
