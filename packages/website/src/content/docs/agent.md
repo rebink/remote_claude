@@ -3,9 +3,9 @@ title: Running the agent
 description: launchd, systemd, foreground, logs, and lifecycle.
 ---
 
-The agent is a small Fastify HTTP server. It has no required state between requests — restart it any time.
+The agent is a small Fastify HTTP server. It has no required state between requests, so you can restart it any time.
 
-## macOS — managed via launchd (recommended)
+## macOS: managed via launchd (recommended)
 
 ```bash
 patchwire-agent install
@@ -41,7 +41,7 @@ patchwire-agent uninstall
 patchwire-agent install \
   --projects-root /Volumes/Code/projects \
   --port 9090 \
-  --host 100.64.0.7 \
+  --host <your-ip> \
   --token "$(cat ~/.tokens/rc)" \
   --claude-bin /opt/homebrew/bin/claude
 ```
@@ -64,7 +64,29 @@ patchwire-agent user disable carol  # carol's requests now get 403, no delete
 Tokens are stored hashed in `~/.patchwire/users.json`; the plaintext is shown
 to you exactly once.
 
-## macOS / Linux — foreground (for testing)
+### Project layout on the agent
+
+As of v0.2, every project lives under a user namespace:
+
+```
+PROJECTS_ROOT/
+├── alice/
+│   ├── flutter-app/        # rsync target for Alice's `patchwire ask`
+│   └── backend/
+└── bob/
+    └── flutter-app/        # Bob's copy — distinct from Alice's
+```
+
+The agent resolves `<projectsRoot>/<username>/<project>` per request, where
+`<username>` comes from the authenticated bearer token. This means two
+developers can have a project with the same name without collision.
+
+On upgrade from v0.1, the first `patchwire-agent serve` run after install
+moves any top-level `PROJECTS_ROOT/<project>/` into `PROJECTS_ROOT/default/<project>/`
+automatically, so existing single-user setups keep working without manual
+file moves.
+
+## macOS or Linux: foreground (for testing)
 
 ```bash
 export PW_AGENT_TOKEN=…
@@ -76,7 +98,7 @@ patchwire-agent
 
 Ctrl-C to stop. Useful for tailing logs interactively or debugging.
 
-## Linux — systemd (manual setup)
+## Linux: systemd (manual setup)
 
 The `install` subcommand is currently macOS-only. On Linux, write a unit yourself:
 
@@ -115,7 +137,7 @@ curl -s http://<host>:7878/health
 
 ## Logs
 
-When run via launchd, stdout/stderr go to `~/.patchwire/logs/`. The Fastify logger uses one JSON line per request — easy to grep:
+When run via launchd, stdout and stderr go to `~/.patchwire/logs/`. The Fastify logger uses one JSON line per request, which makes it easy to grep:
 
 ```bash
 tail -f ~/.patchwire/logs/agent.out.log | grep '"url":"/ask"'
@@ -125,8 +147,8 @@ In the foreground, log lines go to your terminal in the same JSON format.
 
 ## Hardening checklist
 
-- [ ] Bind to a private interface (`PW_AGENT_HOST=127.0.0.1` or your tailnet IP) — never `0.0.0.0` on a public network.
-- [ ] Long random token (`openssl rand -hex 32`) — `install` does this for you.
+- [ ] Bind to a private interface (`PW_AGENT_HOST=127.0.0.1` or your tailnet IP). Never `0.0.0.0` on a public network.
+- [ ] Long random token (`openssl rand -hex 32`). `install` does this for you.
 - [ ] `~/.patchwire/agent.env` is chmod 600.
 - [ ] Each project under `PW_PROJECTS_ROOT` is a clean git checkout.
 - [ ] The `claude` binary you point at is the official one from Anthropic.
