@@ -112,6 +112,13 @@ export interface HealthResponse {
   claude: { found: boolean; path?: string };
 }
 
+export interface WhoamiResponse {
+  user: string;
+  createdAt?: string;
+  disabled: boolean;
+  lastSeen?: string;
+}
+
 export class AgentClient {
   constructor(private cfg: Config) {}
 
@@ -131,6 +138,18 @@ export class AgentClient {
       throw new Error(`Agent /health returned ${res.statusCode}`);
     }
     return (await res.body.json()) as HealthResponse;
+  }
+
+  async whoami(): Promise<WhoamiResponse> {
+    const res = await request(`${this.cfg.remote.agentUrl}/me`, {
+      method: 'GET',
+      headers: this.headers(),
+    });
+    if (res.statusCode !== 200) {
+      const text = await res.body.text();
+      throw new Error(`Agent /me returned ${res.statusCode}: ${text}`);
+    }
+    return (await res.body.json()) as WhoamiResponse;
   }
 
   async ask(body: AskRequest): Promise<AskResponse> {
