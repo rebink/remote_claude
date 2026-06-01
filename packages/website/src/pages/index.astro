@@ -112,20 +112,139 @@ const rev = '263e2e3';
         </div>
 
         <div class="hero-cta reveal">
-          <a href="/quickstart/" class="cta cta-primary magnet">
-            <span>Try Patchwire</span>
+          <a href="/install-extension/" class="cta cta-primary magnet">
+            <span class="cta-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M22 4.5l-9.5 7.5L22 19.5V4.5z" fill="currentColor"/>
+                <path d="M3 8l5 5v6l9.5-7.5L8 4v6l-5-2z" fill="currentColor" opacity="0.85"/>
+              </svg>
+            </span>
+            <span>Install for VS Code</span>
             <span class="cta-arrow">→</span>
           </a>
-          <a href={repo} class="cta cta-ghost magnet">
-            <span>View on GitHub</span>
-            <span class="cta-arrow">↗</span>
+          <a href="/quickstart/" class="cta cta-ghost magnet">
+            <span class="cta-icon" aria-hidden="true">$_</span>
+            <span>Get the CLI</span>
+            <span class="cta-arrow">→</span>
           </a>
         </div>
 
-        <div class="hero-byline reveal" aria-hidden="true">
-          <span>↓ scroll</span>
-          <span class="byline-line"></span>
-          <span>3 minutes to install</span>
+        <div class="hero-byline reveal">
+          <span aria-hidden="true">↓ scroll</span>
+          <span class="byline-line" aria-hidden="true"></span>
+          <a href={repo} class="byline-link">github.com/rebink/patchwire ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── SECTION: VS CODE EXTENSION ───────── -->
+    <section class="editor">
+      <div class="editor-grid">
+        <div class="editor-prose">
+          <span class="kicker reveal"><span class="kicker-bar"></span>00 · from your editor</span>
+          <h2 class="editor-h reveal">
+            Or, never <em>leave</em> your editor.
+          </h2>
+          <p class="editor-sub reveal">
+            Patchwire ships a VS Code extension. Chat in a side panel.
+            Preview the diff inline. <strong>Apply with one keystroke.</strong>
+            Same engine, same diff-return guarantee &mdash; just without the
+            terminal context switch.
+          </p>
+          <ul class="editor-bullets reveal">
+            <li><span class="bullet-mark">▢</span> Native side panel — feels like part of VS Code</li>
+            <li><span class="bullet-mark">▢</span> Inline diff preview, hunk-by-hunk apply</li>
+            <li><span class="bullet-mark">▢</span> Setup wizard discovers your Tailscale peers</li>
+            <li><span class="bullet-mark">▢</span> Shares the same config as the CLI — swap any time</li>
+          </ul>
+          <div class="editor-cta reveal">
+            <a href="/install-extension/" class="cta cta-primary magnet">
+              <span class="cta-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 4.5l-9.5 7.5L22 19.5V4.5z" fill="currentColor"/>
+                  <path d="M3 8l5 5v6l9.5-7.5L8 4v6l-5-2z" fill="currentColor" opacity="0.85"/>
+                </svg>
+              </span>
+              <span>Install for VS Code</span>
+              <span class="cta-arrow">→</span>
+            </a>
+            <a href="/quickstart/" class="cta cta-link magnet">
+              <span>or use the CLI</span>
+              <span class="cta-arrow">→</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="editor-mock reveal">
+          <div class="vscode" data-tilt>
+            <header class="vscode-bar">
+              <span class="term-dots" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+              <span class="vscode-title">Visual Studio Code — your-app</span>
+              <span class="vscode-host" aria-hidden="true">·</span>
+            </header>
+            <div class="vscode-body">
+              <aside class="vscode-activity" aria-hidden="true">
+                <span class="va">▤</span>
+                <span class="va">⌕</span>
+                <span class="va">⌥</span>
+                <span class="va va-active" title="Patchwire">
+                  <svg width="14" height="14" viewBox="0 0 22 22" aria-hidden="true">
+                    <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" fill="none"/>
+                    <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
+                    <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-dasharray="1 2"/>
+                  </svg>
+                </span>
+                <span class="va">▦</span>
+              </aside>
+              <aside class="vscode-side">
+                <header class="vss-head">
+                  <span class="vss-title">PATCHWIRE</span>
+                  <span class="vss-conn">
+                    <span class="vss-conn-dot"></span>
+                    <span>mac&#8209;mini</span>
+                  </span>
+                </header>
+                <div class="vss-thread" role="log">
+                  <div class="vss-msg vss-msg-user">
+                    <span class="vss-avatar">you</span>
+                    <p class="vss-bubble">refactor login_bloc to freezed</p>
+                  </div>
+                  <div class="vss-msg vss-msg-bot">
+                    <span class="vss-avatar vss-avatar-pw">pw</span>
+                    <div class="vss-content">
+                      <p class="vss-msg-head">
+                        Done.
+                        <span class="vss-stat-add">+12</span>
+                        <span class="vss-stat-sep">·</span>
+                        <span class="vss-stat-rm">−8</span>
+                        <span class="vss-stat-sep">·</span>
+                        <span class="vss-stat-files">3 files</span>
+                      </p>
+                      <div class="vss-diffinline">
+                        <header class="vss-diff-head">lib/auth/login_bloc.dart</header>
+                        <div class="vss-row vss-row-minus"><span class="vss-row-sign">−</span><span>return BlocBase.fromJson(json);</span></div>
+                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>return Freezed.fromJson(json);</span></div>
+                        <div class="vss-row vss-row-context"><span class="vss-row-sign">&nbsp;</span><span>{`}`}</span></div>
+                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>@freezed</span></div>
+                      </div>
+                      <div class="vss-actions">
+                        <button class="vss-btn vss-btn-primary" type="button">Apply <span class="vss-kbd">↵</span></button>
+                        <button class="vss-btn" type="button">Reject</button>
+                        <button class="vss-btn vss-btn-ghost" type="button">Tweak</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="vss-input" aria-hidden="true">
+                  <span class="vss-input-text">Ask Patchwire&hellip;</span>
+                  <span class="vss-input-cursor"></span>
+                  <span class="vss-input-send">↵</span>
+                </div>
+              </aside>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -936,6 +1055,30 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       .page .cta-ghost span { color: inherit; }
       .page .cta-lg { padding: 18px 28px; font-size: 14px; }
 
+      /* New: link-style CTA (for "or use the CLI") */
+      .page .cta-link {
+        background: transparent;
+        border-color: transparent;
+        color: var(--rc-bone-dim);
+        padding-inline: 4px;
+      }
+      .page .cta-link:hover {
+        background: transparent;
+        color: var(--rc-phosphor);
+      }
+
+      /* Small leading glyph next to CTA text (mono `$_` for CLI,
+         square SVG for VS Code) */
+      .page .cta-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--rc-font-mono);
+        font-size: 12px;
+        opacity: 0.9;
+        margin-right: -2px;
+      }
+
       .hero-byline {
         display: inline-flex; align-items: center; gap: 14px;
         margin-top: 18px;
@@ -947,6 +1090,364 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         opacity: 0.7;
       }
       .byline-line { width: 60px; height: 1px; background: rgba(232, 226, 208, 0.2); }
+      .byline-link {
+        color: var(--rc-bone-dim);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+      .byline-link:hover { color: var(--rc-phosphor); }
+
+      /* ═══════════════════════════════════════════════════════════
+         SECTION : EDITOR (VS Code extension showcase)
+         ═══════════════════════════════════════════════════════════ */
+      .editor {
+        padding: clamp(80px, 11vw, 140px) var(--gutter);
+        max-width: var(--max);
+        margin: 0 auto;
+        border-top: 1px solid var(--rc-hairline-ink);
+      }
+      .editor-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: clamp(40px, 5vw, 64px);
+        align-items: center;
+      }
+      @media (min-width: 1024px) {
+        .editor-grid { grid-template-columns: 0.95fr 1.05fr; }
+      }
+
+      .editor-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(36px, 5.6vw, 76px);
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+        color: var(--rc-bone);
+        margin: 0 0 22px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        max-width: 16ch;
+        text-wrap: balance;
+      }
+      .editor-h em {
+        font-style: italic;
+        font-weight: 380;
+        color: var(--rc-amber);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+      .editor-sub {
+        font-size: 17px;
+        line-height: 1.55;
+        color: var(--rc-bone-dim);
+        margin: 0 0 24px;
+        max-width: 44ch;
+      }
+      .editor-sub strong { color: var(--rc-bone); font-weight: 600; }
+
+      .editor-bullets {
+        list-style: none;
+        margin: 0 0 32px;
+        padding: 0;
+        max-width: 44ch;
+      }
+      .editor-bullets li {
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--rc-bone);
+        padding: 8px 0;
+        border-bottom: 1px dashed var(--rc-hairline-ink);
+        display: grid;
+        grid-template-columns: 22px 1fr;
+        gap: 8px;
+        align-items: baseline;
+      }
+      .editor-bullets li:last-child { border-bottom: none; }
+      .editor-bullets li code {
+        font-family: var(--rc-font-mono);
+        font-size: 0.86em;
+        background: rgba(201, 245, 100, 0.10);
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--rc-phosphor);
+      }
+      .bullet-mark {
+        color: var(--rc-phosphor);
+        font-family: var(--rc-font-mono);
+        opacity: 0.9;
+        line-height: 1;
+      }
+
+      .editor-cta {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      /* ─── VS Code mock window ─── */
+      .editor-mock {
+        position: relative;
+        perspective: 1400px;
+      }
+      .vscode {
+        background: #16161A;
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 1px 0 rgba(232, 226, 208, 0.04) inset,
+          0 40px 100px -40px rgba(0, 0, 0, 0.75),
+          0 0 0 1px rgba(201, 245, 100, 0.04);
+        transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+        will-change: transform;
+      }
+      .vscode-bar {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 16px;
+        background: #0F0F12;
+        border-bottom: 1px solid var(--rc-hairline-ink);
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px;
+        color: var(--rc-bone-dim);
+      }
+      .vscode-title { text-align: center; opacity: 0.65; }
+      .vscode-host { opacity: 0; font-size: 0; }   /* spacer for grid balance */
+
+      .vscode-body {
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        min-height: 460px;
+      }
+
+      /* Activity bar */
+      .vscode-activity {
+        background: #0F0F12;
+        border-right: 1px solid var(--rc-hairline-ink);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 0;
+      }
+      .va {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--rc-font-mono);
+        font-size: 16px;
+        color: var(--rc-bone-dim);
+        opacity: 0.55;
+        border-left: 2px solid transparent;
+        transition: opacity 0.18s ease, color 0.18s ease;
+      }
+      .va-active {
+        opacity: 1;
+        color: var(--rc-phosphor);
+        border-left-color: var(--rc-phosphor);
+      }
+      .va:hover { opacity: 0.85; }
+      .va-active:hover { opacity: 1; }
+
+      /* Patchwire side panel */
+      .vscode-side {
+        background: #131318;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 0;
+      }
+      .vss-head {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        background: #0F0F12;
+        border-bottom: 1px solid var(--rc-hairline-ink);
+      }
+      .vss-title {
+        font-family: var(--rc-font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.12em;
+        color: var(--rc-bone-dim);
+      }
+      .vss-conn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--rc-font-mono);
+        font-size: 10.5px;
+        color: var(--rc-bone-dim);
+      }
+      .vss-conn-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--rc-phosphor);
+        box-shadow: 0 0 6px rgba(201, 245, 100, 0.55);
+        animation: pulse 2.2s ease-in-out infinite;
+      }
+
+      .vss-thread {
+        padding: 16px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        overflow: hidden;
+      }
+      .vss-msg {
+        display: grid;
+        grid-template-columns: 30px 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+      .vss-avatar {
+        width: 26px; height: 26px;
+        border-radius: 6px;
+        background: rgba(232, 226, 208, 0.06);
+        font-family: var(--rc-font-mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        color: var(--rc-bone-dim);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+        flex-shrink: 0;
+      }
+      .vss-avatar-pw {
+        background: var(--rc-phosphor);
+        color: var(--rc-ink);
+        font-weight: 600;
+      }
+      .vss-bubble {
+        margin: 2px 0 0;
+        font-family: var(--rc-font-body);
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--rc-bone);
+        background: rgba(232, 226, 208, 0.04);
+        border: 1px solid var(--rc-hairline-ink);
+        padding: 8px 12px;
+        border-radius: 6px;
+        max-width: max-content;
+      }
+      .vss-content { display: grid; gap: 10px; min-width: 0; }
+      .vss-msg-head {
+        margin: 4px 0 0;
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px;
+        color: var(--rc-bone-dim);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .vss-stat-add  { color: var(--rc-phosphor); font-weight: 600; }
+      .vss-stat-rm   { color: var(--rc-amber); font-weight: 600; }
+      .vss-stat-sep  { opacity: 0.4; }
+      .vss-stat-files { opacity: 0.7; }
+
+      .vss-diffinline {
+        background: rgba(14, 14, 16, 0.5);
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 6px;
+        overflow: hidden;
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px;
+      }
+      .vss-diff-head {
+        padding: 6px 10px;
+        background: rgba(232, 226, 208, 0.03);
+        color: var(--rc-amber);
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--rc-hairline-ink);
+        opacity: 0.85;
+      }
+      .vss-row {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 6px;
+        padding: 1px 8px;
+        line-height: 1.6;
+      }
+      .vss-row-sign { text-align: center; font-weight: 600; }
+      .vss-row-context { color: var(--rc-bone); opacity: 0.65; }
+      .vss-row-plus    { background: rgba(201, 245, 100, 0.10); color: var(--rc-bone); }
+      .vss-row-plus  .vss-row-sign { color: var(--rc-phosphor); }
+      .vss-row-minus   { background: rgba(255, 140, 66, 0.10); color: var(--rc-bone-dim); }
+      .vss-row-minus .vss-row-sign { color: var(--rc-amber); }
+
+      .vss-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .vss-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px;
+        color: var(--rc-bone);
+        background: rgba(232, 226, 208, 0.04);
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease;
+      }
+      .vss-btn:hover {
+        background: rgba(232, 226, 208, 0.08);
+        border-color: rgba(232, 226, 208, 0.3);
+      }
+      .vss-btn-primary {
+        background: var(--rc-phosphor);
+        color: var(--rc-ink);
+        border-color: var(--rc-phosphor);
+        font-weight: 600;
+      }
+      .vss-btn-primary:hover { background: #d4f878; color: var(--rc-ink); }
+      .vss-btn-ghost { color: var(--rc-bone-dim); }
+      .vss-kbd {
+        font-size: 10px;
+        padding: 1px 5px;
+        background: rgba(14, 14, 16, 0.4);
+        border-radius: 3px;
+        opacity: 0.7;
+      }
+      .vss-btn-primary .vss-kbd { background: rgba(14, 14, 16, 0.18); }
+
+      .vss-input {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: #0F0F12;
+        border-top: 1px solid var(--rc-hairline-ink);
+        font-family: var(--rc-font-mono);
+        font-size: 12px;
+      }
+      .vss-input-text { color: var(--rc-bone-dim); opacity: 0.55; }
+      .vss-input-cursor {
+        width: 7px; height: 14px;
+        background: var(--rc-phosphor);
+        opacity: 0.75;
+        animation: blink 1.1s steps(2) infinite;
+      }
+      .vss-input-send {
+        width: 22px; height: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(232, 226, 208, 0.04);
+        border-radius: 4px;
+        color: var(--rc-bone-dim);
+      }
 
       /* ═══════════════════════════════════════════════════════════
          SECTION : CLAIM
@@ -1484,9 +1985,22 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         .hero-cta { flex-direction: column; align-items: stretch; }
         .hero-cta .cta { justify-content: center; }
 
-        .claim-h, .flow-h, .setup-h, .feats-h, .endcta-h {
+        .claim-h, .flow-h, .setup-h, .feats-h, .endcta-h, .editor-h {
           font-size: clamp(32px, 9vw, 48px);
         }
+
+        /* Editor section mobile */
+        .editor { padding-block: 56px; }
+        .editor-cta { flex-direction: column; align-items: stretch; }
+        .editor-cta .cta { justify-content: center; }
+        .vscode-body { min-height: 420px; }
+        .vss-thread { padding: 14px 12px; gap: 14px; }
+        .vss-bubble { font-size: 12.5px; }
+        .vss-row { font-size: 10.5px; }
+        .vss-diff-head { font-size: 10px; }
+        .vss-actions { gap: 4px; }
+        .vss-btn { padding: 5px 9px; font-size: 11px; }
+        .vss-msg-head { font-size: 11px; }
 
         .flowdiagram { grid-template-columns: 1fr; gap: 14px; padding: 22px; }
         .flowwire { height: 40px; }
