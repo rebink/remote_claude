@@ -224,9 +224,9 @@ export class SetupWizard {
         }
 
         // Namespace the remote path under the LAPTOP's username so multiple
-        // developers sharing one SSH account on the Mini don't collide on
+        // developers sharing one SSH account on the remote don't collide on
         // project names. Fallback to "shared" if local username is unusable
-        // (e.g., contains weird chars). Example: ~/workspace/apple/dev_sync_cli.
+        // (e.g., contains weird chars). Example: ~/workspace/alice/my-app.
         const rawLocalUser = (os.userInfo().username || 'shared').toLowerCase();
         const localUser = rawLocalUser.replace(/[^a-z0-9._-]/g, '-').replace(/^-+|-+$/g, '') || 'shared';
         const remotePathOnMini = `~/workspace/${localUser}/${projectName}`;
