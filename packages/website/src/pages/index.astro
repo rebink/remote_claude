@@ -886,14 +886,19 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       }
       .term-btn-primary .term-btn-kbd { background: rgba(14, 14, 16, 0.15); }
 
-      /* ─── CTAs ─── */
+      /* ─── CTAs ───
+         Selectors are intentionally bumped to .page .cta-* so they
+         beat custom.css's `html.rc-brand a { color: inherit }` which
+         would otherwise force the button text to inherit body's bone
+         color (terrible contrast on phosphor). */
       .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
-      .cta {
+      .page .cta {
         display: inline-flex;
         align-items: center;
         gap: 12px;
         padding: 14px 22px;
         font-family: var(--rc-font-mono);
+        font-weight: 500;
         font-size: 13px;
         letter-spacing: 0.01em;
         border: 1px solid transparent;
@@ -901,26 +906,35 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.25s ease;
         white-space: nowrap;
         will-change: transform;
+        text-decoration: none;
       }
-      .cta-arrow { transition: transform 0.2s ease; }
-      .cta:hover .cta-arrow { transform: translate(2px, -1px); }
-      .cta-primary {
+      .page .cta-arrow { transition: transform 0.2s ease; color: inherit; }
+      .page .cta:hover .cta-arrow { transform: translate(2px, -1px); }
+      .page .cta-primary {
         background: var(--rc-phosphor);
         color: var(--rc-ink);
         border-color: var(--rc-phosphor);
-        box-shadow: 0 0 0 0 rgba(201, 245, 100, 0.5);
+        box-shadow: 0 0 0 0 rgba(201, 245, 100, 0.5), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+        font-weight: 600;
       }
-      .cta-primary:hover { background: #d4f878; box-shadow: 0 0 0 6px rgba(201, 245, 100, 0.15); }
-      .cta-ghost {
+      .page .cta-primary:hover {
+        background: #d4f878;
+        color: var(--rc-ink);
+        box-shadow: 0 0 0 6px rgba(201, 245, 100, 0.18), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+      }
+      .page .cta-primary span { color: inherit; }
+      .page .cta-ghost {
         background: rgba(232, 226, 208, 0.04);
         color: var(--rc-bone);
-        border-color: var(--rc-hairline-ink);
+        border-color: rgba(232, 226, 208, 0.18);
       }
-      .cta-ghost:hover {
+      .page .cta-ghost:hover {
         background: rgba(232, 226, 208, 0.08);
-        border-color: rgba(232, 226, 208, 0.4);
+        color: var(--rc-bone);
+        border-color: rgba(232, 226, 208, 0.42);
       }
-      .cta-lg { padding: 18px 28px; font-size: 14px; }
+      .page .cta-ghost span { color: inherit; }
+      .page .cta-lg { padding: 18px 28px; font-size: 14px; }
 
       .hero-byline {
         display: inline-flex; align-items: center; gap: 14px;
