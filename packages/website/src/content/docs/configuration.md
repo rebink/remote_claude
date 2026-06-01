@@ -61,7 +61,8 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `PW_AGENT_TOKEN` | **yes** | — | Bearer token (must match `PW_TOKEN` on the laptop). |
+| `PW_AGENT_TOKEN` | no | — | **Legacy.** Used only at first boot to auto-migrate to a per-user `default` user. After migration, manage users with `patchwire-agent user add\|list\|rotate\|disable\|rm`. |
+| `PW_USERS_FILE` | no | `~/.patchwire/users.json` | Path to the agent's users JSON. |
 | `PW_PROJECTS_ROOT` | **yes** | — | Parent directory containing each project. |
 | `PW_AGENT_HOST` | no | `127.0.0.1` | Bind interface. Use `0.0.0.0` to bind all, or your tailnet IP. |
 | `PW_AGENT_PORT` | no | `7878` | TCP port. |

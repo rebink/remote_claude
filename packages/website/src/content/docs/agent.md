@@ -48,6 +48,22 @@ patchwire-agent install \
 
 Re-running `install` regenerates the plist and reloads launchd.
 
+### Adding more developers
+
+The agent supports multiple developers. Each gets their own token:
+
+```bash
+patchwire-agent user add alice
+# → prints a hex token, copy it to Alice's ~/.patchwire/env as PW_TOKEN
+
+patchwire-agent user list       # see who's registered
+patchwire-agent user rotate bob # invalidate Bob's old token, issue a new one
+patchwire-agent user disable carol  # carol's requests now get 403, no delete
+```
+
+Tokens are stored hashed in `~/.patchwire/users.json`; the plaintext is shown
+to you exactly once.
+
 ## macOS / Linux — foreground (for testing)
 
 ```bash

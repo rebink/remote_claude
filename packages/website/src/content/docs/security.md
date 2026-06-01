@@ -67,6 +67,19 @@ If you ever see a `409`, **don't** force the run — investigate. Either the pre
 
 To rotate: regenerate on the Mini (`patchwire-agent install --token <new>`) and update `~/.patchwire/env` on the laptop. Re-source.
 
+## Per-user tokens (v0.2+)
+
+The agent now supports multiple developers via per-user bearer tokens:
+
+- `patchwire-agent user add <name>` generates a 256-bit token and prints it once.
+- Tokens are stored hashed (SHA-256) in `~/.patchwire/users.json`; plaintext is never persisted on the agent.
+- A laptop authenticates by putting `PW_TOKEN=<the-token>` in `~/.patchwire/env`.
+- `patchwire-agent user rotate <name>` invalidates the old token immediately.
+
+A v0.1 install upgrades transparently: on first v0.2 agent start, if `PW_AGENT_TOKEN`
+is set and `users.json` does not exist, a `default` user is created with that token's
+hash. Existing laptops keep working with no config change.
+
 ## What Anthropic sees
 
 Same as if you ran `claude` locally. Claude Code on the Mini sends prompts and relevant file context to Anthropic's API per its own data policy. Patchwire doesn't add to or subtract from that surface. Read [Anthropic's data handling docs](https://docs.claude.com/en/docs/claude-code/security) for specifics.
