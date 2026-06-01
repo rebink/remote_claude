@@ -6,6 +6,7 @@ import { homedir } from 'node:os';
 import { z } from 'zod';
 import type { UsersStore } from './users-store.ts';
 import { resolveUserFromHeader } from './auth.ts';
+import { ConcurrencyManager } from './concurrency.ts';
 import {
   captureDiff,
   cleanResetToHead,
@@ -34,6 +35,8 @@ export interface AgentOptions {
   version: string;
   /** Path to the persistent session-store JSON. Defaults to `~/.patchwire/agent-sessions.json`. */
   sessionStorePath?: string;
+  /** Concurrency manager. Defaults to ConcurrencyManager({globalCap:3, perUserCap:1}). */
+  concurrency?: ConcurrencyManager;
 }
 
 const AskBody = z.object({
@@ -104,6 +107,9 @@ export function buildServer(opts: AgentOptions) {
   // / `--aiArgs` exactly the same way the `/ask` path does via `runAi`.
   const aiRunner = makeAiRunner({ bin: opts.aiCommand, args: opts.aiArgs });
 
+  const concurrency =
+    opts.concurrency ?? new ConcurrencyManager({ globalCap: 3, perUserCap: 1 });
+
   app.addHook('onRequest', async (req, reply) => {
     if (req.url === '/health') return;
     const result = resolveUserFromHeader(req.headers.authorization, opts.usersStore);
@@ -134,6 +140,10 @@ export function buildServer(opts: AgentOptions) {
     return summary;
   });
 
+  app.get('/queue', async () => {
+    return concurrency.snapshot();
+  });
+
   app.post('/ask', async (req, reply) => {
     const parsed = AskBody.safeParse(req.body);
     if (!parsed.success) {
@@ -162,37 +172,46 @@ export function buildServer(opts: AgentOptions) {
       return { error: 'agent working tree is dirty before run', status: status.status };
     }
 
-    const start = Date.now();
-    let claudeResult;
-    try {
-      claudeResult = await runAi({
-        command: opts.aiCommand,
-        args: opts.aiArgs,
-        prompt,
-        cwd: projectDir,
-        timeoutMs: opts.timeoutSec * 1000,
-      });
-    } catch (err) {
-      await resetClean(projectDir).catch(() => {});
-      reply.code(500);
-      return { error: (err as Error).message };
+    const lease = await concurrency.acquire(username);
+    reply.header('X-Patchwire-Queue-Wait-Ms', String(lease.queueWaitMs));
+    if (lease.positionAtEntry > 0) {
+      reply.header('X-Patchwire-Queue-Position-At-Entry', String(lease.positionAtEntry));
     }
-
-    let diffData;
     try {
-      diffData = await captureDiff(projectDir);
+      const start = Date.now();
+      let claudeResult;
+      try {
+        claudeResult = await runAi({
+          command: opts.aiCommand,
+          args: opts.aiArgs,
+          prompt,
+          cwd: projectDir,
+          timeoutMs: opts.timeoutSec * 1000,
+        });
+      } catch (err) {
+        await resetClean(projectDir).catch(() => {});
+        reply.code(500);
+        return { error: (err as Error).message };
+      }
+
+      let diffData;
+      try {
+        diffData = await captureDiff(projectDir);
+      } finally {
+        await resetClean(projectDir).catch(() => {});
+      }
+
+      return {
+        diff: diffData.diff,
+        files: diffData.files,
+        durationMs: Date.now() - start,
+        stdout: claudeResult.stdout,
+        stderr: claudeResult.stderr,
+        exitCode: claudeResult.exitCode,
+      };
     } finally {
-      await resetClean(projectDir).catch(() => {});
+      concurrency.release(lease);
     }
-
-    return {
-      diff: diffData.diff,
-      files: diffData.files,
-      durationMs: Date.now() - start,
-      stdout: claudeResult.stdout,
-      stderr: claudeResult.stderr,
-      exitCode: claudeResult.exitCode,
-    };
   });
 
   app.post('/chat', async (req, reply) => {
@@ -213,58 +232,63 @@ export function buildServer(opts: AgentOptions) {
       return reply.status(404).send({ ok: false, code: 'project_not_found', path: cwd });
     }
 
-    reply.raw.setHeader('content-type', 'application/x-ndjson');
-    reply.hijack();
-    const emit = (e: unknown) => reply.raw.write(JSON.stringify(e) + '\n');
-
-    // TODO (M3 Task 24): wire client-disconnect cancellation by listening on
-    //   req.raw.on('close') and aborting the spawned claude child via AbortSignal.
-    //   Requires plumbing an AbortSignal through aiRunner.run.
-    turns.start(body.uuid);
+    const lease = await concurrency.acquire(username);
     try {
-      await runChatTurn({
-        uuid: body.uuid,
-        prompt: body.prompt,
-        cwd,
-        store: sessionStore,
-        ai: aiRunner,
-        git: { diffHead, cleanResetToHead },
-        // Wrap emit to record completion in TurnState. The wrapper MUST forward
-        // every event to the original `emit` — the side effect for `chat_done`
-        // is purely additive so GET /session/:id/status can report final
-        // token counts + duration.
-        emit: (e) => {
-          if (e.type === 'chat_done') {
-            turns.complete(body.uuid, {
-              tokensIn: e.tokensIn,
-              tokensOut: e.tokensOut,
-              durationMs: e.durationMs,
-            });
-          }
-          emit(e);
-        },
-      });
-    } catch (err) {
-      // Record the error in TurnState BEFORE emitting it on the wire — that
-      // way the status endpoint reflects the error even if the socket write
-      // fails (e.g. client already disconnected).
-      turns.error(body.uuid, (err as Error).message);
+      reply.raw.setHeader('content-type', 'application/x-ndjson');
+      reply.hijack();
+      const emit = (e: unknown) => reply.raw.write(JSON.stringify(e) + '\n');
+
+      // TODO (M3 Task 24): wire client-disconnect cancellation by listening on
+      //   req.raw.on('close') and aborting the spawned claude child via AbortSignal.
+      //   Requires plumbing an AbortSignal through aiRunner.run.
+      turns.start(body.uuid);
       try {
-        emit({
-          type: 'error',
-          code: 'turn_failed',
-          message: (err as Error).message,
-          recoverable: true,
+        await runChatTurn({
+          uuid: body.uuid,
+          prompt: body.prompt,
+          cwd,
+          store: sessionStore,
+          ai: aiRunner,
+          git: { diffHead, cleanResetToHead },
+          // Wrap emit to record completion in TurnState. The wrapper MUST forward
+          // every event to the original `emit` — the side effect for `chat_done`
+          // is purely additive so GET /session/:id/status can report final
+          // token counts + duration.
+          emit: (e) => {
+            if (e.type === 'chat_done') {
+              turns.complete(body.uuid, {
+                tokensIn: e.tokensIn,
+                tokensOut: e.tokensOut,
+                durationMs: e.durationMs,
+              });
+            }
+            emit(e);
+          },
         });
-      } catch {
-        /* socket already destroyed — nothing more we can do */
+      } catch (err) {
+        // Record the error in TurnState BEFORE emitting it on the wire — that
+        // way the status endpoint reflects the error even if the socket write
+        // fails (e.g. client already disconnected).
+        turns.error(body.uuid, (err as Error).message);
+        try {
+          emit({
+            type: 'error',
+            code: 'turn_failed',
+            message: (err as Error).message,
+            recoverable: true,
+          });
+        } catch {
+          /* socket already destroyed — nothing more we can do */
+        }
+      } finally {
+        try {
+          reply.raw.end();
+        } catch {
+          /* same */
+        }
       }
     } finally {
-      try {
-        reply.raw.end();
-      } catch {
-        /* same */
-      }
+      concurrency.release(lease);
     }
   });
 

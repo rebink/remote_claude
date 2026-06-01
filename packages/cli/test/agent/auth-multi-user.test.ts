@@ -131,4 +131,26 @@ describe('server auth hook (multi-user)', () => {
     expect(typeof after).toBe('string');
     await a.close();
   });
+
+  it('GET /queue returns an empty snapshot when nothing is in flight', async () => {
+    const a = app();
+    const res = await a.inject({
+      method: 'GET', url: '/queue',
+      headers: { authorization: 'Bearer alice-token' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { globalCap: number; perUserCap: number; inFlight: string[]; queued: unknown[] };
+    expect(body.globalCap).toBe(3);
+    expect(body.perUserCap).toBe(1);
+    expect(body.inFlight).toEqual([]);
+    expect(body.queued).toEqual([]);
+    await a.close();
+  });
+
+  it('GET /queue requires auth', async () => {
+    const a = app();
+    const res = await a.inject({ method: 'GET', url: '/queue' });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
 });
