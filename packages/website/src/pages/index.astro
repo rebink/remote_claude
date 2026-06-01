@@ -4,6 +4,7 @@ import '../styles/custom.css';
 const repo = 'https://github.com/rebink/patchwire';
 const version = '0.1.0';
 const rev = '263e2e3';
+const date = 'Mon, 01 Jun 2026';
 ---
 
 <!doctype html>
@@ -11,11 +12,11 @@ const rev = '263e2e3';
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0E0E10" />
+    <meta name="theme-color" content="#F5F1E8" />
     <title>Patchwire — local stays local, AI stays remote</title>
     <meta
       name="description"
-      content="Push your project to a remote Mac. Run Claude Code there with the whole repo. Pull back a unified diff. Apply only what you want."
+      content="Push your project to a remote Mac. Run an AI CLI there with the whole repo. Pull back a unified diff. Apply only what you want."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:title" content="Patchwire" />
@@ -25,7 +26,7 @@ const rev = '263e2e3';
     />
   </head>
   <body>
-    <!-- ── Top bar ─────────────────────────────────────────────── -->
+    <!-- ───────── TOP BAR ───────── -->
     <header class="topbar">
       <a class="wordmark" href="/" aria-label="Patchwire home">
         <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
@@ -42,269 +43,251 @@ const rev = '263e2e3';
         <a href="/install-extension/">Extension</a>
         <a href={repo} class="topnav-ext">GitHub ↗</a>
       </nav>
-      <span class="rev">
-        <span class="rev-dot"></span>v{version} · rev {rev}
+      <span class="patch-meta">
+        <span class="patch-no">PATCH 0001</span>
+        <span class="patch-sep">·</span>
+        <span class="patch-rev">rev {rev}</span>
       </span>
     </header>
 
-    <!-- ── HERO: bicameral split ───────────────────────────────── -->
-    <section class="hero">
-      <div class="hero-paper" aria-hidden="true"></div>
-      <div class="hero-ink" aria-hidden="true"></div>
+    <!-- ───────── HERO: Patch #1 cover ───────── -->
+    <section class="cover">
+      <div class="cover-grid">
+        <!-- Email-style patch header (left rail) -->
+        <aside class="patch-email" aria-hidden="true">
+          <div class="patch-row"><span class="patch-key">From:</span> <span class="patch-val">patchwire &lt;hi@patchwire.dev&gt;</span></div>
+          <div class="patch-row"><span class="patch-key">Date:</span> <span class="patch-val">{date}</span></div>
+          <div class="patch-row"><span class="patch-key">Subject:</span> <span class="patch-val">[PATCH 0001] Welcome.</span></div>
+          <div class="patch-row patch-row-meta">
+            <span class="patch-key">In-Reply-To:</span>
+            <span class="patch-val patch-val-dim">your-workflow@{rev}</span>
+          </div>
+        </aside>
 
-      <!-- The wire: a hairline crossing both halves with a traveling patch -->
-      <div class="wire" aria-hidden="true">
-        <span class="wire-line"></span>
-        <span class="wire-patch">■</span>
-      </div>
+        <!-- Body -->
+        <div class="cover-body">
+          <span class="kicker"><span class="kicker-dot"></span>0001-welcome.patch · 4 insertions(+), 2 deletions(−)</span>
 
-      <div class="hero-grid">
-        <!-- LEFT: local side -->
-        <div class="hero-local">
-          <span class="side-label side-label-dark">
-            <span class="side-dot side-dot-amber"></span>LOCAL · your laptop
-          </span>
-          <p class="hero-stanza">
-            Your IDE. Your hot-reload. Your debugger. Your &mdash; everything &mdash; un&shy;touched.
+          <h1 class="cover-h">
+            <span class="cover-h-w" style="--i:0">Welcome</span>
+            <span class="cover-h-w" style="--i:1">to</span>
+            <span class="cover-h-w cover-h-mark" style="--i:2">Patchwire.</span>
+          </h1>
+
+          <p class="cover-lede">
+            Push your project to a faster machine. Run an AI there with
+            the whole&nbsp;repo. Pull back a <em>diff</em> you preview
+            and <code>git apply</code> &mdash; nothing else crosses the wire.
           </p>
-          <pre class="hero-snippet hero-snippet-light"><code>$ patchwire ask <span class="sn-q">"refactor login_bloc</span>
-<span class="sn-cont">                 to freezed"</span></code></pre>
-        </div>
 
-        <!-- RIGHT: remote side -->
-        <div class="hero-remote">
-          <span class="side-label side-label-light">
-            <span class="side-dot side-dot-phosphor"></span>REMOTE · the Mac on your desk
-          </span>
-          <pre class="hero-snippet hero-snippet-dark"><code><span class="prompt-host">mini ~</span> <span class="prompt-arrow">›</span> claude --print
-<span class="sn-out">// editing 3 files…</span>
-<span class="sn-out-ok">→ wrote diff (412 lines)</span></code></pre>
-        </div>
+          <!-- ── The hero diff ── -->
+          <pre class="diff diff-hero" aria-label="Welcome patch">
+<span class="diff-meta"><span class="diff-meta-key">diff --git</span> <span class="diff-meta-path">a/your-workflow.md</span> <span class="diff-meta-path">b/your-workflow.md</span></span>
+<span class="diff-meta diff-meta-dim">index 0000000..{rev} 100644</span>
+<span class="diff-hunk">@@ -1,4 +1,5 @@ how AI fits into your workflow</span>
+<span class="diff-line diff-context" style="--i:1"><span class="num">1</span><span class="sign"> </span><span class="content">You keep coding on your laptop.</span></span>
+<span class="diff-line diff-minus"   style="--i:2"><span class="num">2</span><span class="sign">-</span><span class="content">Your AI lives in your editor &mdash; slow over SSH.</span></span>
+<span class="diff-line diff-plus"    style="--i:3"><span class="num">2</span><span class="sign">+</span><span class="content">Your AI runs on the Mac, with the whole repo.</span></span>
+<span class="diff-line diff-minus"   style="--i:4"><span class="num">3</span><span class="sign">-</span><span class="content">It edits files. You hope it didn't break anything.</span></span>
+<span class="diff-line diff-plus"    style="--i:5"><span class="num">3</span><span class="sign">+</span><span class="content">It returns a diff. You preview. You <strong>git apply</strong>.</span></span>
+<span class="diff-line diff-context" style="--i:6"><span class="num">4</span><span class="sign"> </span><span class="content">Diffs come back. You review them. You apply them.</span></span>
+<span class="diff-line diff-plus"    style="--i:7"><span class="num">5</span><span class="sign">+</span><span class="content">&mdash; Patchwire</span></span>
+</pre>
 
-        <!-- The big headline straddles the seam; two layers, each clipped -->
-        <h1 class="hero-headline" aria-label="Local stays local. AI stays remote. Diffs cross the wire.">
-          <span class="headline-layer headline-paper" aria-hidden="true">
-            <span class="hl-word" style="--i:0">Local</span>
-            <span class="hl-word" style="--i:1">stays</span>
-            <span class="hl-word" style="--i:2">local.</span>
-            <br/>
-            <span class="hl-word" style="--i:3">AI</span>
-            <span class="hl-word" style="--i:4">stays</span>
-            <span class="hl-word hl-italic" style="--i:5">remote.</span>
-            <br/>
-            <span class="hl-word" style="--i:6">Diffs</span>
-            <span class="hl-word" style="--i:7">cross</span>
-            <span class="hl-word" style="--i:8">the</span>
-            <span class="hl-word hl-accent-amber" style="--i:9">wire.</span>
-          </span>
-          <span class="headline-layer headline-ink" aria-hidden="true">
-            <span class="hl-word" style="--i:0">Local</span>
-            <span class="hl-word" style="--i:1">stays</span>
-            <span class="hl-word" style="--i:2">local.</span>
-            <br/>
-            <span class="hl-word" style="--i:3">AI</span>
-            <span class="hl-word" style="--i:4">stays</span>
-            <span class="hl-word hl-italic" style="--i:5">remote.</span>
-            <br/>
-            <span class="hl-word" style="--i:6">Diffs</span>
-            <span class="hl-word" style="--i:7">cross</span>
-            <span class="hl-word" style="--i:8">the</span>
-            <span class="hl-word hl-accent-phosphor" style="--i:9">wire.</span>
-          </span>
-        </h1>
-
-        <div class="hero-cta">
-          <a href="/quickstart/" class="cta cta-primary">
-            <span class="cta-cursor"></span>
-            <span>Read the Quickstart</span>
-            <span class="cta-arrow">→</span>
-          </a>
-          <a href={repo} class="cta cta-ghost">
-            <span>View on GitHub</span>
-            <span class="cta-arrow">↗</span>
-          </a>
+          <div class="cover-cta">
+            <a href="/quickstart/" class="cta cta-primary">
+              <span class="cta-cursor"></span>
+              <span>Apply patch</span>
+              <span class="cta-arrow">→</span>
+            </a>
+            <a href={repo} class="cta cta-ghost">
+              <span>View on GitHub</span>
+              <span class="cta-arrow">↗</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ── SECTION: Why ────────────────────────────────────────── -->
-    <section class="why">
-      <div class="why-meta">
-        <span class="kicker">§ 01 / The premise</span>
-        <span class="meta-rule"></span>
-        <span class="kicker-end">read 2 min</span>
-      </div>
+    <!-- ───────── HUNK 1: The local-first stance ───────── -->
+    <section class="hunk">
+      <div class="hunk-marker">@@ HUNK 1 · the local-first stance @@</div>
+      <div class="hunk-grid">
+        <div class="hunk-prose">
+          <h2 class="hunk-h">Local stays local. <em>AI stays remote.</em></h2>
+          <p>
+            Code-server over SSH is laggy. Cursor wants to edit in place.
+            Mounted filesystems are a coin flip. Patchwire picks the
+            difficult cut: <strong>your code never leaves your laptop's
+            editor, and the AI never touches it directly.</strong> Only
+            the result crosses the wire.
+          </p>
+        </div>
 
-      <h2 class="why-title">
-        Your laptop is fast. Your Mac is bigger. <em>So why is the AI&nbsp;crawling?</em>
+        <!-- Side-by-side LOCAL vs REMOTE -->
+        <div class="splitcard">
+          <article class="splitcard-side splitcard-local">
+            <header class="splitcard-head">
+              <span class="splitcard-dot splitcard-dot-amber" aria-hidden="true"></span>
+              <span class="splitcard-label">LOCAL</span>
+              <span class="splitcard-host">macbook&nbsp;~</span>
+            </header>
+            <ul class="splitcard-list">
+              <li>Your IDE, hot-reload, debugger</li>
+              <li>Source of truth — never edited remotely</li>
+              <li>Diff preview &amp; selective <code>git apply</code></li>
+            </ul>
+          </article>
+          <article class="splitcard-side splitcard-remote">
+            <header class="splitcard-head splitcard-head-dark">
+              <span class="splitcard-dot splitcard-dot-phosphor" aria-hidden="true"></span>
+              <span class="splitcard-label">REMOTE</span>
+              <span class="splitcard-host">mac&#8209;mini&nbsp;~</span>
+            </header>
+            <ul class="splitcard-list splitcard-list-dark">
+              <li>Clean checkout per request</li>
+              <li>Runs <code>claude --print</code> (or any AI CLI)</li>
+              <li>Captures <code>git diff</code>, resets the tree</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── HUNK 2: One install per side ───────── -->
+    <section class="hunk">
+      <div class="hunk-marker">@@ HUNK 2 · one install per side @@</div>
+      <h2 class="hunk-h hunk-h-center">
+        Three commands. <em>Forever.</em>
       </h2>
+      <p class="hunk-lede">
+        Patchwire isn't a SaaS. Install one binary on each Mac, drop a
+        YAML in your project, you're done.
+      </p>
 
-      <div class="why-grid">
-        <p class="why-lead">
-          Code-server over SSH lags. Cursor wants to edit in&#8209;place. Mounted filesystems
-          are a coin flip. We pick a different cut: <strong>local stays local, AI stays
-          remote, only diffs cross the wire.</strong>
-        </p>
-        <div class="why-callout">
-          <p class="callout-q">
-            “Claude is great at editing files. It's flaky at hand-rolling diffs.
-            So we let it edit a clean checkout — and derive the diff from git.”
-          </p>
-          <p class="callout-attr">— The honest take, from the architecture page</p>
+      <pre class="diff diff-install" aria-label="Install commands">
+<span class="diff-meta"><span class="diff-meta-key">diff --git</span> <span class="diff-meta-path">a/install.sh</span> <span class="diff-meta-path">b/install.sh</span></span>
+<span class="diff-hunk">@@ on the Mac Mini @@</span>
+<span class="diff-line diff-plus"   ><span class="num">1</span><span class="sign">+</span><span class="content">pnpm add -g github:rebink/patchwire</span></span>
+<span class="diff-line diff-plus"   ><span class="num">2</span><span class="sign">+</span><span class="content">patchwire-agent install   # launchd, prints a token</span></span>
+<span class="diff-hunk">@@ on your laptop @@</span>
+<span class="diff-line diff-plus"   ><span class="num">1</span><span class="sign">+</span><span class="content">pnpm add -g github:rebink/patchwire</span></span>
+<span class="diff-line diff-plus"   ><span class="num">2</span><span class="sign">+</span><span class="content">patchwire setup           # auto-detects Tailscale peers</span></span>
+<span class="diff-line diff-plus"   ><span class="num">3</span><span class="sign">+</span><span class="content">patchwire ask "refactor login_bloc to freezed"</span></span>
+</pre>
+    </section>
+
+    <!-- ───────── HUNK 3: The request lifecycle ───────── -->
+    <section class="hunk">
+      <div class="hunk-marker">@@ HUNK 3 · the request lifecycle @@</div>
+      <h2 class="hunk-h">One HTTP call. <em>End&#8209;to&#8209;end.</em></h2>
+
+      <ol class="lifecycle">
+        <li class="lifecycle-step">
+          <span class="lifecycle-no">01</span>
+          <div class="lifecycle-body">
+            <h3 class="lifecycle-h">Read the config.</h3>
+            <p>CLI reads <code>patchwire.yml</code> for host, user, project path, agent URL, AI command.</p>
+          </div>
+        </li>
+        <li class="lifecycle-step">
+          <span class="lifecycle-no">02</span>
+          <div class="lifecycle-body">
+            <h3 class="lifecycle-h">Push code over rsync.</h3>
+            <p>One-way push with your excludes. The remote always mirrors your local; never the other direction.</p>
+          </div>
+        </li>
+        <li class="lifecycle-step">
+          <span class="lifecycle-no">03</span>
+          <div class="lifecycle-body">
+            <h3 class="lifecycle-h">HTTP <code>/ask</code> with bearer token.</h3>
+            <p>Agent verifies the project is a clean git tree, then spawns the configured AI CLI with the prompt on stdin.</p>
+          </div>
+        </li>
+        <li class="lifecycle-step">
+          <span class="lifecycle-no">04</span>
+          <div class="lifecycle-body">
+            <h3 class="lifecycle-h">AI edits files. Agent captures <code>git diff</code>.</h3>
+            <p>The AI edits a clean checkout natively. The agent derives the diff from git, then resets the tree. Robust, no prompt fragility.</p>
+          </div>
+        </li>
+        <li class="lifecycle-step">
+          <span class="lifecycle-no">05</span>
+          <div class="lifecycle-body">
+            <h3 class="lifecycle-h">Diff returns. You decide.</h3>
+            <p>Colorized preview. <code>git apply</code> selectively. Nothing lands without your hand on it.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ───────── HUNK 4: What's added vs removed ───────── -->
+    <section class="hunk hunk-changelog">
+      <div class="hunk-marker">@@ HUNK 4 · summary of changes @@</div>
+      <h2 class="hunk-h">Compared to the alternatives.</h2>
+
+      <div class="changelog">
+        <div class="changelog-col changelog-removed">
+          <header class="changelog-head">
+            <span class="changelog-sign">−</span>
+            <span class="changelog-label">REMOVED</span>
+          </header>
+          <ul>
+            <li>SSH-mounted filesystems with editor lag</li>
+            <li>Edit-in-place AI that commits on its own</li>
+            <li>Lock-in to one AI provider</li>
+            <li>Bidirectional sync &amp; conflict hell</li>
+            <li>SaaS billing for "AI compute"</li>
+          </ul>
+        </div>
+        <div class="changelog-col changelog-added">
+          <header class="changelog-head">
+            <span class="changelog-sign">+</span>
+            <span class="changelog-label">ADDED</span>
+          </header>
+          <ul>
+            <li>Full-repo context on a heavier machine</li>
+            <li>Unified diffs, reviewed before they land</li>
+            <li>AI-agnostic: Claude, Codex, aider, anything</li>
+            <li>One-way rsync push (no surprises locally)</li>
+            <li>Self-hosted. MIT. Two binaries.</li>
+          </ul>
         </div>
       </div>
-    </section>
 
-    <!-- ── SECTION: Three commands per side ────────────────────── -->
-    <section class="three">
-      <div class="three-meta">
-        <span class="kicker">§ 02 / Three commands per side</span>
-        <span class="meta-rule"></span>
-        <span class="kicker-end">setup once, run forever</span>
-      </div>
-
-      <div class="three-grid">
-        <!-- Local card -->
-        <article class="term-card term-card-light">
-          <header class="term-header">
-            <span class="term-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </span>
-            <span class="term-title">laptop / ~ </span>
-            <span class="term-host">macbook</span>
-          </header>
-          <pre class="term-body"><code><span class="t-comment"># 1. install</span>
-$ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
-
-<span class="t-comment"># 2. setup (auto-detects Tailscale peers)</span>
-$ patchwire setup
-
-<span class="t-comment"># 3. ask</span>
-$ patchwire ask <span class="t-str">"refactor login_bloc"</span>
-  <span class="t-out">✓ diff returned (412 lines)</span></code></pre>
-        </article>
-
-        <!-- Remote card -->
-        <article class="term-card term-card-dark">
-          <header class="term-header term-header-dark">
-            <span class="term-dots term-dots-dark" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </span>
-            <span class="term-title">mini / ~ </span>
-            <span class="term-host">mac&#8209;mini</span>
-          </header>
-          <pre class="term-body term-body-dark"><code><span class="t-comment-d"># 1. install</span>
-$ pnpm add -g <span class="t-str-d">github:rebink/patchwire</span>
-
-<span class="t-comment-d"># 2. register agent as a launchd service</span>
-$ patchwire-agent install
-  <span class="t-out-d">→ TOKEN: rc_b9f...</span>
-
-<span class="t-comment-d"># 3. nothing — the agent runs in the background</span></code></pre>
-        </article>
-      </div>
-    </section>
-
-    <!-- ── SECTION: The shape of a request ─────────────────────── -->
-    <section class="shape">
-      <div class="shape-meta">
-        <span class="kicker">§ 03 / The shape of a request</span>
-        <span class="meta-rule"></span>
-        <span class="kicker-end">one HTTP call, end-to-end</span>
-      </div>
-
-      <pre class="shape-diagram" aria-hidden="true">
-<span class="d-local">┌──────────────────────────────┐</span>          <span class="d-remote">┌──────────────────────────────┐</span>
-<span class="d-local">│ <strong>MacBook</strong>                      │</span>          <span class="d-remote">│ <strong>Mac Mini</strong>                     │</span>
-<span class="d-local">│ patchwire (CLI)              │</span>          <span class="d-remote">│ patchwire-agent              │</span>
-<span class="d-local">│                              │</span>          <span class="d-remote">│                              │</span>
-<span class="d-local">│  ◦ source of truth           │</span>  <span class="d-arrow">━━ rsync ━━▶</span>  <span class="d-remote">│  ◦ clean git checkout        │</span>
-<span class="d-local">│  ◦ rsync push (one-way)      │</span>          <span class="d-remote">│  ◦ spawn <code>claude --print</code>     │</span>
-<span class="d-local">│  ◦ HTTP /ask                 │</span>  <span class="d-arrow">━━━ HTTP ━━▶</span>  <span class="d-remote">│  ◦ capture <code>git diff</code>         │</span>
-<span class="d-local">│  ◦ colorized diff preview    │</span>  <span class="d-arrow">◀━ unified ━━</span>  <span class="d-remote">│  ◦ reset working tree        │</span>
-<span class="d-local">│  ◦ <code>git apply</code> (selective)    │</span>          <span class="d-remote">│                              │</span>
-<span class="d-local">└──────────────────────────────┘</span>          <span class="d-remote">└──────────────────────────────┘</span>
-            </pre>
-
-      <p class="shape-note">
-        Bearer-token HTTP over Tailscale. SSH keys for the initial sync. Never internet-exposed.
-        See the <a href="/architecture/" class="link">architecture page</a> for the request lifecycle.
+      <p class="changelog-stat">
+        <span class="changelog-stat-key">1 file changed,</span>
+        <span class="changelog-plus">5 insertions(+),</span>
+        <span class="changelog-minus">5 deletions(−)</span>
       </p>
     </section>
 
-    <!-- ── SECTION: Pull-quote feature grid ────────────────────── -->
-    <section class="features">
-      <div class="features-meta">
-        <span class="kicker">§ 04 / Why it's different</span>
-        <span class="meta-rule"></span>
+    <!-- ───────── APPLY: final CTA ───────── -->
+    <section class="apply">
+      <div class="apply-meta">
+        <span class="patch-key">Subject:</span>
+        <span class="patch-val">[PATCH 0002] You're ready.</span>
       </div>
-
-      <div class="features-grid">
-        <article class="feat feat-1">
-          <span class="feat-no">01</span>
-          <h3 class="feat-h">Reviewable, not magical</h3>
-          <p>Every change is a unified diff. <code>git apply -p</code> what you want, drop the rest. The AI never sneaks an edit past you.</p>
-        </article>
-
-        <article class="feat feat-2 feat-quote">
-          <p class="feat-q">
-            “The remote machine never edits&nbsp;your laptop's filesystem&nbsp;directly.”
-          </p>
-          <p class="feat-q-meta">— the load&#8209;bearing&nbsp;invariant</p>
-        </article>
-
-        <article class="feat feat-3">
-          <span class="feat-no">02</span>
-          <h3 class="feat-h">Full repo context</h3>
-          <p>Claude runs with the whole tree on a clean checkout — not the truncated context of FS&#8209;mounted scratch space.</p>
-        </article>
-
-        <article class="feat feat-4">
-          <span class="feat-no">03</span>
-          <h3 class="feat-h">No FS surprises</h3>
-          <p>Your hot-reload, your debugger, your file-watcher — all untouched. The AI's machine is its own.</p>
-        </article>
-
-        <article class="feat feat-5">
-          <span class="feat-no">04</span>
-          <h3 class="feat-h">Indie&#8209;tool ergonomics</h3>
-          <p>One npm install per side. One YAML config. Five commands you'll remember. No SaaS dashboard.</p>
-        </article>
-
-        <article class="feat feat-6 feat-strip">
-          <ul class="strip-list">
-            <li><strong>Tailscale</strong><span>recommended transport</span></li>
-            <li><strong>SSH keys</strong><span>initial sync</span></li>
-            <li><strong>Bearer token</strong><span>HTTP auth</span></li>
-            <li><strong>MIT</strong><span>open source</span></li>
-          </ul>
-        </article>
+      <h2 class="apply-h">
+        Apply <em>patch</em>.
+      </h2>
+      <p class="apply-lede">
+        Three commands per side, one YAML, five minutes. Reviewable diffs the whole way.
+      </p>
+      <div class="apply-cta">
+        <a href="/quickstart/" class="cta cta-primary cta-dark">
+          <span class="cta-cursor"></span>
+          <span>Start the Quickstart</span>
+          <span class="cta-arrow">→</span>
+        </a>
+        <a href="/install-extension/" class="cta cta-ghost cta-ghost-dark">
+          <span>Install the VS Code extension</span>
+          <span class="cta-arrow">→</span>
+        </a>
       </div>
     </section>
 
-    <!-- ── SECTION: Final CTA ──────────────────────────────────── -->
-    <section class="end">
-      <div class="end-grid">
-        <h2 class="end-h">
-          Push your code <em>there</em>.<br/>
-          Pull a diff <em>back</em>.<br/>
-          Stay in&nbsp;control.
-        </h2>
-        <div class="end-actions">
-          <a href="/quickstart/" class="cta cta-primary cta-dark">
-            <span class="cta-cursor"></span>
-            <span>Start the Quickstart</span>
-            <span class="cta-arrow">→</span>
-          </a>
-          <a href="/install-extension/" class="cta cta-ghost cta-ghost-dark">
-            <span>Install the VS Code extension</span>
-            <span class="cta-arrow">→</span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Footer ──────────────────────────────────────────────── -->
+    <!-- ───────── FOOTER ───────── -->
     <footer class="foot">
       <div class="foot-grid">
         <div class="foot-mark">
@@ -351,15 +334,18 @@ $ patchwire-agent install
     </footer>
 
     <style>
-      /* ─────────────────────────────────────────────────────────
-         LAYOUT TOKENS (page-scoped)
-         ───────────────────────────────────────────────────────── */
+      /* ═══════════════════════════════════════════════════════════
+         PAGE TOKENS
+         ═══════════════════════════════════════════════════════════ */
       :root {
         --gutter: clamp(20px, 4vw, 56px);
-        --max: 1400px;
-        --seam: 52%;  /* where the bicameral split happens */
+        --max: 1200px;
+        --rc-line-num: rgba(14, 14, 16, 0.32);
       }
 
+      /* ═══════════════════════════════════════════════════════════
+         TOP BAR
+         ═══════════════════════════════════════════════════════════ */
       .topbar {
         position: relative;
         z-index: 10;
@@ -368,694 +354,648 @@ $ patchwire-agent install
         align-items: center;
         gap: 32px;
         padding: 22px var(--gutter);
-        border-bottom: 1px solid var(--hairline-paper);
-        background: var(--paper);
+        border-bottom: 1px solid var(--rc-hairline-paper);
+        background: var(--rc-paper);
       }
-
       .wordmark {
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        font-family: var(--font-display);
+        font-family: var(--rc-font-display);
         font-weight: 500;
         font-size: 17px;
         letter-spacing: -0.01em;
-        color: var(--ink);
+        color: var(--rc-ink);
       }
-      .wordmark svg { color: var(--ink); }
-
       .topnav {
         display: flex;
         justify-content: center;
         gap: 28px;
         font-size: 14px;
-        letter-spacing: 0.005em;
       }
       .topnav a {
-        color: var(--charcoal);
+        color: var(--rc-charcoal);
         opacity: 0.78;
         transition: opacity 0.15s ease;
       }
       .topnav a:hover { opacity: 1; }
 
-      .rev {
+      .patch-meta {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--charcoal);
-        opacity: 0.7;
-      }
-      .rev-dot {
-        width: 7px; height: 7px;
-        background: var(--phosphor-dim);
-        border-radius: 50%;
-        box-shadow: 0 0 0 3px rgba(142, 174, 63, 0.12);
-        animation: rev-pulse 2.2s ease-in-out infinite;
-      }
-      @keyframes rev-pulse {
-        0%, 100% { opacity: 0.6; }
-        50%      { opacity: 1; }
-      }
-
-      /* ─────────────────────────────────────────────────────────
-         HERO — the bicameral split
-         The .hero itself spans the viewport (for the cream/ink fills).
-         Content lives inside .hero-grid which respects max-width.
-         ───────────────────────────────────────────────────────── */
-      .hero {
-        position: relative;
-        min-height: 92vh;
-        overflow: hidden;
-        isolation: isolate;
-      }
-
-      .hero-paper, .hero-ink {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        z-index: 0;
-      }
-      .hero-paper {
-        left: 0;
-        right: calc(100% - var(--seam));
-        background: var(--paper);
-        background-image:
-          radial-gradient(1px 1px at 24% 32%, rgba(14,14,16,0.07) 50%, transparent 51%),
-          radial-gradient(1px 1px at 68% 78%, rgba(14,14,16,0.05) 50%, transparent 51%);
-        background-size: 240px 240px, 320px 320px;
-      }
-      .hero-ink {
-        left: var(--seam);
-        right: 0;
-        background: var(--ink);
-        background-image:
-          radial-gradient(1px 1px at 20% 30%, rgba(201,245,100,0.18) 50%, transparent 51%),
-          radial-gradient(1px 1px at 70% 60%, rgba(201,245,100,0.10) 50%, transparent 51%),
-          linear-gradient(180deg, transparent 0%, rgba(201,245,100,0.04) 100%);
-        background-size: 280px 280px, 360px 360px, 100% 100%;
-      }
-
-      /* The wire — hairline across both halves with a traveling patch */
-      .wire {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 38%;
-        z-index: 1;
-        pointer-events: none;
-      }
-      .wire-line {
-        display: block;
-        height: 1px;
-        background: linear-gradient(90deg,
-          rgba(14,14,16,0.18) 0%,
-          rgba(14,14,16,0.18) calc(var(--seam) - 1px),
-          var(--phosphor) calc(var(--seam) - 1px),
-          var(--phosphor) calc(var(--seam) + 60px),
-          rgba(201,245,100,0.25) 100%);
-      }
-      .wire-patch {
-        position: absolute;
-        top: -7px;
-        left: 0;
-        font-family: var(--font-mono);
+        font-family: var(--rc-font-mono);
         font-size: 11px;
-        color: var(--ink);
-        animation: patch-travel 5.2s cubic-bezier(0.7, 0, 0.3, 1) 0.6s infinite;
+        color: var(--rc-charcoal);
+        opacity: 0.66;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
-      @keyframes patch-travel {
-        0%   { left: 4%;  color: var(--amber); transform: scale(1); }
-        45%  { left: calc(var(--seam) - 8px); color: var(--ink); transform: scale(1.1); }
-        50%  { left: calc(var(--seam) + 8px); color: var(--phosphor); }
-        90%  { left: 92%; color: var(--phosphor); transform: scale(1); }
-        100% { left: 92%; color: var(--phosphor); opacity: 0; }
-      }
+      .patch-no  { color: var(--rc-ink); opacity: 0.9; }
+      .patch-sep { opacity: 0.5; }
+      .patch-rev { color: var(--rc-charcoal); }
 
-      .hero-grid {
-        position: relative;
-        z-index: 2;
-        display: grid;
-        grid-template-columns: var(--seam) 1fr;
-        grid-template-rows: auto 1fr auto;
-        grid-template-areas:
-          "local    remote"
-          "headline headline"
-          "cta      cta";
-        gap: clamp(28px, 5vh, 56px) 0;
-        padding: 48px var(--gutter) clamp(40px, 5vh, 56px);
+      /* ═══════════════════════════════════════════════════════════
+         COVER (HERO)
+         ═══════════════════════════════════════════════════════════ */
+      .cover {
+        padding: clamp(48px, 7vw, 96px) var(--gutter) clamp(60px, 9vw, 120px);
         max-width: var(--max);
         margin: 0 auto;
-        min-height: 92vh;
+        position: relative;
+      }
+      /* Hairline corner registration marks — editorial flourish */
+      .cover::before,
+      .cover::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-color: var(--rc-rule-paper);
+        border-style: solid;
+      }
+      .cover::before {
+        top: clamp(28px, 4vw, 56px);
+        left: clamp(8px, 1.5vw, 24px);
+        border-width: 1px 0 0 1px;
+      }
+      .cover::after {
+        bottom: clamp(28px, 4vw, 56px);
+        right: clamp(8px, 1.5vw, 24px);
+        border-width: 0 1px 1px 0;
       }
 
-      .hero-local, .hero-remote {
-        padding-top: 8px;
-        max-width: 38ch;
+      .cover-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: clamp(28px, 4vw, 56px);
       }
-      .hero-local  { grid-area: local; padding-right: clamp(20px, 4vw, 56px); }
-      .hero-remote { grid-area: remote; padding-left: clamp(20px, 4vw, 56px); color: var(--bone); }
+      @media (min-width: 1000px) {
+        .cover-grid {
+          grid-template-columns: 220px minmax(0, 1fr);
+          gap: 64px;
+        }
+      }
 
-      .side-label {
+      /* Email-style patch header (left rail) */
+      .patch-email {
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px;
+        line-height: 1.85;
+        color: var(--rc-charcoal-dim);
+        border-left: 1px solid var(--rc-amber);
+        padding: 4px 0 4px 16px;
+        align-self: start;
+      }
+      .patch-row { display: block; }
+      .patch-row-meta { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--rc-hairline-paper); }
+      .patch-key {
+        display: inline-block;
+        min-width: 78px;
+        color: var(--rc-amber-dim);
+        opacity: 0.9;
+      }
+      .patch-val { color: var(--rc-charcoal); }
+      .patch-val-dim { color: var(--rc-charcoal-dim); }
+
+      /* Cover body */
+      .cover-body { min-width: 0; }
+
+      .kicker {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        font-family: var(--font-mono);
+        gap: 10px;
+        font-family: var(--rc-font-mono);
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        margin-bottom: 18px;
+        color: var(--rc-charcoal);
+        opacity: 0.68;
+        margin-bottom: 28px;
       }
-      .side-label-dark { color: var(--charcoal); }
-      .side-label-light { color: var(--bone); opacity: 0.85; }
-      .side-dot {
+      .kicker-dot {
         width: 6px; height: 6px;
+        background: var(--rc-phosphor-dim);
         border-radius: 50%;
-        display: inline-block;
+        box-shadow: 0 0 0 3px rgba(142, 174, 63, 0.12);
+        animation: kicker-pulse 2.2s ease-in-out infinite;
       }
-      .side-dot-amber    { background: var(--amber); }
-      .side-dot-phosphor { background: var(--phosphor); box-shadow: 0 0 6px rgba(201,245,100,0.6); }
-
-      .hero-stanza {
-        font-family: var(--font-display);
-        font-weight: 380;
-        font-size: clamp(18px, 1.6vw, 22px);
-        line-height: 1.45;
-        color: var(--ink);
-        margin: 0 0 22px;
-        font-variation-settings: "SOFT" 80, "WONK" 1;
+      @keyframes kicker-pulse {
+        0%, 100% { opacity: 0.7; }
+        50%      { opacity: 1; }
       }
 
-      .hero-snippet {
-        font-family: var(--font-mono);
-        font-size: 12.5px;
-        line-height: 1.65;
-        margin: 0;
-        padding: 14px 16px;
-        border: 1px solid var(--hairline-paper);
-        background: rgba(255,255,255,0.55);
-        backdrop-filter: blur(3px);
-        max-width: 36ch;
-      }
-      .hero-snippet-dark {
-        background: rgba(255,255,255,0.04);
-        border-color: var(--hairline-ink);
-        color: var(--bone);
-      }
-      .sn-q { color: var(--amber-dim); }
-      .sn-cont { color: var(--charcoal); opacity: 0.7; }
-      .prompt-host { color: rgba(232, 226, 208, 0.55); }
-      .prompt-arrow { color: var(--phosphor); margin-right: 6px; }
-      .sn-out { color: rgba(232, 226, 208, 0.55); display: inline-block; }
-      .sn-out-ok { color: var(--phosphor); display: inline-block; }
-
-      /* The headline — two layers, each color-clipped to its half.
-         Lives in the grid's middle row; spans both columns so its 0–100%
-         width matches the bicameral seam at exactly 52%. */
-      .hero-headline {
-        grid-area: headline;
-        position: relative;
-        z-index: 3;
-        align-self: center;
-        font-family: var(--font-display);
+      .cover-h {
+        font-family: var(--rc-font-display);
         font-weight: 400;
-        font-size: clamp(38px, 7vw, 102px);
+        font-size: clamp(40px, 7.8vw, 112px);
         line-height: 0.96;
         letter-spacing: -0.035em;
-        margin: 0;
-        font-variation-settings: "SOFT" 30, "opsz" 144;
-        pointer-events: none;
+        color: var(--rc-ink);
+        margin: 0 0 32px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        text-wrap: balance;
       }
-      .headline-layer {
-        display: block;
-      }
-      /* The first layer establishes the headline's natural height.
-         The second layer is overlaid via absolute positioning so the two
-         clipped views align perfectly across the seam. */
-      .headline-paper {
-        position: relative;
-        color: var(--ink);
-        clip-path: inset(0 calc(100% - var(--seam)) 0 0);
-      }
-      .headline-ink {
-        position: absolute;
-        inset: 0;
-        color: var(--bone);
-        clip-path: inset(0 0 0 var(--seam));
-      }
-      .hl-italic { font-style: italic; font-weight: 380; font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144; }
-      .hl-accent-amber { color: var(--amber-dim); }
-      .hl-accent-phosphor { color: var(--phosphor); }
-
-      /* Stagger reveal */
-      .hl-word {
+      .cover-h-w {
         display: inline-block;
         opacity: 0;
-        transform: translateY(0.4em);
-        animation: hl-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-        animation-delay: calc(0.08s * var(--i) + 0.1s);
+        transform: translateY(0.35em);
+        animation: word-rise 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+        animation-delay: calc(var(--i) * 0.08s + 0.05s);
         margin-right: 0.22em;
       }
-      @keyframes hl-rise {
+      @keyframes word-rise {
         to { opacity: 1; transform: translateY(0); }
       }
+      .cover-h-mark {
+        font-style: italic;
+        font-weight: 380;
+        font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144;
+        color: var(--rc-amber-dim);
+      }
 
-      .hero-cta {
-        grid-area: cta;
-        position: relative;
-        z-index: 4;
+      .cover-lede {
+        font-family: var(--rc-font-display);
+        font-weight: 380;
+        font-size: clamp(18px, 1.5vw, 22px);
+        line-height: 1.55;
+        color: var(--rc-charcoal);
+        margin: 0 0 36px;
+        max-width: 48ch;
+        font-variation-settings: 'SOFT' 60;
+        text-wrap: pretty;
+      }
+      .cover-lede em {
+        font-style: italic;
+        color: var(--rc-ink);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+      .cover-lede code {
+        font-family: var(--rc-font-mono);
+        font-size: 0.86em;
+        background: rgba(201, 245, 100, 0.20);
+        padding: 0.1em 0.45em;
+        border-radius: 4px;
+        color: var(--rc-ink);
+      }
+
+      /* ─────────── DIFF BLOCK (the recurring unit) ─────────── */
+      .diff {
+        font-family: var(--rc-font-mono);
+        font-size: clamp(11.5px, 1.05vw, 13.5px);
+        line-height: 1.7;
+        background: var(--rc-paper-warm);
+        border: 1px solid var(--rc-hairline-paper);
+        border-radius: var(--rc-radius-md);
+        margin: 0 0 36px;
+        overflow-x: auto;
+        padding: 16px 0;
+        white-space: pre;
+        color: var(--rc-charcoal);
+      }
+      .diff > * { display: block; }
+      .diff-meta {
+        padding: 1px clamp(14px, 2vw, 22px);
+        color: var(--rc-charcoal-dim);
+        opacity: 0.82;
+      }
+      .diff-meta-dim { opacity: 0.5; }
+      .diff-meta-key { color: var(--rc-amber-dim); font-weight: 500; }
+      .diff-meta-path { color: var(--rc-charcoal); }
+      .diff-hunk {
+        margin: 10px 0;
+        padding: 4px clamp(14px, 2vw, 22px);
+        color: var(--rc-charcoal-dim);
+        background: rgba(14, 14, 16, 0.025);
+        border-block: 1px solid var(--rc-hairline-paper);
+        font-size: 0.92em;
+        opacity: 0.85;
+      }
+      .diff-line {
+        display: grid;
+        grid-template-columns: 38px 22px 1fr;
+        align-items: baseline;
+        padding: 0 clamp(8px, 1.6vw, 18px);
+        column-gap: 0;
+      }
+      .diff-line .num {
+        color: var(--rc-line-num);
+        font-size: 0.86em;
+        text-align: right;
+        padding-right: 12px;
+        user-select: none;
+      }
+      .diff-line .sign { font-weight: 600; text-align: center; }
+      .diff-line .content { padding-left: 8px; }
+      .diff-line .content strong {
+        font-weight: 600;
+        color: var(--rc-ink);
+      }
+      .diff-context { background: transparent; }
+      .diff-plus    { background: rgba(201, 245, 100, 0.18); }
+      .diff-plus .sign  { color: var(--rc-phosphor-dim); }
+      .diff-minus   { background: rgba(255, 140, 66, 0.10); }
+      .diff-minus .sign { color: var(--rc-amber-dim); }
+      .diff-minus .content { color: var(--rc-charcoal-dim); }
+
+      /* Hero diff: line reveal cascade */
+      .diff-hero .diff-line {
+        opacity: 0;
+        transform: translateX(-4px);
+        animation: line-reveal 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        animation-delay: calc(var(--i) * 0.09s + 0.35s);
+      }
+      @keyframes line-reveal {
+        to { opacity: 1; transform: translateX(0); }
+      }
+
+      .cover-cta {
         display: flex;
-        gap: 16px;
+        gap: 14px;
         flex-wrap: wrap;
-        animation: cta-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 1.1s both;
+        margin-top: 8px;
+        animation: word-rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 1.1s both;
       }
-      @keyframes cta-rise {
-        from { opacity: 0; transform: translateY(10px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-
       .cta {
         display: inline-flex;
         align-items: center;
         gap: 12px;
         padding: 14px 22px;
-        font-family: var(--font-mono);
+        font-family: var(--rc-font-mono);
         font-size: 13px;
         letter-spacing: 0.01em;
         border: 1px solid transparent;
         transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+        border-radius: var(--rc-radius-sm);
+        white-space: nowrap;
       }
       .cta:hover { transform: translateY(-1px); }
       .cta-arrow { transition: transform 0.18s ease; }
       .cta:hover .cta-arrow { transform: translate(2px, -1px); }
-
       .cta-primary {
-        background: var(--phosphor);
-        color: var(--ink);
-        border-color: var(--phosphor);
+        background: var(--rc-phosphor);
+        color: var(--rc-ink);
+        border-color: var(--rc-phosphor);
       }
       .cta-primary:hover { background: #d4f878; }
-
       .cta-ghost {
         background: transparent;
-        color: var(--ink);
-        border-color: var(--rule-paper);
+        color: var(--rc-ink);
+        border-color: var(--rc-rule-paper);
       }
-      .cta-ghost:hover { background: rgba(14,14,16,0.04); border-color: var(--ink); }
-      .cta-ghost-dark { color: var(--bone); border-color: rgba(232, 226, 208, 0.25); }
-      .cta-ghost-dark:hover { background: rgba(232, 226, 208, 0.06); border-color: var(--bone); }
-      .cta-dark { background: var(--phosphor); color: var(--ink); }
-
+      .cta-ghost:hover { background: rgba(14,14,16,0.04); border-color: var(--rc-ink); }
+      .cta-ghost-dark { color: var(--rc-bone); border-color: rgba(232,226,208,0.25); }
+      .cta-ghost-dark:hover { background: rgba(232,226,208,0.06); border-color: var(--rc-bone); }
+      .cta-dark { background: var(--rc-phosphor); color: var(--rc-ink); }
       .cta-cursor {
-        width: 8px;
-        height: 14px;
+        width: 8px; height: 14px;
         background: currentColor;
         opacity: 0.85;
         animation: blink 1.1s steps(2) infinite;
       }
-      @keyframes blink {
-        50% { opacity: 0; }
-      }
+      @keyframes blink { 50% { opacity: 0; } }
 
-      /* ─────────────────────────────────────────────────────────
-         SECTION: meta header rows (used by §01, §02, …)
-         ───────────────────────────────────────────────────────── */
-      .why, .three, .shape, .features {
-        padding: clamp(64px, 9vw, 120px) var(--gutter);
+      /* ═══════════════════════════════════════════════════════════
+         HUNKS (the recurring section)
+         ═══════════════════════════════════════════════════════════ */
+      .hunk {
+        padding: clamp(56px, 8vw, 110px) var(--gutter);
         max-width: var(--max);
         margin: 0 auto;
+        position: relative;
       }
+      .hunk + .hunk { border-top: 1px solid var(--rc-hairline-paper); }
 
-      .why-meta, .three-meta, .shape-meta, .features-meta {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 20px;
-        margin-bottom: 56px;
-      }
-      .kicker, .kicker-end {
-        font-family: var(--font-mono);
+      .hunk-marker {
+        font-family: var(--rc-font-mono);
         font-size: 11px;
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: var(--charcoal);
+        color: var(--rc-charcoal);
         opacity: 0.55;
-      }
-      .meta-rule {
-        height: 1px;
-        background: var(--rule-paper);
-      }
-
-      /* ─────────────────────────────────────────────────────────
-         WHY
-         ───────────────────────────────────────────────────────── */
-      .why {
-        background: var(--paper);
-        border-top: 1px solid var(--hairline-paper);
-      }
-      .why-title {
-        font-family: var(--font-display);
-        font-weight: 400;
-        font-size: clamp(32px, 4.6vw, 68px);
-        line-height: 1.04;
-        letter-spacing: -0.025em;
-        margin: 0 0 48px;
-        max-width: 22ch;
-        font-variation-settings: "SOFT" 30, "opsz" 144;
-      }
-      .why-title em {
-        font-style: italic;
-        font-weight: 380;
-        font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144;
-        color: var(--amber-dim);
-      }
-      .why-grid {
-        display: grid;
-        grid-template-columns: 1.2fr 1fr;
-        gap: clamp(40px, 6vw, 96px);
-        align-items: start;
-      }
-      .why-lead {
-        font-size: 19px;
-        line-height: 1.55;
-        margin: 0;
-        max-width: 38ch;
-      }
-      .why-lead strong { font-weight: 600; color: var(--ink); }
-      .why-callout {
-        border-left: 1px solid var(--ink);
-        padding: 4px 0 4px 28px;
-      }
-      .callout-q {
-        font-family: var(--font-display);
-        font-weight: 380;
-        font-style: italic;
-        font-size: 22px;
-        line-height: 1.4;
-        margin: 0 0 14px;
-        font-variation-settings: "SOFT" 100, "WONK" 1;
-        color: var(--ink);
-      }
-      .callout-attr {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--charcoal);
-        opacity: 0.7;
-        margin: 0;
-      }
-
-      /* ─────────────────────────────────────────────────────────
-         THREE (terminal cards)
-         ───────────────────────────────────────────────────────── */
-      .three {
-        background: var(--paper);
-      }
-      .three-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 28px;
-      }
-      .term-card {
-        border: 1px solid var(--hairline-paper);
-        overflow: hidden;
-        position: relative;
-      }
-      .term-card-light {
-        background: #FBF8EF;
-      }
-      .term-card-dark {
-        background: var(--ink);
-        border-color: var(--hairline-ink);
-        color: var(--bone);
-      }
-      .term-card::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background:
-          linear-gradient(90deg, transparent 0, transparent 100%);
-        transition: background 0.3s ease;
-      }
-      .term-card:hover::before {
-        background: linear-gradient(180deg, transparent 0, rgba(201,245,100,0.04) 100%);
-      }
-      .term-header {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 14px;
-        padding: 10px 16px;
-        border-bottom: 1px solid var(--hairline-paper);
-        background: rgba(14,14,16,0.03);
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.05em;
-        color: var(--charcoal);
-      }
-      .term-header-dark {
-        background: rgba(232, 226, 208, 0.04);
-        border-bottom-color: var(--hairline-ink);
-        color: rgba(232, 226, 208, 0.7);
-      }
-      .term-dots { display: inline-flex; gap: 6px; }
-      .term-dots span {
-        width: 9px; height: 9px;
-        border-radius: 50%;
-        background: rgba(14,14,16,0.18);
-      }
-      .term-dots-dark span { background: rgba(232, 226, 208, 0.22); }
-      .term-title { letter-spacing: 0.04em; opacity: 0.8; }
-      .term-host { opacity: 0.5; text-transform: uppercase; font-size: 10px; }
-      .term-body {
-        margin: 0;
-        padding: 22px 24px 26px;
-        font-family: var(--font-mono);
-        font-size: 13px;
-        line-height: 1.7;
-        color: var(--ink);
-        overflow-x: auto;
-      }
-      .term-body-dark { color: var(--bone); }
-      .t-comment { color: var(--charcoal); opacity: 0.5; }
-      .t-comment-d { color: rgba(232, 226, 208, 0.45); }
-      .t-str { color: var(--amber-dim); }
-      .t-str-d { color: var(--amber); }
-      .t-out { color: var(--phosphor-dim); }
-      .t-out-d { color: var(--phosphor); }
-
-      /* ─────────────────────────────────────────────────────────
-         SHAPE — the diagram, treated as editorial art
-         ───────────────────────────────────────────────────────── */
-      .shape {
-        background: var(--paper);
-        border-top: 1px solid var(--hairline-paper);
-      }
-      .shape-diagram {
-        font-family: var(--font-mono);
-        font-size: clamp(11px, 1.05vw, 14px);
-        line-height: 1.45;
-        margin: 0 0 32px;
-        white-space: pre;
-        overflow-x: auto;
-        padding: 24px;
-        background: #FBF8EF;
-        border: 1px solid var(--hairline-paper);
-      }
-      .d-local { color: var(--charcoal); }
-      .d-remote { color: var(--charcoal); opacity: 0.7; }
-      .d-arrow { color: var(--amber-dim); font-weight: 600; }
-      .shape-diagram strong { font-weight: 700; }
-      .shape-diagram code {
-        font-family: inherit;
-        background: rgba(201,245,100,0.20);
-        padding: 0 4px;
-        color: var(--ink);
-      }
-      .shape-note {
-        font-size: 15px;
-        max-width: 60ch;
-        margin: 0;
-        color: var(--charcoal);
-      }
-      .link {
-        border-bottom: 1px solid var(--ink);
-        padding-bottom: 1px;
-        transition: color 0.15s;
-      }
-      .link:hover { color: var(--amber-dim); border-bottom-color: var(--amber-dim); }
-
-      /* ─────────────────────────────────────────────────────────
-         FEATURES (asymmetric grid w/ pull-quote)
-         ───────────────────────────────────────────────────────── */
-      .features {
-        background: var(--paper);
-        border-top: 1px solid var(--hairline-paper);
-      }
-      .features-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: 1fr 1fr auto;
-        gap: 1px;
-        background: var(--hairline-paper);
-        border: 1px solid var(--hairline-paper);
-      }
-      .feat-1 { grid-area: 1 / 1 / 2 / 2; }
-      .feat-2 { grid-area: 1 / 2 / 3 / 3; }   /* dark quote spans 2 rows */
-      .feat-3 { grid-area: 1 / 3 / 2 / 4; }
-      .feat-4 { grid-area: 2 / 1 / 3 / 2; }
-      .feat-5 { grid-area: 2 / 3 / 3 / 4; }
-      .feat-6 { grid-area: 3 / 1 / 4 / 4; }   /* strip across the bottom */
-      .feat {
-        background: var(--paper);
-        padding: 36px 28px;
-        position: relative;
-        transition: background 0.2s ease;
-      }
-      .feat:hover { background: #FBF8EF; }
-      .feat-no {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.1em;
-        color: var(--amber-dim);
-        margin-bottom: 28px;
+        margin-bottom: 32px;
+        padding: 6px 12px;
+        background: rgba(14, 14, 16, 0.04);
+        border-radius: var(--rc-radius-sm);
         display: inline-block;
       }
-      .feat-h {
-        font-family: var(--font-display);
-        font-weight: 460;
-        font-size: 22px;
-        line-height: 1.2;
-        letter-spacing: -0.015em;
-        margin: 0 0 12px;
-        color: var(--ink);
+      .hunk-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(30px, 4.6vw, 60px);
+        line-height: 1.04;
+        letter-spacing: -0.025em;
+        color: var(--rc-ink);
+        margin: 0 0 24px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        max-width: 22ch;
+        text-wrap: balance;
       }
-      .feat p {
-        margin: 0;
-        font-size: 14.5px;
-        line-height: 1.6;
-        color: var(--charcoal);
-      }
-      .feat code {
-        font-family: var(--font-mono);
-        background: rgba(201,245,100,0.22);
-        padding: 1px 5px;
-        font-size: 0.92em;
-        color: var(--ink);
-      }
-      .feat-quote {
-        background: var(--ink);
-        color: var(--bone);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 44px 32px;
-      }
-      .feat-quote:hover { background: var(--ink-edge); }
-      .feat-quote .feat-q {
-        font-family: var(--font-display);
+      .hunk-h-center { text-align: center; margin-inline: auto; }
+      .hunk-h em {
         font-style: italic;
         font-weight: 380;
-        font-size: clamp(20px, 1.9vw, 28px);
-        line-height: 1.32;
-        margin: 0 0 18px;
-        color: var(--bone);
-        font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144;
+        color: var(--rc-amber-dim);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
       }
-      .feat-quote .feat-q-meta {
-        font-family: var(--font-mono);
+      .hunk-lede {
+        font-size: 17px;
+        line-height: 1.55;
+        color: var(--rc-charcoal);
+        max-width: 56ch;
+        margin: 0 auto 36px;
+        text-align: center;
+      }
+
+      /* ─── HUNK 1 (split card) ─── */
+      .hunk-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 36px;
+        align-items: start;
+      }
+      @media (min-width: 900px) {
+        .hunk-grid { grid-template-columns: 1.05fr 1fr; gap: 64px; }
+      }
+      .hunk-prose p {
+        font-size: 17px;
+        line-height: 1.6;
+        color: var(--rc-charcoal);
+        margin: 0;
+      }
+      .hunk-prose p strong { color: var(--rc-ink); font-weight: 600; }
+
+      .splitcard {
+        display: grid;
+        grid-template-columns: 1fr;
+        border: 1px solid var(--rc-hairline-paper);
+        border-radius: var(--rc-radius-md);
+        overflow: hidden;
+      }
+      @media (min-width: 600px) {
+        .splitcard { grid-template-columns: 1fr 1fr; }
+      }
+      .splitcard-side {
+        padding: 22px 24px 26px;
+      }
+      .splitcard-local  { background: var(--rc-paper-warm); }
+      .splitcard-remote {
+        background: var(--rc-ink);
+        color: var(--rc-bone);
+        border-top: 1px solid var(--rc-hairline-ink);
+      }
+      @media (min-width: 600px) {
+        .splitcard-remote { border-top: none; border-left: 1px solid var(--rc-hairline-ink); }
+      }
+      .splitcard-head {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--rc-font-mono);
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--phosphor);
-        margin: 0;
+        color: var(--rc-charcoal);
+        margin-bottom: 16px;
       }
-      .feat-strip {
-        grid-column: span 3;
-        padding: 28px;
-        background: #FBF8EF;
+      .splitcard-head-dark { color: var(--rc-bone-dim); }
+      .splitcard-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
       }
-      .feat-strip:hover { background: #FBF8EF; }
-      .strip-list {
+      .splitcard-dot-amber    { background: var(--rc-amber); }
+      .splitcard-dot-phosphor { background: var(--rc-phosphor); box-shadow: 0 0 6px rgba(201,245,100,0.55); }
+      .splitcard-host {
+        font-family: var(--rc-font-mono);
+        font-size: 10.5px;
+        margin-left: auto;
+        opacity: 0.55;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .splitcard-label { letter-spacing: 0.12em; }
+      .splitcard-list {
         list-style: none;
         margin: 0;
         padding: 0;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 28px;
+        font-size: 14.5px;
+        line-height: 1.5;
       }
-      .strip-list li {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        font-family: var(--font-mono);
-        font-size: 13px;
-        border-left: 2px solid var(--amber);
-        padding-left: 14px;
+      .splitcard-list li {
+        padding: 6px 0;
+        border-bottom: 1px dashed var(--rc-hairline-paper);
       }
-      .strip-list li strong { color: var(--ink); }
-      .strip-list li span { color: var(--charcoal); opacity: 0.6; font-size: 11px; }
+      .splitcard-list li:last-child { border-bottom: none; }
+      .splitcard-list-dark li { border-bottom-color: var(--rc-hairline-ink); }
+      .splitcard-list code {
+        font-family: var(--rc-font-mono);
+        font-size: 0.88em;
+        background: rgba(201,245,100,0.22);
+        padding: 1px 4px;
+        border-radius: 3px;
+        color: var(--rc-ink);
+      }
+      .splitcard-list-dark code {
+        background: rgba(201,245,100,0.15);
+        color: var(--rc-phosphor);
+      }
 
-      /* ─────────────────────────────────────────────────────────
-         END / final CTA
-         ───────────────────────────────────────────────────────── */
-      .end {
-        background: var(--ink);
-        color: var(--bone);
+      /* ─── HUNK 3 (lifecycle) ─── */
+      .lifecycle {
+        list-style: none;
+        margin: 36px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0;
+        max-width: 720px;
+      }
+      .lifecycle-step {
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        gap: 24px;
+        padding: 22px 0;
+        border-bottom: 1px solid var(--rc-hairline-paper);
+        position: relative;
+      }
+      .lifecycle-step:last-child { border-bottom: none; }
+      .lifecycle-no {
+        font-family: var(--rc-font-mono);
+        font-size: 13px;
+        color: var(--rc-amber-dim);
+        letter-spacing: 0.06em;
+        padding-top: 4px;
+      }
+      .lifecycle-h {
+        font-family: var(--rc-font-display);
+        font-weight: 500;
+        font-size: 22px;
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        color: var(--rc-ink);
+        margin: 0 0 6px;
+      }
+      .lifecycle-body p {
+        font-size: 15.5px;
+        line-height: 1.55;
+        color: var(--rc-charcoal);
+        margin: 0;
+      }
+      .lifecycle-h code,
+      .lifecycle-body p code {
+        font-family: var(--rc-font-mono);
+        font-size: 0.86em;
+        background: rgba(201, 245, 100, 0.20);
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--rc-ink);
+      }
+
+      /* ─── HUNK 4 (changelog) ─── */
+      .changelog {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 28px;
+        margin-top: 36px;
+      }
+      @media (min-width: 760px) {
+        .changelog { grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rc-hairline-paper); border: 1px solid var(--rc-hairline-paper); border-radius: var(--rc-radius-md); overflow: hidden; }
+      }
+      .changelog-col {
+        background: var(--rc-paper);
+        padding: 30px 28px;
+      }
+      .changelog-removed { background: rgba(255, 140, 66, 0.05); }
+      .changelog-added   { background: rgba(201, 245, 100, 0.07); }
+      .changelog-head {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+      .changelog-removed .changelog-head { color: var(--rc-amber-dim); }
+      .changelog-added   .changelog-head { color: var(--rc-phosphor-dim); }
+      .changelog-sign {
+        font-size: 18px;
+        line-height: 1;
+        font-weight: 700;
+      }
+      .changelog-col ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 15.5px;
+        line-height: 1.55;
+      }
+      .changelog-col li {
+        padding: 8px 0;
+        position: relative;
+        padding-left: 22px;
+        border-bottom: 1px dashed var(--rc-hairline-paper);
+      }
+      .changelog-col li:last-child { border-bottom: none; }
+      .changelog-col li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 18px;
+        width: 12px;
+        height: 1px;
+        background: currentColor;
+        opacity: 0.4;
+      }
+      .changelog-removed li { color: var(--rc-charcoal-dim); }
+      .changelog-added   li { color: var(--rc-charcoal); }
+      .changelog-added   li::before { background: var(--rc-phosphor-dim); opacity: 0.7; }
+      .changelog-removed li::before { background: var(--rc-amber-dim); opacity: 0.7; }
+
+      .changelog-stat {
+        font-family: var(--rc-font-mono);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        color: var(--rc-charcoal);
+        opacity: 0.78;
+        margin: 28px 0 0;
+        text-align: center;
+      }
+      .changelog-plus  { color: var(--rc-phosphor-dim); }
+      .changelog-minus { color: var(--rc-amber-dim); }
+
+      /* ═══════════════════════════════════════════════════════════
+         APPLY (final CTA on ink)
+         ═══════════════════════════════════════════════════════════ */
+      .apply {
+        background: var(--rc-ink);
+        color: var(--rc-bone);
         padding: clamp(72px, 11vw, 140px) var(--gutter);
-        border-top: 1px solid var(--hairline-ink);
+        text-align: center;
         position: relative;
         overflow: hidden;
       }
-      .end::before {
+      .apply::before {
         content: '';
         position: absolute;
         inset: 0;
         background:
-          radial-gradient(60% 80% at 80% 20%, rgba(201,245,100,0.08) 0%, transparent 70%),
-          radial-gradient(40% 60% at 20% 80%, rgba(255,140,66,0.05) 0%, transparent 70%);
+          radial-gradient(50% 80% at 70% 30%, rgba(201,245,100,0.06) 0%, transparent 70%),
+          radial-gradient(40% 60% at 20% 80%, rgba(255,140,66,0.04) 0%, transparent 70%);
         pointer-events: none;
       }
-      .end-grid {
+      .apply-meta {
         position: relative;
-        max-width: var(--max);
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: 1.5fr 1fr;
-        gap: 64px;
-        align-items: end;
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--rc-bone-dim);
+        margin-bottom: 32px;
       }
-      .end-h {
-        font-family: var(--font-display);
+      .apply-meta .patch-key { color: var(--rc-phosphor); opacity: 1; }
+      .apply-meta .patch-val { color: var(--rc-bone); }
+      .apply-h {
+        position: relative;
+        font-family: var(--rc-font-display);
         font-weight: 400;
-        font-size: clamp(36px, 5.4vw, 84px);
-        line-height: 1.02;
-        letter-spacing: -0.03em;
-        margin: 0;
-        font-variation-settings: "SOFT" 30, "opsz" 144;
+        font-size: clamp(48px, 9vw, 124px);
+        line-height: 1.0;
+        letter-spacing: -0.035em;
+        color: var(--rc-bone);
+        margin: 0 0 24px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
       }
-      .end-h em {
+      .apply-h em {
         font-style: italic;
         font-weight: 380;
-        font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144;
-        color: var(--phosphor);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+        color: var(--rc-phosphor);
       }
-      .end-actions {
+      .apply-lede {
+        position: relative;
+        font-size: 17px;
+        line-height: 1.55;
+        color: var(--rc-bone-dim);
+        max-width: 56ch;
+        margin: 0 auto 40px;
+      }
+      .apply-cta {
+        position: relative;
         display: flex;
-        flex-direction: column;
-        gap: 12px;
-        align-items: stretch;
+        gap: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
       }
 
-      /* ─────────────────────────────────────────────────────────
+      /* ═══════════════════════════════════════════════════════════
          FOOTER
-         ───────────────────────────────────────────────────────── */
+         ═══════════════════════════════════════════════════════════ */
       .foot {
-        background: var(--ink);
-        color: var(--bone);
+        background: var(--rc-ink);
+        color: var(--rc-bone);
         padding: 56px var(--gutter) 32px;
-        border-top: 1px solid var(--hairline-ink);
+        border-top: 1px solid var(--rc-hairline-ink);
       }
       .foot-grid {
         max-width: var(--max);
@@ -1064,16 +1004,15 @@ $ patchwire-agent install
         grid-template-columns: 1.2fr 2fr;
         gap: 56px;
         padding-bottom: 36px;
-        border-bottom: 1px solid var(--hairline-ink);
+        border-bottom: 1px solid var(--rc-hairline-ink);
       }
-      .wordmark-dark { color: var(--bone); }
-      .wordmark-dark svg { color: var(--bone); }
+      .wordmark-dark { color: var(--rc-bone); }
       .foot-blurb {
         margin: 14px 0 0;
         max-width: 36ch;
         font-size: 14px;
         line-height: 1.55;
-        color: rgba(232, 226, 208, 0.6);
+        color: var(--rc-bone-dim);
       }
       .foot-nav {
         display: grid;
@@ -1081,12 +1020,12 @@ $ patchwire-agent install
         gap: 36px;
       }
       .foot-nav h4 {
-        font-family: var(--font-mono);
+        font-family: var(--rc-font-mono);
         font-size: 11px;
         font-weight: 500;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: rgba(232, 226, 208, 0.5);
+        color: var(--rc-bone-dim);
         margin: 0 0 16px;
       }
       .foot-nav a {
@@ -1096,7 +1035,7 @@ $ patchwire-agent install
         color: rgba(232, 226, 208, 0.85);
         transition: color 0.15s;
       }
-      .foot-nav a:hover { color: var(--phosphor); }
+      .foot-nav a:hover { color: var(--rc-phosphor); }
       .foot-bottom {
         max-width: var(--max);
         margin: 0 auto;
@@ -1105,251 +1044,61 @@ $ patchwire-agent install
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 16px;
-        font-family: var(--font-mono);
+        font-family: var(--rc-font-mono);
         font-size: 11px;
         color: rgba(232, 226, 208, 0.4);
       }
       .foot-tag {
         letter-spacing: 0.06em;
-        color: var(--phosphor);
+        color: var(--rc-phosphor);
         opacity: 0.7;
       }
 
-      /* ─────────────────────────────────────────────────────────
+      /* ═══════════════════════════════════════════════════════════
          REDUCED MOTION
-         ───────────────────────────────────────────────────────── */
+         ═══════════════════════════════════════════════════════════ */
       @media (prefers-reduced-motion: reduce) {
-        .hl-word, .hero-cta { animation: none; opacity: 1; transform: none; }
-        .wire-patch, .rev-dot, .cta-cursor { animation: none; }
-      }
-
-      /* ─────────────────────────────────────────────────────────
-         RESPONSIVE
-         The bicameral identity survives at every width.
-
-         ≥ 1024px    Vertical bicameral (default).
-         768–1023px  Vertical bicameral, tightened.
-         540–767px   HORIZONTAL bicameral (paper top, ink bottom).
-                     Headline straddles a horizontal seam.
-         ≤ 539px     Same horizontal bicameral, single-col features.
-         ───────────────────────────────────────────────────────── */
-
-      /* ── Tablet: keep vertical bicameral, tighten typography ── */
-      @media (min-width: 768px) and (max-width: 1099px) {
-        .topnav { gap: 20px; font-size: 13px; }
-        .topnav a:nth-child(4) { display: none; } /* hide "Extension" link */
-        .rev { font-size: 11px; }
-
-        .hero-local, .hero-remote { max-width: 32ch; }
-        .hero-stanza { font-size: 17px; }
-        .hero-snippet { font-size: 11.5px; padding: 12px 14px; }
-
-        .hero-headline { font-size: clamp(36px, 6.4vw, 76px); line-height: 0.98; }
-
-        /* Keep CTAs on the cream side so they don't straddle the seam
-           (which would make ghost-button text invisible). */
-        .hero-cta {
-          grid-column: 1 / 2;
-          padding-right: clamp(20px, 4vw, 56px);
-          flex-wrap: wrap;
+        .cover-h-w, .cover-cta, .diff-hero .diff-line {
+          animation: none; opacity: 1; transform: none;
         }
-        .hero-cta .cta { white-space: nowrap; }
-
-        .why-title { font-size: clamp(28px, 5vw, 50px); }
-        .why-grid { grid-template-columns: 1fr; gap: 36px; }
-        .why-callout { border-left: none; border-top: 1px solid var(--rule-paper); padding: 22px 0 0; }
-
-        .three-grid { gap: 22px; }
-        .term-body { padding: 18px 18px 22px; font-size: 12px; }
-
-        .features-grid { grid-template-columns: 1fr 1fr; }
-        .feat-1 { grid-area: 1 / 1 / 2 / 2; }
-        .feat-2 { grid-area: 1 / 2 / 3 / 3; }   /* dark quote spans 2 rows in right col */
-        .feat-3 { grid-area: 2 / 1 / 3 / 2; }
-        .feat-4 { grid-area: 3 / 1 / 4 / 2; }
-        .feat-5 { grid-area: 3 / 2 / 4 / 3; }
-        .feat-6 { grid-area: 4 / 1 / 5 / 3; }
-
-        .end-grid { grid-template-columns: 1fr; gap: 36px; }
-        .end-h { font-size: clamp(34px, 6vw, 58px); }
-
-        .foot-grid { grid-template-columns: 1fr; gap: 36px; }
+        .kicker-dot, .cta-cursor { animation: none; }
       }
 
-      /* ── Mobile (≤ 767px): HORIZONTAL bicameral ─────────────── */
-      @media (max-width: 767px) {
-        :root { --seam: 100%; --gutter: clamp(18px, 5vw, 28px); }
-
-        /* Top bar: wordmark + tiny rev only */
+      /* ═══════════════════════════════════════════════════════════
+         RESPONSIVE
+         ═══════════════════════════════════════════════════════════ */
+      @media (max-width: 900px) {
         .topbar { grid-template-columns: 1fr auto; gap: 12px; padding: 16px var(--gutter); }
         .topnav { display: none; }
-        .rev { font-size: 10px; gap: 6px; }
-        .rev-dot { width: 6px; height: 6px; }
+        .patch-meta { font-size: 10px; }
 
-        /* The full-bleed paper / ink strips behind the hero are
-           replaced by per-grid-item backgrounds with negative-margin
-           bleeds out to the viewport edge. */
-        .hero { min-height: auto; }
-        .hero-paper, .hero-ink, .wire { display: none; }
+        .cover { padding-top: 36px; padding-bottom: 60px; }
+        .cover::before, .cover::after { display: none; }
+        .patch-email { font-size: 11px; }
+        .patch-key { min-width: 64px; }
+        .cover-cta { flex-direction: column; align-items: stretch; }
+        .cover-cta .cta { justify-content: center; }
 
-        .hero-grid {
-          grid-template-columns: 1fr;
-          grid-template-areas:
-            "local"
-            "headline"
-            "remote"
-            "cta";
-          gap: 0;
-          padding: 0;
-          min-height: auto;
-        }
+        .hunk { padding-block: 56px; }
+        .hunk-h { font-size: clamp(28px, 7.5vw, 40px); }
+        .hunk-h-center { text-align: left; margin: 0 0 24px; }
+        .hunk-lede { text-align: left; margin-inline: 0; }
 
-        .hero-local, .hero-remote, .hero-headline, .hero-cta {
-          max-width: 100%;
-        }
+        .lifecycle-step { grid-template-columns: 38px 1fr; gap: 16px; padding-block: 18px; }
+        .lifecycle-h { font-size: 18px; }
 
-        /* LOCAL zone (cream) — top of mobile bicameral */
-        .hero-local {
-          background: var(--paper);
-          padding: 36px var(--gutter) 28px;
-        }
-        .hero-stanza { font-size: 18px; line-height: 1.4; margin-bottom: 18px; }
-        .hero-snippet, .hero-snippet-light {
-          font-size: 12px;
-          padding: 12px 14px;
-          max-width: 100%;
-        }
+        .changelog-stat { text-align: left; }
 
-        /* HEADLINE zone — its background is the bicameral SEAM:
-           paper on top half, ink on bottom half, hard transition. */
-        .hero-headline {
-          background: linear-gradient(180deg,
-            var(--paper) 0%, var(--paper) 50%,
-            var(--ink) 50%, var(--ink) 100%);
-          padding: 16px var(--gutter);
-          /* Tight on mobile so the long line "Diffs cross the wire."
-             fits one row at narrow widths. opsz 18 narrows glyphs. */
-          font-size: clamp(30px, 8.6vw, 54px);
-          line-height: 1.05;
-          letter-spacing: -0.025em;
-          font-variation-settings: "SOFT" 30, "opsz" 18;
-        }
-        .hero-headline .hl-word { margin-right: 0.16em; }
-        .headline-paper {
-          color: var(--ink);
-          clip-path: inset(0 0 50% 0);
-        }
-        .headline-ink {
-          color: var(--bone);
-          clip-path: inset(50% 0 0 0);
-          display: block;
-        }
-        .hl-accent-amber    { color: var(--amber-dim); }
-        .hl-accent-phosphor { color: var(--phosphor); }
+        .apply-h { font-size: clamp(40px, 12vw, 64px); }
+        .apply-cta { flex-direction: column; align-items: stretch; }
+        .apply-cta .cta { justify-content: center; }
 
-        /* REMOTE zone (ink) — below the seam */
-        .hero-remote {
-          background: var(--ink);
-          color: var(--bone);
-          padding: 28px var(--gutter) 24px;
-        }
-        .side-label-light { color: var(--bone); opacity: 0.85; }
-        .hero-snippet-dark {
-          background: rgba(232, 226, 208, 0.04);
-          border-color: var(--hairline-ink);
-          font-size: 12px;
-          padding: 12px 14px;
-          max-width: 100%;
-        }
-
-        /* CTAs sit on the ink zone for visual continuity */
-        .hero-cta {
-          background: var(--ink);
-          padding: 4px var(--gutter) 40px;
-          gap: 10px;
-          flex-direction: column;
-          align-items: stretch;
-        }
-        .hero-cta .cta { justify-content: center; padding: 16px 20px; }
-        /* Ghost CTA on dark background — higher specificity to beat the
-           desktop .cta-ghost color rule. */
-        .hero-cta .cta-ghost {
-          color: var(--bone);
-          border-color: rgba(232, 226, 208, 0.25);
-          background: transparent;
-        }
-        .hero-cta .cta-ghost:hover {
-          background: rgba(232, 226, 208, 0.06);
-          border-color: var(--bone);
-        }
-
-        /* Section meta rows: hide right-side kicker on narrow */
-        .kicker-end { display: none; }
-        .why-meta, .three-meta, .shape-meta, .features-meta {
-          grid-template-columns: 1fr auto;
-          margin-bottom: 36px;
-        }
-
-        /* §01 */
-        .why { padding: 64px var(--gutter); }
-        .why-title { font-size: clamp(28px, 7vw, 40px); margin-bottom: 32px; }
-        .why-grid { grid-template-columns: 1fr; gap: 28px; }
-        .why-lead { font-size: 16px; }
-        .why-callout { border-left: none; border-top: 1px solid var(--rule-paper); padding: 22px 0 0; }
-        .callout-q { font-size: 18px; }
-
-        /* §02 */
-        .three { padding: 64px var(--gutter); }
-        .three-grid { grid-template-columns: 1fr; gap: 20px; }
-        .term-body { padding: 16px 14px 20px; font-size: 11.5px; }
-        .term-header { padding: 8px 12px; font-size: 10px; }
-        .term-host { display: none; }  /* hide host badge on mobile */
-
-        /* §03 — diagram gets a fade-out shadow on right edge to hint
-           horizontal scroll */
-        .shape { padding: 64px var(--gutter); }
-        .shape-diagram {
-          font-size: 10.5px;
-          padding: 18px;
-          position: relative;
-          mask-image: linear-gradient(90deg, #000 92%, transparent 100%);
-          -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent 100%);
-        }
-
-        /* §04 Features grid: single column */
-        .features { padding: 64px var(--gutter); }
-        .features-grid { grid-template-columns: 1fr; grid-template-rows: none; }
-        .feat-1, .feat-2, .feat-3, .feat-4, .feat-5, .feat-6 { grid-area: auto; }
-        .feat { padding: 28px 22px; }
-        .feat-quote { padding: 32px 22px; }
-        .strip-list { grid-template-columns: 1fr 1fr; gap: 18px; }
-
-        /* End / final CTA */
-        .end { padding: 72px var(--gutter); }
-        .end-grid { grid-template-columns: 1fr; gap: 28px; }
-        .end-h { font-size: clamp(32px, 8vw, 48px); }
-        .end-actions { flex-direction: column; align-items: stretch; }
-        .end .cta { justify-content: center; }
-
-        /* Footer */
-        .foot { padding: 44px var(--gutter) 28px; }
-        .foot-grid { grid-template-columns: 1fr; gap: 32px; padding-bottom: 28px; }
-        .foot-nav { grid-template-columns: 1fr 1fr; gap: 24px; }
-        .foot-bottom { font-size: 10px; gap: 10px; flex-direction: column; align-items: flex-start; }
-        .foot-tag { letter-spacing: 0.04em; }
+        .foot-grid { grid-template-columns: 1fr; gap: 36px; }
+        .foot-nav { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .foot-bottom { font-size: 10px; flex-direction: column; align-items: flex-start; gap: 8px; }
       }
-
-      /* ── Extra-small (≤ 539px): tighter typography, single-col strip ── */
-      @media (max-width: 539px) {
-        .strip-list { grid-template-columns: 1fr; gap: 14px; }
-        .why-title { font-size: clamp(26px, 8vw, 34px); }
-        .end-h { font-size: clamp(28px, 9vw, 40px); }
-
-        /* Headline tightens further on very narrow screens. */
-        .hero-headline {
-          font-size: clamp(28px, 9vw, 40px);
-          line-height: 1.06;
-        }
+      @media (max-width: 540px) {
+        .foot-nav { grid-template-columns: 1fr 1fr; }
       }
     </style>
   </body>
