@@ -4,7 +4,8 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { z } from 'zod';
-import { verifyToken } from './auth.ts';
+import type { UsersStore } from './users-store.ts';
+import { resolveUserFromHeader } from './auth.ts';
 import {
   captureDiff,
   cleanResetToHead,
@@ -18,8 +19,14 @@ import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
 import { TurnState } from './turn-state.ts';
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    username?: string;
+  }
+}
+
 export interface AgentOptions {
-  token: string;
+  usersStore: UsersStore;
   projectsRoot: string;
   aiCommand: string;
   aiArgs: string[];
@@ -99,15 +106,32 @@ export function buildServer(opts: AgentOptions) {
 
   app.addHook('onRequest', async (req, reply) => {
     if (req.url === '/health') return;
-    const ok = verifyToken(req.headers.authorization, opts.token);
-    if (!ok) {
+    const result = resolveUserFromHeader(req.headers.authorization, opts.usersStore);
+    if (!result) {
       reply.code(401).send({ error: 'unauthorized' });
+      return;
     }
+    if (result.disabled) {
+      reply.code(403).send({ error: 'user disabled' });
+      return;
+    }
+    req.username = result.user;
+    opts.usersStore.touchLastSeen(result.user);
   });
 
   app.get('/health', async () => {
     const claude = findAiBin(opts.aiCommand);
     return { ok: true, version: opts.version, claude };
+  });
+
+  app.get('/me', async (req) => {
+    const name = req.username!;
+    const summary = opts.usersStore.list().find((u) => u.user === name);
+    // Admin lookups won't appear in `list()`; surface a minimal record.
+    if (!summary) {
+      return { user: name, disabled: false };
+    }
+    return summary;
   });
 
   app.post('/ask', async (req, reply) => {
