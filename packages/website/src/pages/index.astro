@@ -15,7 +15,7 @@ const rev = '263e2e3';
     <title>Patchwire — local stays local, AI stays remote</title>
     <meta
       name="description"
-      content="Push your project to a remote Mac. Run an AI CLI there. Pull back a unified diff. Apply only what you want."
+      content="Push your project to a remote machine. Run an AI CLI there. Pull back a unified diff. Apply only what you want."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:title" content="Patchwire" />
@@ -74,7 +74,7 @@ const rev = '263e2e3';
         </h1>
 
         <p class="hero-sub reveal">
-          Push your code to the heavier Mac. The AI runs there with the
+          Push your code to a heavier machine. The AI runs there with the
           whole repo. You get back a unified diff. Nothing else crosses the wire.
         </p>
 
@@ -85,7 +85,7 @@ const rev = '263e2e3';
               <span></span><span></span><span></span>
             </span>
             <span class="term-path">~/projects/your-app</span>
-            <span class="term-host">macbook · zsh</span>
+            <span class="term-host">laptop · zsh</span>
           </header>
           <div class="term-body" aria-live="polite">
             <div class="term-line" data-typewrite='$ patchwire ask "refactor login_bloc to freezed"' data-after="800"></div>
@@ -203,7 +203,7 @@ const rev = '263e2e3';
                   <span class="vss-title">PATCHWIRE</span>
                   <span class="vss-conn">
                     <span class="vss-conn-dot"></span>
-                    <span>mac&#8209;mini</span>
+                    <span>remote</span>
                   </span>
                 </header>
                 <div class="vss-thread" role="log">
@@ -311,7 +311,7 @@ const rev = '263e2e3';
         </div>
         <div class="flowbox flowbox-mac">
           <span class="flowbox-icon">▣</span>
-          <span class="flowbox-title">Mac Mini</span>
+          <span class="flowbox-title">Remote</span>
           <span class="flowbox-sub">patchwire-agent</span>
         </div>
       </div>
@@ -359,7 +359,7 @@ const rev = '263e2e3';
         <article class="termcard reveal" data-tilt>
           <header class="termcard-bar">
             <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="termcard-host">on the Mac Mini</span>
+            <span class="termcard-host">on the remote</span>
           </header>
           <pre class="termcard-body"><span class="t-com"># once</span>
 $ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
@@ -375,7 +375,7 @@ $ patchwire-agent install
           <pre class="termcard-body"><span class="t-com"># once</span>
 $ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
 $ patchwire setup
-  <span class="t-ok">→ Tailscale peer: mac-mini.tail-xyz.ts.net</span>
+  <span class="t-ok">→ Tailscale peer: remote-host.tail-xyz.ts.net</span>
 
 <span class="t-com"># forever</span>
 $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre>
