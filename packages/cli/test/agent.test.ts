@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildServer } from '../src/agent/server.ts';
+import { UsersStore } from '../src/agent/users-store.ts';
 
 const TOKEN = 'abc-test-token-1234567890';
 
@@ -50,9 +51,15 @@ afterEach(async () => {
 });
 
 describe('agent server', () => {
+  function makeStore(): UsersStore {
+    const s = new UsersStore(join(projectsRoot, 'users.json'));
+    s.addUser('tester', TOKEN);
+    return s;
+  }
+
   it('GET /health returns ok without auth', async () => {
     const app = buildServer({
-      token: TOKEN,
+      usersStore: makeStore(),
       projectsRoot,
       aiCommand: 'definitely-not-installed-xyz',
       aiArgs: [],
@@ -69,7 +76,7 @@ describe('agent server', () => {
 
   it('rejects /ask without bearer token', async () => {
     const app = buildServer({
-      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -82,7 +89,7 @@ describe('agent server', () => {
 
   it('returns 404 when project directory is missing', async () => {
     const app = buildServer({
-      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -95,7 +102,7 @@ describe('agent server', () => {
 
   it('rejects malicious project names', async () => {
     const app = buildServer({
-      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -114,7 +121,7 @@ printf 'brand new\\n' > c.txt`,
     );
 
     const app = buildServer({
-      token: TOKEN, projectsRoot,
+      usersStore: makeStore(), projectsRoot,
       aiCommand: fakeClaudeBin, aiArgs: [],
       timeoutSec: 10, version: 'x',
     });
@@ -144,7 +151,7 @@ printf 'brand new\\n' > c.txt`,
     await writeFile(join(noGitDir, 'x.txt'), 'x', 'utf8');
 
     const app = buildServer({
-      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -159,7 +166,7 @@ printf 'brand new\\n' > c.txt`,
     await writeFile(join(projectDir, 'a.txt'), 'changed by user\n', 'utf8');
 
     const app = buildServer({
-      token: TOKEN, projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',

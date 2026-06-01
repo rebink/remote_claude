@@ -1,5 +1,9 @@
 import { Command } from 'commander';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { buildServer } from './agent/server.ts';
+import { UsersStore } from './agent/users-store.ts';
+import { migrateIfNeeded } from './agent/migrate-v01.ts';
 import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 
@@ -15,7 +19,6 @@ function envRequired(name: string): string {
 }
 
 async function runServe(): Promise<void> {
-  const token = envRequired('PW_AGENT_TOKEN');
   const projectsRoot = envRequired('PW_PROJECTS_ROOT');
   const host = process.env.PW_AGENT_HOST ?? '127.0.0.1';
   const port = Number(process.env.PW_AGENT_PORT ?? 7878);
@@ -23,14 +26,30 @@ async function runServe(): Promise<void> {
   const aiArgs = (process.env.PW_AI_ARGS ?? '--print').split(/\s+/).filter(Boolean);
   const timeoutSec = Number(process.env.PW_TIMEOUT_SEC ?? 600);
 
+  const usersJsonPath = process.env.PW_USERS_FILE ?? join(homedir(), '.patchwire', 'users.json');
+  const legacyToken = process.env.PW_AGENT_TOKEN;
+
+  const migration = migrateIfNeeded({ usersJsonPath, legacyToken });
+  const usersStore = new UsersStore(usersJsonPath);
+
   const app = buildServer({
-    token,
+    usersStore,
     projectsRoot,
     aiCommand,
     aiArgs,
     timeoutSec,
     version: VERSION,
   });
+
+  if (migration.migrated) {
+    app.log.info(`migrated v0.1 → v0.2: created 'default' user from PW_AGENT_TOKEN`);
+  }
+  if (usersStore.list().length === 0) {
+    app.log.warn(
+      'no users registered — agent will 401 every request. ' +
+      'Run: patchwire-agent user add <name>',
+    );
+  }
 
   // Best-effort: keep the macOS login keychain from auto-locking so `claude`
   // can read its OAuth credentials. Only takes effect if the keychain is
