@@ -80,4 +80,32 @@ describe('ConcurrencyManager', () => {
     const a2 = await m.acquire('alice');
     m.release(a2);
   });
+
+  it('fires onQueued once with position when the request waits on the global cap', async () => {
+    const m = new ConcurrencyManager({ globalCap: 1, perUserCap: 5 });
+    const held = await m.acquire('alice');
+    const positions: number[] = [];
+    const bP = m.acquire('bob', ({ position }) => positions.push(position));
+    // bob is waiting behind alice; the callback should already have fired once.
+    expect(positions).toEqual([1]);
+    m.release(held);
+    const b = await bP;
+    expect(positions).toEqual([1]); // still exactly one call — one-shot
+    m.release(b);
+  });
+
+  it('does not fire onQueued when a slot is immediately available', async () => {
+    const m = new ConcurrencyManager({ globalCap: 2, perUserCap: 1 });
+    const positions: number[] = [];
+    const lease = await m.acquire('alice', ({ position }) => positions.push(position));
+    expect(positions).toEqual([]);
+    m.release(lease);
+  });
+
+  it('still works when called without an onQueued callback (regression)', async () => {
+    const m = new ConcurrencyManager({ globalCap: 1, perUserCap: 5 });
+    const lease = await m.acquire('alice');
+    expect(lease.positionAtEntry).toBe(0);
+    m.release(lease);
+  });
 });

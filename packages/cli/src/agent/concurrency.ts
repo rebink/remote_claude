@@ -42,7 +42,10 @@ export class ConcurrencyManager {
     this.global = new Semaphore(opts.globalCap);
   }
 
-  async acquire(user: string): Promise<Lease> {
+  async acquire(
+    user: string,
+    onQueued?: (info: { position: number }) => void,
+  ): Promise<Lease> {
     const start = Date.now();
     const perUserSem = this.getOrCreatePerUser(user);
 
@@ -51,12 +54,22 @@ export class ConcurrencyManager {
     this.pending.push({ user, key: trackKey });
 
     try {
-      await perUserSem.acquire();
-      // After per-user acquired, compute position at entry for global queue.
-      // This is the position we'd be in if we wait on global.
+      // Acquire the per-user slot first. Use a token so we can act on the
+      // immediate-grant case without yielding to a microtask: when the slot is
+      // free the token is granted synchronously (positionOf === 0), letting
+      // onQueued fire before acquire()'s first await.
+      const perUserToken = perUserSem.acquireToken();
+      if (perUserSem.positionOf(perUserToken) !== 0) {
+        await perUserToken.promise;
+      }
+
+      // Per-user slot now held. Decide the global-queue position at entry before
+      // awaiting the global slot, and fire the one-shot queued notification only
+      // when we will actually wait on the global cap.
       const willWaitOnGlobal =
         this.global.available() === 0 || this.global.waiting() > 0;
       const positionAtEntrySnapshot = willWaitOnGlobal ? this.global.waiting() + 1 : 0;
+      if (willWaitOnGlobal) onQueued?.({ position: positionAtEntrySnapshot });
 
       const globalAcquireStart = Date.now();
       await this.global.acquire();

@@ -6,6 +6,18 @@ import { spawnSync } from 'node:child_process';
 import { buildServer } from '../../src/agent/server.ts';
 import { UsersStore } from '../../src/agent/users-store.ts';
 import { NoopAuditLog } from '../../src/agent/audit-log.ts';
+import type { AskEvent } from '@patchwire/protocol';
+
+/** Pull the diff from the streamed NDJSON `/ask` `result` event. */
+function askDiff(payload: string): string {
+  const result = payload
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => JSON.parse(l) as AskEvent)
+    .find((e) => e.type === 'result');
+  return result?.type === 'result' ? result.diff : '__no_result__';
+}
 
 describe('per-user paths end-to-end', () => {
   let dir: string;
@@ -64,8 +76,8 @@ describe('per-user paths end-to-end', () => {
     ]);
     expect(a.statusCode).toBe(200);
     expect(b.statusCode).toBe(200);
-    expect((a.json() as { diff: string }).diff).toBe('');
-    expect((b.json() as { diff: string }).diff).toBe('');
+    expect(askDiff(a.payload)).toBe('');
+    expect(askDiff(b.payload)).toBe('');
   });
 
   it('a user with no project at the expected path gets 404 even if another user has that name', async () => {
