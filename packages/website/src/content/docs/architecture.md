@@ -14,7 +14,7 @@ laptop (patchwire CLI)            remote (patchwire-agent)
   - git apply (selective)                - reset working tree
 ```
 
-Two binaries, one shared bearer token, one TCP connection. That's the whole product surface.
+Two binaries, per-user bearer tokens, one TCP connection. That's the whole product surface. One agent serves a whole team; see [Multi-developer](/multi-developer/).
 
 ## Request lifecycle: `patchwire ask "<prompt>"`
 

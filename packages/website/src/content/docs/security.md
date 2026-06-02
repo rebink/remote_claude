@@ -80,6 +80,9 @@ A v0.1 install upgrades transparently: on first v0.2 agent start, if `PW_AGENT_T
 is set and `users.json` does not exist, a `default` user is created with that token's
 hash. Existing laptops keep working with no config change.
 
+For the full multi-developer model (identity, isolated checkouts, the fair queue,
+and the audit log) see [Multi-developer](/multi-developer/).
+
 ## What Anthropic sees
 
 Same as if you ran `claude` locally. Claude Code on the remote sends prompts and relevant file context to Anthropic's API per its own data policy. Patchwire doesn't add to or subtract from that surface. Read [Anthropic's data handling docs](https://docs.claude.com/en/docs/claude-code/security) for specifics.
