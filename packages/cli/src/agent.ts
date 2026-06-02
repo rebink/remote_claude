@@ -10,6 +10,7 @@ import { JsonlAuditLog } from './agent/audit-log.ts';
 import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 import { registerUserCommands } from './commands/user.ts';
+import { registerAgentLogCommand } from './commands/agent-log.ts';
 
 const VERSION = '0.1.0';
 
@@ -148,6 +149,7 @@ program
   .action(async () => { await runDaemonUninstall(); });
 
 registerUserCommands(program);
+registerAgentLogCommand(program);
 
 program.parseAsync(process.argv).catch((err: Error) => {
   console.error(err.message);
