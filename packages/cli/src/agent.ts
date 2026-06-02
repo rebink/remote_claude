@@ -11,6 +11,7 @@ import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 import { registerUserCommands } from './commands/user.ts';
 import { registerAgentLogCommand } from './commands/agent-log.ts';
+import { registerUsageCommand } from './commands/usage.ts';
 
 const VERSION = '0.1.0';
 
@@ -150,6 +151,7 @@ program
 
 registerUserCommands(program);
 registerAgentLogCommand(program);
+registerUsageCommand(program);
 
 program.parseAsync(process.argv).catch((err: Error) => {
   console.error(err.message);

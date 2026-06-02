@@ -6,7 +6,7 @@ import type { AuditEntry, AskAuditEntry, ChatAuditEntry } from '../agent/audit-l
 
 const DURATION_RE = /^(\d+)\s*(s|m|h|d)$/;
 
-function parseSince(value: string): number {
+export function parseSince(value: string): number {
   const m = value.match(DURATION_RE);
   if (!m) {
     throw new Error(`--since must look like '15m', '6h', '7d', '30s' (got '${value}')`);
