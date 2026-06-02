@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildServer } from '../src/agent/server.ts';
 import { UsersStore } from '../src/agent/users-store.ts';
+import { JsonlAuditLog, NoopAuditLog } from '../src/agent/audit-log.ts';
+import { join as pathJoin } from 'node:path';
 
 const TOKEN = 'abc-test-token-1234567890';
 
@@ -65,6 +67,7 @@ describe('agent server', () => {
       aiArgs: [],
       timeoutSec: 5,
       version: '0.0.0-test',
+      auditLog: new NoopAuditLog(),
     });
     const res = await app.inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
@@ -77,6 +80,7 @@ describe('agent server', () => {
   it('rejects /ask without bearer token', async () => {
     const app = buildServer({
       usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      auditLog: new NoopAuditLog(),
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -90,6 +94,7 @@ describe('agent server', () => {
   it('returns 404 when project directory is missing', async () => {
     const app = buildServer({
       usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      auditLog: new NoopAuditLog(),
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -103,6 +108,7 @@ describe('agent server', () => {
   it('rejects malicious project names', async () => {
     const app = buildServer({
       usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      auditLog: new NoopAuditLog(),
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -124,6 +130,7 @@ printf 'brand new\\n' > c.txt`,
       usersStore: makeStore(), projectsRoot,
       aiCommand: fakeClaudeBin, aiArgs: [],
       timeoutSec: 10, version: 'x',
+      auditLog: new NoopAuditLog(),
     });
 
     const res = await app.inject({
@@ -152,6 +159,7 @@ printf 'brand new\\n' > c.txt`,
 
     const app = buildServer({
       usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      auditLog: new NoopAuditLog(),
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -167,6 +175,7 @@ printf 'brand new\\n' > c.txt`,
 
     const app = buildServer({
       usersStore: makeStore(), projectsRoot, aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'x',
+      auditLog: new NoopAuditLog(),
     });
     const res = await app.inject({
       method: 'POST', url: '/ask',
@@ -174,6 +183,34 @@ printf 'brand new\\n' > c.txt`,
       payload: { prompt: 'p', project: 'sample' },
     });
     expect(res.statusCode).toBe(409);
+    await app.close();
+  });
+
+  it('writes an audit line after a successful /ask', async () => {
+    fakeClaudeBin = await makeFakeClaude(`printf 'three-edited\\n' >> a.txt`);
+    const auditPath = pathJoin(projectsRoot, 'audit.log');
+    const log = new JsonlAuditLog({ path: auditPath });
+    const app = buildServer({
+      usersStore: makeStore(),
+      projectsRoot,
+      aiCommand: fakeClaudeBin, aiArgs: [],
+      timeoutSec: 10, version: 'x',
+      auditLog: log,
+    });
+    const res = await app.inject({
+      method: 'POST', url: '/ask',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      payload: { prompt: 'edit it', project: 'sample' },
+    });
+    expect(res.statusCode).toBe(200);
+    const entries = log.readAll();
+    expect(entries).toHaveLength(1);
+    const e = entries[0] as { route: string; user: string; project: string; lines_added: number; prompt_sha256: string };
+    expect(e.route).toBe('/ask');
+    expect(e.user).toBe('tester');
+    expect(e.project).toBe('sample');
+    expect(e.lines_added).toBeGreaterThan(0);
+    expect(e.prompt_sha256).toMatch(/^[0-9a-f]{64}$/);
     await app.close();
   });
 });
