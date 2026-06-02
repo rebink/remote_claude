@@ -38,6 +38,7 @@ export function registerUsageCommand(program: Command): void {
       const entries = readEntries({ basePath: basePath(), filter });
       const report = aggregateUsage(entries);
 
+      // --json always emits the structured report (even when empty) so JSON consumers never see the human sentinel.
       if (opts.json) {
         process.stdout.write(JSON.stringify(report) + '\n');
         return;
