@@ -3,8 +3,8 @@ import '../styles/custom.css';
 import { ClientRouter } from 'astro:transitions';
 
 const repo = 'https://github.com/rebink/patchwire';
-const version = '0.1.0';
-const rev = '263e2e3';
+const version = '0.2.4';
+const rev = 'b71dc5e';
 ---
 
 <!doctype html>
@@ -13,10 +13,10 @@ const rev = '263e2e3';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0E0E10" />
-    <title>Patchwire: local stays local, AI stays remote</title>
+    <title>Patchwire: one remote, your whole team, their own diffs</title>
     <meta
       name="description"
-      content="Push your project to a remote machine. Run an AI CLI there. Pull back a unified diff. Apply only what you want."
+      content="A shared remote runs the AI for your whole team. Per-user tokens, isolated checkouts, a fair queue. Each diff returns to the laptop that asked for it."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:type" content="website" />
@@ -24,7 +24,7 @@ const rev = '263e2e3';
     <meta property="og:title" content="Patchwire" />
     <meta
       property="og:description"
-      content="Local-first development. AI executes remotely. Diffs come back for review."
+      content="One shared remote runs the AI for the whole team. Per-user tokens, isolated checkouts, a fair queue. Diffs come back to each laptop for review."
     />
     <meta property="og:image" content="https://patchwire.dev/og.png" />
     <meta property="og:image:width" content="1200" />
@@ -33,7 +33,7 @@ const rev = '263e2e3';
     <meta name="twitter:title" content="Patchwire" />
     <meta
       name="twitter:description"
-      content="Local stays local. AI stays remote. Only diffs cross the wire."
+      content="One box. Every developer. Their own diffs. Patchwire runs the AI on one shared remote — per-user, isolated, queued — and returns a diff to each laptop."
     />
     <meta name="twitter:image" content="https://patchwire.dev/og.png" />
     <ClientRouter />
@@ -53,9 +53,9 @@ const rev = '263e2e3';
       </a>
       <nav class="topnav" aria-label="Primary">
         <a href="/quickstart/">Quickstart</a>
+        <a href="/multi-developer/">Teams</a>
         <a href="/architecture/">Architecture</a>
         <a href="/commands/">CLI</a>
-        <a href="/install-extension/">Extension</a>
         <a href={repo} class="topnav-ext">GitHub ↗</a>
       </nav>
       <span class="meta-pill">
@@ -77,7 +77,7 @@ const rev = '263e2e3';
 
       <div class="hero-inner">
         <div class="hero-eyebrow reveal">
-          <span class="eyebrow-tag">0.1.0 / 2026</span>
+          <span class="eyebrow-tag">0.2.4 / 2026</span>
           <span class="eyebrow-sep">·</span>
           <span class="eyebrow-rev">rev {rev}</span>
           <span class="eyebrow-sep">·</span>
@@ -85,14 +85,15 @@ const rev = '263e2e3';
         </div>
 
         <h1 class="hero-h reveal">
-          <span class="hero-h-line">We&nbsp;pulled</span>
-          <span class="hero-h-line">AI off your</span>
-          <span class="hero-h-line"><em>laptop.</em></span>
+          <span class="hero-h-line">One&nbsp;box.</span>
+          <span class="hero-h-line">Every developer.</span>
+          <span class="hero-h-line">Their own <em>diffs.</em></span>
         </h1>
 
         <p class="hero-sub reveal">
-          Push your code to a heavier machine. The AI runs there with the
-          whole repo. You get back a unified diff. Nothing else crosses the wire.
+          A shared remote runs the AI for the whole team. Per-user tokens,
+          isolated checkouts, a fair queue. Each diff returns to the laptop
+          that asked for it &mdash; nothing else crosses the wire.
         </p>
 
         <!-- ── The animated terminal centerpiece ── -->
@@ -101,15 +102,16 @@ const rev = '263e2e3';
             <span class="term-dots" aria-hidden="true">
               <span></span><span></span><span></span>
             </span>
-            <span class="term-path">~/projects/your-app</span>
-            <span class="term-host">laptop · zsh</span>
+            <span class="term-path">~/projects/team-app</span>
+            <span class="term-host">you@laptop · zsh</span>
           </header>
           <div class="term-body" aria-live="polite">
             <div class="term-line" data-typewrite='$ patchwire ask "refactor login_bloc to freezed"' data-after="800"></div>
-            <div class="term-line term-line-step" data-step="rsync" data-step-detail="14 files · 84 ms"           data-after="700"></div>
-            <div class="term-line term-line-step" data-step="POST"  data-step-detail="/ask · 187 bytes"           data-after="900"></div>
-            <div class="term-line term-line-step" data-step="spawn" data-step-detail="claude --print · 4.7 s"     data-after="1400"></div>
-            <div class="term-line term-line-step" data-step="diff"  data-step-detail="captured · 31 lines · 6 files" data-after="700"></div>
+            <div class="term-line term-line-step" data-step="rsync"    data-step-detail="14 files · 84 ms"              data-after="650"></div>
+            <div class="term-line term-line-step" data-step="queued"   data-step-detail="position 2 · ahead: ana, ben" data-after="1100"></div>
+            <div class="term-line term-line-step" data-step="accepted" data-step-detail="slot granted · waited 3.4 s"  data-after="700"></div>
+            <div class="term-line term-line-step" data-step="spawn"    data-step-detail="claude --print · 4.7 s"       data-after="1400"></div>
+            <div class="term-line term-line-step" data-step="diff"     data-step-detail="31 lines · 6 files"           data-after="700"></div>
             <div class="term-spacer"></div>
             <div class="term-diff" id="termDiff">
               <div class="diff-rail">@@ <span class="rail-path">lib/auth/login_bloc.dart</span></div>
@@ -271,25 +273,26 @@ const rev = '263e2e3';
     <section class="claim">
       <span class="kicker reveal"><span class="kicker-bar"></span>01 · the stance</span>
       <h2 class="claim-h reveal">
-        Your laptop&nbsp;was <em>never</em> meant to&nbsp;host the AI.
+        Sharing one machine usually <em>ruins</em> it.
       </h2>
       <p class="claim-sub reveal">
-        Code-server is laggy. In-editor AI is forgetful. Mounted FS is a coin flip.
-        Patchwire picks a different cut: <strong>local stays local,
-        AI stays remote, only diffs cross the wire.</strong>
+        Point a whole team at one box and you get clobbered checkouts,
+        colliding AI runs, and &ldquo;who&rsquo;s on the machine right now?&rdquo;
+        Patchwire keeps the shared box but gives every developer their
+        <strong>own token, their own checkout, and a fair place in line.</strong>
       </p>
 
       <div class="parallel reveal">
         <article class="par-card par-old">
           <header class="par-head">
             <span class="par-dot par-dot-amber"></span>
-            <span class="par-label">THE OLD WAY</span>
+            <span class="par-label">SHARED BOX, THE OLD WAY</span>
           </header>
           <ul>
-            <li>AI edits files in your editor</li>
-            <li>You hope it didn't break anything</li>
-            <li>You git-reset half the time</li>
-            <li>Locked to one provider's tools</li>
+            <li>One checkout everyone fights over</li>
+            <li>Concurrent runs clobber each other</li>
+            <li>No record of who ran what</li>
+            <li>First-come hogs the whole machine</li>
           </ul>
         </article>
         <article class="par-card par-new">
@@ -298,10 +301,10 @@ const rev = '263e2e3';
             <span class="par-label">PATCHWIRE</span>
           </header>
           <ul>
-            <li>AI edits a clean checkout on the remote</li>
-            <li>You read the diff before it lands</li>
-            <li>git apply selectively, or never</li>
-            <li>Any CLI: Claude, Codex, aider, custom</li>
+            <li>Per-user isolated checkout</li>
+            <li>Fair FIFO queue, live position</li>
+            <li>Every turn in a JSONL audit log</li>
+            <li>Per-user + global concurrency caps</li>
           </ul>
         </article>
       </div>
@@ -325,7 +328,7 @@ const rev = '263e2e3';
             <line x1="0" y1="30" x2="400" y2="30" stroke="rgba(232,226,208,0.18)" stroke-width="1" stroke-dasharray="2 4"/>
           </svg>
           <span class="flowparticle"></span>
-          <span class="flowlabel">rsync · HTTP · diff back</span>
+          <span class="flowlabel">rsync · queue · streamed diff</span>
         </div>
         <div class="flowbox flowbox-mac">
           <span class="flowbox-icon">▣</span>
@@ -339,14 +342,14 @@ const rev = '263e2e3';
           <span class="step-no">01</span>
           <div class="step-body">
             <h3>Push code over rsync.</h3>
-            <p>One-way. Your laptop is the source of truth. The remote always mirrors local. Never the other direction.</p>
+            <p>One-way, into your <em>own</em> per-user directory on the remote. Your laptop is the source of truth; the remote mirrors it. Never the other direction, never another developer's tree.</p>
           </div>
         </li>
         <li class="step reveal">
           <span class="step-no">02</span>
           <div class="step-body">
-            <h3>HTTP <code>/ask</code> with bearer token.</h3>
-            <p>The agent verifies the project is a clean git tree, then spawns the configured AI CLI with the prompt on stdin.</p>
+            <h3>Streamed <code>/ask</code> with your per-user token.</h3>
+            <p>The agent resolves your token to your identity, drops you into the fair queue &mdash; you watch your live position stream back &mdash; then spawns the AI on your own clean checkout.</p>
           </div>
         </li>
         <li class="step reveal">
@@ -366,34 +369,111 @@ const rev = '263e2e3';
       </ol>
     </section>
 
+    <!-- ───────── SECTION: BUILT FOR TEAMS ───────── -->
+    <section class="teams">
+      <span class="kicker reveal"><span class="kicker-bar"></span>03 · for teams</span>
+      <h2 class="teams-h reveal">
+        No one steps on <em>anyone.</em>
+      </h2>
+      <p class="teams-sub reveal">
+        One agent, many developers. Identity, isolation, fairness, and a paper
+        trail &mdash; built into the protocol, not bolted on after.
+      </p>
+
+      <div class="teams-grid">
+        <div class="teams-prose">
+          <article class="teampillar reveal">
+            <span class="teampillar-no">01</span>
+            <div>
+              <h3>Isolated checkouts</h3>
+              <p>Each developer rsyncs into <code>&lt;user&gt;/&lt;project&gt;</code> on the remote. Two people can hammer the same project name and never touch each other's tree.</p>
+            </div>
+          </article>
+          <article class="teampillar reveal">
+            <span class="teampillar-no">02</span>
+            <div>
+              <h3>Fair queue</h3>
+              <p>Per-user <em>and</em> global concurrency caps. Requests over the cap wait FIFO and stream their live position back, so one box never thunders.</p>
+            </div>
+          </article>
+          <article class="teampillar reveal">
+            <span class="teampillar-no">03</span>
+            <div>
+              <h3>Audit log</h3>
+              <p>Every successful turn appends one JSONL line: who, which project, prompt <em>hash</em>, lines changed, duration. Plaintext prompts never touch disk.</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- on-brand agent dashboard: live /queue snapshot + audit tail -->
+        <aside class="teams-panel reveal" data-tilt aria-hidden="true">
+          <header class="tp-bar">
+            <span class="term-dots"><span></span><span></span><span></span></span>
+            <span class="tp-bar-title">patchwire-agent</span>
+            <span class="tp-bar-ep">GET /queue</span>
+          </header>
+          <div class="tp-body">
+            <div class="tp-label">in flight · 1 / 3</div>
+            <div class="tp-row tp-row-run">
+              <span class="tp-user">ana</span>
+              <span class="tp-meta">claude --print · 4.7s</span>
+              <span class="tp-badge tp-badge-run">running</span>
+            </div>
+
+            <div class="tp-label">queued · 2</div>
+            <div class="tp-row">
+              <span class="tp-pos">1</span>
+              <span class="tp-user">ben</span>
+              <span class="tp-meta">waiting</span>
+            </div>
+            <div class="tp-row tp-row-you">
+              <span class="tp-pos">2</span>
+              <span class="tp-user">you</span>
+              <span class="tp-meta">waiting</span>
+            </div>
+
+            <div class="tp-divider"></div>
+
+            <div class="tp-label">~/.patchwire/agent.log</div>
+            <pre class="tp-audit"><span class="tp-aline"><span class="tp-k">cleo</span> team-app · +12 −3 · 5.2s</span>
+<span class="tp-aline"><span class="tp-k">ana</span> api · +4 −0 · 3.4s</span>
+<span class="tp-aline tp-aline-live"><span class="tp-k">ana</span> team-app · streaming…</span></pre>
+          </div>
+        </aside>
+      </div>
+    </section>
+
     <!-- ───────── SECTION: SETUP ───────── -->
     <section class="setup">
-      <span class="kicker reveal"><span class="kicker-bar"></span>03 · setup</span>
+      <span class="kicker reveal"><span class="kicker-bar"></span>04 · setup</span>
       <h2 class="setup-h reveal">
-        Three commands per side. <em>Forever.</em>
+        Install once. <em>Add developers</em> forever.
       </h2>
 
       <div class="setup-grid">
         <article class="termcard reveal" data-tilt>
           <header class="termcard-bar">
             <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="termcard-host">on the remote</span>
+            <span class="termcard-host">on the remote · admin</span>
           </header>
           <pre class="termcard-body"><span class="t-com"># once</span>
 $ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
 $ patchwire-agent install
-  <span class="t-ok">→ TOKEN: pw_b9f...</span>
-  <span class="t-ok">→ launchd: com.patchwire.agent</span></pre>
+  <span class="t-ok">→ launchd: com.patchwire.agent</span>
+
+<span class="t-com"># per developer</span>
+$ patchwire-agent user add <span class="t-str">ana</span>
+  <span class="t-ok">→ Token: pw_b9f...  (hand to ana)</span></pre>
         </article>
         <article class="termcard termcard-laptop reveal" data-tilt>
           <header class="termcard-bar">
             <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="termcard-host">on your laptop</span>
+            <span class="termcard-host">on each laptop · ana</span>
           </header>
           <pre class="termcard-body"><span class="t-com"># once</span>
 $ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
-$ patchwire setup
-  <span class="t-ok">→ Tailscale peer: <your-remote-host></span>
+$ patchwire setup --token <span class="t-str">pw_b9f...</span>
+  <span class="t-ok">→ identity: ana · remote: <your-remote-host></span>
 
 <span class="t-com"># forever</span>
 $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre>
@@ -403,9 +483,9 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
 
     <!-- ───────── SECTION: FEATURES ───────── -->
     <section class="feats">
-      <span class="kicker reveal"><span class="kicker-bar"></span>04 · the gains</span>
+      <span class="kicker reveal"><span class="kicker-bar"></span>05 · the gains</span>
       <h2 class="feats-h reveal">
-        Built different on&nbsp;purpose.
+        Built for the whole&nbsp;<em>team.</em>
       </h2>
 
       <div class="featgrid">
@@ -430,18 +510,33 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
           <h3>One-way sync.</h3>
           <p>rsync push. Your laptop's filesystem is the source of truth. The remote can't surprise you.</p>
         </article>
+        <article class="feat-card reveal">
+          <span class="feat-no">+</span>
+          <h3>Isolated checkouts.</h3>
+          <p>Per-user directories on the remote. Same project name, different developers, zero collisions.</p>
+        </article>
+        <article class="feat-card reveal">
+          <span class="feat-no">+</span>
+          <h3>Fair queue.</h3>
+          <p>Per-user and global caps. Over the cap, requests wait FIFO and stream their live <code>position</code> back.</p>
+        </article>
+        <article class="feat-card reveal">
+          <span class="feat-no">+</span>
+          <h3>Audit trail.</h3>
+          <p>One JSONL line per turn: who, what, how many lines. Prompt <em>hashes</em> only, never plaintext.</p>
+        </article>
         <article class="feat-card reveal feat-card-quote">
           <p class="feat-q">
-            "Your laptop should be quiet. <em>Your AI</em> should run somewhere bigger."
+            "One box should serve the whole team. <em>Quietly,</em> and without taking turns by hand."
           </p>
-          <p class="feat-q-meta">patchwire@0.1.0</p>
+          <p class="feat-q-meta">patchwire@0.2.4</p>
         </article>
         <article class="feat-card reveal feat-card-strip">
           <ul class="strip">
             <li><strong>MIT</strong><span>open source</span></li>
             <li><strong>Tailscale</strong><span>recommended transport</span></li>
-            <li><strong>Two bins</strong><span>cli + agent</span></li>
-            <li><strong>YAML</strong><span>one file, one project</span></li>
+            <li><strong>Per-user</strong><span>tokens · queue · audit</span></li>
+            <li><strong>Any CLI</strong><span>claude, codex, aider…</span></li>
           </ul>
         </article>
       </div>
@@ -492,6 +587,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
           <div>
             <h4>Read</h4>
             <a href="/quickstart/">Quickstart</a>
+            <a href="/multi-developer/">Multi-developer</a>
             <a href="/architecture/">Architecture</a>
             <a href="/configuration/">Configuration</a>
             <a href="/security/">Security model</a>
@@ -1775,6 +1871,113 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       }
 
       /* ═══════════════════════════════════════════════════════════
+         SECTION : TEAMS  (the v0.2 multi-developer centerpiece)
+         ═══════════════════════════════════════════════════════════ */
+      .teams {
+        padding: clamp(80px, 11vw, 140px) var(--gutter);
+        max-width: var(--max);
+        margin: 0 auto;
+        border-top: 1px solid var(--rc-hairline-ink);
+      }
+      .teams-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(36px, 6vw, 84px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        color: var(--rc-bone);
+        margin: 0 0 18px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+      }
+      .teams-h em {
+        font-style: italic; font-weight: 380; color: var(--rc-phosphor);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+      .teams-sub {
+        font-size: 18px; line-height: 1.6; color: var(--rc-bone-dim);
+        max-width: 56ch; margin: 0 0 52px;
+      }
+      .teams-grid {
+        display: grid; grid-template-columns: 1fr; gap: clamp(36px, 5vw, 60px);
+        align-items: center;
+      }
+      @media (min-width: 1024px) { .teams-grid { grid-template-columns: 1fr 1fr; } }
+
+      .teams-prose { display: grid; gap: 0; }
+      .teampillar {
+        display: grid; grid-template-columns: 46px 1fr; gap: 16px;
+        padding: 22px 0; border-bottom: 1px dashed var(--rc-hairline-ink);
+      }
+      .teampillar:last-child { border-bottom: none; }
+      .teampillar-no {
+        font-family: var(--rc-font-mono); font-size: 13px; color: var(--rc-phosphor);
+        letter-spacing: 0.06em; padding-top: 5px;
+      }
+      .teampillar h3 {
+        font-family: var(--rc-font-display); font-weight: 500; font-size: 22px;
+        line-height: 1.2; letter-spacing: -0.015em; color: var(--rc-bone); margin: 0 0 6px;
+      }
+      .teampillar p { font-size: 15.5px; line-height: 1.55; color: var(--rc-bone-dim); margin: 0; }
+      .teampillar code {
+        font-family: var(--rc-font-mono); font-size: 0.84em;
+        background: rgba(201, 245, 100, 0.10); padding: 1px 5px; border-radius: 3px; color: var(--rc-phosphor);
+      }
+      .teampillar em { font-style: italic; color: var(--rc-bone); }
+
+      /* agent dashboard panel — live /queue snapshot + audit tail */
+      .teams-panel {
+        background: #131318; border: 1px solid var(--rc-hairline-ink); border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 1px 0 rgba(232, 226, 208, 0.04) inset,
+          0 30px 80px -34px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(201, 245, 100, 0.04);
+        transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+        will-change: transform;
+      }
+      .tp-bar {
+        display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px;
+        padding: 10px 16px; background: #0F0F12; border-bottom: 1px solid var(--rc-hairline-ink);
+        font-family: var(--rc-font-mono); font-size: 11.5px; color: var(--rc-bone-dim);
+      }
+      .tp-bar-title { text-align: center; opacity: 0.7; }
+      .tp-bar-ep { color: var(--rc-phosphor); opacity: 0.85; font-size: 10.5px; letter-spacing: 0.04em; }
+      .tp-body { padding: 18px 18px 22px; font-family: var(--rc-font-mono); font-size: 12.5px; color: var(--rc-bone); }
+      .tp-label {
+        font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--rc-bone-dim); opacity: 0.6; margin: 14px 0 8px;
+      }
+      .tp-label:first-child { margin-top: 0; }
+      .tp-row {
+        display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+        padding: 7px 10px; margin: 0 -10px; border-radius: 6px;
+      }
+      .tp-row-run { background: rgba(201, 245, 100, 0.06); }
+      .tp-row-you { background: rgba(232, 226, 208, 0.04); }
+      .tp-pos {
+        min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+        font-size: 10.5px; color: var(--rc-bone-dim);
+        border: 1px solid var(--rc-hairline-ink); border-radius: 4px;
+      }
+      .tp-user { color: var(--rc-bone); font-weight: 500; }
+      .tp-row-you .tp-user { color: var(--rc-phosphor); }
+      .tp-meta { color: var(--rc-bone-dim); opacity: 0.7; font-size: 11px; }
+      .tp-badge {
+        font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+        padding: 2px 7px; border-radius: 999px;
+      }
+      .tp-badge-run { color: var(--rc-ink); background: var(--rc-phosphor); font-weight: 600; }
+      .tp-divider { height: 1px; background: var(--rc-hairline-ink); margin: 16px 0 4px; }
+      .tp-audit {
+        margin: 0; font-family: var(--rc-font-mono); font-size: 11px; line-height: 1.7;
+        color: var(--rc-bone-dim); white-space: pre-wrap; word-break: break-word;
+      }
+      .tp-aline { display: block; }
+      .tp-k { color: var(--rc-amber); }
+      .tp-aline-live { color: var(--rc-bone); }
+      .tp-aline-live .tp-k { color: var(--rc-phosphor); }
+
+      /* ═══════════════════════════════════════════════════════════
          SECTION : SETUP
          ═══════════════════════════════════════════════════════════ */
       .setup {
@@ -1866,6 +2069,10 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         margin: 0 0 56px;
         font-variation-settings: 'SOFT' 30, 'opsz' 144;
         max-width: 18ch;
+      }
+      .feats-h em {
+        font-style: italic; font-weight: 380; color: var(--rc-phosphor);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
       }
 
       .featgrid { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -2105,7 +2312,8 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         .vscode,
         .termcard,
         .par-card,
-        .feat-card {
+        .feat-card,
+        .teams-panel {
           transition: none;
         }
         .cta-arrow { transition: none; }
@@ -2130,9 +2338,14 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         .hero-cta { flex-direction: column; align-items: stretch; }
         .hero-cta .cta { justify-content: center; }
 
-        .claim-h, .flow-h, .setup-h, .feats-h, .endcta-h, .editor-h {
+        .claim-h, .flow-h, .setup-h, .feats-h, .endcta-h, .editor-h, .teams-h {
           font-size: clamp(32px, 9vw, 48px);
         }
+
+        /* Teams section mobile */
+        .teams { padding-block: 56px; }
+        .teampillar { grid-template-columns: 36px 1fr; gap: 12px; padding-block: 18px; }
+        .tp-body { font-size: 11.5px; }
 
         /* Editor section mobile */
         .editor { padding-block: 56px; }

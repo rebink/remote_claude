@@ -46,6 +46,7 @@ export default defineConfig({
           label: 'Concepts',
           items: [
             { label: 'Architecture', slug: 'architecture' },
+            { label: 'Multi-developer', slug: 'multi-developer' },
             { label: 'Why a remote agent?', slug: 'why' },
           ],
         },

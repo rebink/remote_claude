@@ -75,6 +75,9 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 | `PW_AUDIT_LOG_MAX_BYTES` | no | `52428800` (50 MiB) | Size threshold that triggers rotation to `.1`. |
 | `PW_AUDIT_LOG_MAX_FILES` | no | `3` | How many rotated tail files to keep (`.1`, `.2`, `.3`). Older files are dropped. |
 
+The users, concurrency, and audit settings above work together to run one agent
+across a team. See [Multi-developer](/multi-developer/) for how they fit.
+
 ## Laptop environment variables
 
 | Variable | Required | Notes |
