@@ -76,4 +76,34 @@ describe('patchwire-agent usage', () => {
     expect(report.users[0].accepted).toBe(1);
     expect(report.totals.requests).toBe(2);
   });
+
+  it('--json on an empty log emits an empty structured report (not the sentinel)', async () => {
+    await run(['usage', '--json']);
+    const out = logs.join('').trim();
+    const report = JSON.parse(out); // must be valid JSON
+    expect(report.users).toEqual([]);
+    expect(report.totals.requests).toBe(0);
+    expect(out).not.toContain('(no usage yet)');
+  });
+
+  it('--project filters to one project', async () => {
+    const log = new JsonlAuditLog({ path: basePath });
+    log.append(ask({ user: 'alice', project: 'app' }));
+    log.append(ask({ user: 'bob', project: 'other' }));
+    await run(['usage', '--project', 'app', '--json']);
+    const report = JSON.parse(logs.join('').trim());
+    expect(report.users).toHaveLength(1);
+    expect(report.users[0].user).toBe('alice');
+  });
+
+  it('--since excludes entries older than the window', async () => {
+    const log = new JsonlAuditLog({ path: basePath });
+    log.append(ask({ user: 'old', ts: '2000-01-01T00:00:00.000Z' }));
+    log.append(ask({ user: 'recent', ts: new Date().toISOString() }));
+    await run(['usage', '--since', '1h', '--json']);
+    const report = JSON.parse(logs.join('').trim());
+    expect(report.users).toHaveLength(1);
+    expect(report.users[0].user).toBe('recent');
+    expect(report.totals.requests).toBe(1);
+  });
 });
