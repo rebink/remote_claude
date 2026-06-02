@@ -19,6 +19,9 @@ import { findAiBin, makeAiRunner, runAi } from './ai-runner.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
 import { TurnState } from './turn-state.ts';
+import { createHash } from 'node:crypto';
+import type { AuditLog } from './audit-log.ts';
+import { countDiffLines } from './diff-stats.ts';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -37,6 +40,8 @@ export interface AgentOptions {
   sessionStorePath?: string;
   /** Concurrency manager. Defaults to ConcurrencyManager({globalCap:3, perUserCap:1}). */
   concurrency?: ConcurrencyManager;
+  /** Audit log sink. Required — use NoopAuditLog in tests that don't care. */
+  auditLog: AuditLog;
 }
 
 const AskBody = z.object({
@@ -201,10 +206,25 @@ export function buildServer(opts: AgentOptions) {
         await resetClean(projectDir).catch(() => {});
       }
 
+      const durationMs = Date.now() - start;
+      const stats = countDiffLines(diffData.diff);
+      opts.auditLog.append({
+        route: '/ask',
+        ts: new Date().toISOString(),
+        user: username,
+        project,
+        prompt_sha256: createHash('sha256').update(prompt).digest('hex'),
+        files: diffData.files.length,
+        lines_added: stats.linesAdded,
+        lines_removed: stats.linesRemoved,
+        duration_ms: durationMs,
+        queue_wait_ms: lease.queueWaitMs,
+        exit_code: claudeResult.exitCode,
+      });
       return {
         diff: diffData.diff,
         files: diffData.files,
-        durationMs: Date.now() - start,
+        durationMs,
         stdout: claudeResult.stdout,
         stderr: claudeResult.stderr,
         exitCode: claudeResult.exitCode,
@@ -260,6 +280,18 @@ export function buildServer(opts: AgentOptions) {
                 tokensIn: e.tokensIn,
                 tokensOut: e.tokensOut,
                 durationMs: e.durationMs,
+              });
+              opts.auditLog.append({
+                route: '/chat',
+                ts: new Date().toISOString(),
+                user: username,
+                project: body.projectName,
+                prompt_sha256: createHash('sha256').update(body.prompt).digest('hex'),
+                uuid: body.uuid,
+                tokens_in: e.tokensIn,
+                tokens_out: e.tokensOut,
+                duration_ms: e.durationMs,
+                queue_wait_ms: lease.queueWaitMs,
               });
             }
             emit(e);

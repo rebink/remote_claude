@@ -110,6 +110,32 @@ A read-only `GET /queue` endpoint returns the current snapshot:
 }
 ```
 
+### Audit log (v0.2.3+)
+
+Every successful `/ask` and `/chat` turn appends one JSONL line to
+`~/.patchwire/agent.log` (override via `PW_AUDIT_LOG`). The line records:
+
+- `ts`, `user`, `project`, `route`
+- `prompt_sha256` — SHA-256 of the prompt text. Plaintext is never persisted.
+- For `/ask`: `files`, `lines_added`, `lines_removed`, `exit_code`
+- For `/chat`: `uuid`, `tokens_in`, `tokens_out`
+- `duration_ms`, `queue_wait_ms`
+
+The file is size-rotated to `.1`, `.2`, ... on a 50 MiB threshold (configurable
+via `PW_AUDIT_LOG_MAX_BYTES` / `PW_AUDIT_LOG_MAX_FILES`).
+
+View it with the new subcommand:
+
+```bash
+patchwire-agent log                        # last 100, pretty
+patchwire-agent log --user alice --since 24h
+patchwire-agent log --project flutter-app --limit 10
+patchwire-agent log --json                  # raw JSONL (pipe into jq)
+```
+
+Reader looks at the live file plus rotated tail and prints in chronological
+order, applying filters before the limit.
+
 ## macOS or Linux: foreground (for testing)
 
 ```bash
