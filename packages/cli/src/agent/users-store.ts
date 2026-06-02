@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { hashToken } from './token.ts';
+import type { UserPolicy, RateLimit } from './policy.ts';
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]+$/;
 const RESERVED_NAMES = new Set(['__admin__']);
@@ -12,6 +13,15 @@ interface UserRecord {
   createdAt: string;
   disabled: boolean;
   lastSeen?: string;
+  policy?: UserPolicy;
+}
+
+/** Drop an all-empty policy so we never persist `{}`. */
+function normalizePolicy(p: UserPolicy): UserPolicy | undefined {
+  const hasProjects = !!(p.projects && p.projects.length > 0);
+  const hasRate = !!p.rateLimit;
+  if (!hasProjects && !hasRate) return undefined;
+  return p;
 }
 
 export interface UserSummary {
@@ -101,6 +111,28 @@ export class UsersStore {
     if (!r) return;
     r.lastSeen = new Date().toISOString();
     this.persist();
+  }
+
+  getPolicy(name: string): UserPolicy {
+    return this.users[name]?.policy ?? {};
+  }
+
+  setProjects(name: string, projects: string[] | null): void {
+    this.mutate(name, (r) => {
+      const p: UserPolicy = { ...(r.policy ?? {}) };
+      if (projects && projects.length > 0) p.projects = projects;
+      else delete p.projects;
+      r.policy = normalizePolicy(p);
+    });
+  }
+
+  setRateLimit(name: string, rate: RateLimit | null): void {
+    this.mutate(name, (r) => {
+      const p: UserPolicy = { ...(r.policy ?? {}) };
+      if (rate) p.rateLimit = rate;
+      else delete p.rateLimit;
+      r.policy = normalizePolicy(p);
+    });
   }
 
   /**
