@@ -13,10 +13,10 @@ const rev = 'b71dc5e';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0E0E10" />
-    <title>Patchwire: only diffs cross the wire</title>
+    <title>Patchwire — shared AI infrastructure for engineering teams</title>
     <meta
       name="description"
-      content="Run Claude, Codex, or Aider on a machine you control, not a coding-tool vendor's cloud. Every change comes back as a reviewable git diff before it touches your codebase."
+      content="Run Claude, Codex, or Aider on machines you control. Every change comes back as a reviewable git diff. Shared, governed AI for your whole team — not individual seats."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:type" content="website" />
@@ -24,7 +24,7 @@ const rev = 'b71dc5e';
     <meta property="og:title" content="Patchwire" />
     <meta
       property="og:description"
-      content="Run Claude, Codex, or Aider on a machine you control, not a coding-tool vendor's cloud. Every change comes back as a reviewable git diff before it touches your codebase."
+      content="Run Claude, Codex, or Aider on machines you control. Every change comes back as a reviewable git diff. Shared, governed AI for your whole team — not individual seats."
     />
     <meta property="og:image" content="https://patchwire.dev/og.png" />
     <meta property="og:image:width" content="1200" />
@@ -54,7 +54,6 @@ const rev = 'b71dc5e';
       <nav class="topnav" aria-label="Primary">
         <a href="/quickstart/">Quickstart</a>
         <a href="/multi-developer/">Teams</a>
-        <a href="/#pricing">Pricing</a>
         <a href="/architecture/">Architecture</a>
         <a href="/commands/">CLI</a>
         <a href={repo} class="topnav-ext">GitHub ↗</a>
@@ -86,16 +85,17 @@ const rev = 'b71dc5e';
         </div>
 
         <h1 class="hero-h reveal">
-          <span class="hero-h-line">Only diffs</span>
-          <span class="hero-h-line">cross the</span>
-          <span class="hero-h-line"><em>wire.</em></span>
+          <span class="hero-h-line">Shared AI</span>
+          <span class="hero-h-line">infrastructure for</span>
+          <span class="hero-h-line"><em>engineering teams.</em></span>
         </h1>
 
         <p class="hero-sub reveal">
-          Run Claude, Codex, or Aider on a machine <strong>you</strong> control
-          &mdash; your box, not a coding-tool vendor's cloud. Every change comes
-          back as a reviewable git diff before it touches your codebase.
+          Run Claude, Codex, Aider &mdash; any coding agent &mdash; on machines
+          <strong>you</strong> control. Every change comes back as a reviewable
+          git diff. Built for teams, not individual seats.
         </p>
+        <p class="hero-tagline reveal">Only diffs cross the wire.</p>
 
         <!-- ── The animated terminal centerpiece ── -->
         <div class="term reveal" id="term">
@@ -132,19 +132,13 @@ const rev = 'b71dc5e';
         </div>
 
         <div class="hero-cta reveal">
-          <a href="/install-extension/" class="cta cta-primary magnet">
-            <span class="cta-icon" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M22 4.5l-9.5 7.5L22 19.5V4.5z" fill="currentColor"/>
-                <path d="M3 8l5 5v6l9.5-7.5L8 4v6l-5-2z" fill="currentColor" opacity="0.85"/>
-              </svg>
-            </span>
-            <span>Install for VS Code</span>
+          <a href="/quickstart/" class="cta cta-primary magnet">
+            <span class="cta-icon" aria-hidden="true">$_</span>
+            <span>Get started</span>
             <span class="cta-arrow">→</span>
           </a>
-          <a href="/quickstart/" class="cta cta-ghost magnet">
-            <span class="cta-icon" aria-hidden="true">$_</span>
-            <span>Get the CLI</span>
+          <a href="/architecture/" class="cta cta-ghost magnet">
+            <span>Read the docs</span>
             <span class="cta-arrow">→</span>
           </a>
         </div>
