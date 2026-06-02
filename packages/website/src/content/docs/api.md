@@ -3,7 +3,7 @@ title: HTTP API
 description: Every endpoint the agent exposes, with examples.
 ---
 
-The agent is a tiny Fastify server. Two endpoints. No streaming (yet).
+The agent is a tiny Fastify server. `/ask` and `/chat` stream their responses as NDJSON; the other endpoints return plain JSON.
 
 Base URL: whatever you configured as `remote.agentUrl`, e.g. `http://mac-mini.tail-abc123.ts.net:7878`.
 
@@ -40,7 +40,8 @@ If `claude.found` is `false`, the agent is running but won't be able to fulfil `
 
 ## `POST /ask`
 
-Run a prompt against a project. Returns a unified diff.
+Run a prompt against a project. Responds with an NDJSON event stream
+(`application/x-ndjson`) whose terminal `result` event carries a unified diff.
 
 ### Request
 
@@ -60,28 +61,26 @@ Content-Type: application/json
 | `prompt` | string | yes | Free-form instruction for Claude. Sent on stdin to `claude --print`. |
 | `project` | string | yes | Folder name under `PW_PROJECTS_ROOT`. Restricted to `[a-zA-Z0-9_.-]+`. |
 
-### Response — 200 OK
+### Response — 200 OK (NDJSON stream)
 
-```json
-{
-  "diff": "diff --git a/lib/login_bloc.dart b/lib/login_bloc.dart\n…",
-  "files": ["lib/login_bloc.dart", "lib/login_state.dart"],
-  "durationMs": 14823,
-  "stdout": "Refactored 2 files…",
-  "stderr": "",
-  "exitCode": 0
-}
+The body is an NDJSON stream (`application/x-ndjson`): one JSON event per line.
+Lifecycle: an optional `queued`, then `accepted`, then exactly one terminal
+`result` or `error`.
+
+```
+{"type":"queued","position":2}
+{"type":"accepted","queueWaitMs":3400}
+{"type":"result","diff":"diff --git a/lib/login_bloc.dart…","files":["lib/login_bloc.dart","lib/login_state.dart"],"durationMs":14823,"stdout":"Refactored 2 files…","stderr":"","exitCode":0}
 ```
 
-| Field | Notes |
+| Event | Fields |
 | --- | --- |
-| `diff` | Unified diff (git format). Empty string if Claude made no changes. |
-| `files` | List of files changed (`git diff --cached --name-only`). |
-| `durationMs` | Time from request received to response sent. |
-| `stdout` / `stderr` | Captured from `claude` for debugging. |
-| `exitCode` | `claude`'s exit code. Usually 0; a non-zero with empty diff is a hint to look at `stderr`. |
+| `queued` | `position` — global-queue position at entry. Emitted once, only when the request waits. |
+| `accepted` | `queueWaitMs` — how long the request waited before a slot was granted. |
+| `result` | `diff` (unified git diff; empty string if no changes), `files` (changed filenames), `durationMs`, `stdout`/`stderr` (captured from `claude`), `exitCode` (`claude`'s exit code; a non-zero with empty diff is a hint to check `stderr`). |
+| `error` | `code` (`run_failed`, `diff_failed`, or `internal`), `message`. Terminal failure that occurred after the stream began. |
 
-### Response — error codes
+### Pre-flight error codes (before the stream)
 
 | Status | Meaning | Body |
 | --- | --- | --- |
@@ -90,7 +89,10 @@ Content-Type: application/json
 | `404` | `PW_PROJECTS_ROOT/<project>` does not exist | `{ "error": "project not found: …" }` |
 | `409` | Working tree was dirty before the run | `{ "error": "agent working tree is dirty before run", "status": "M file.txt\n" }` |
 | `412` | Project dir is not a git repo | `{ "error": "project is not a git repository on agent host" }` |
-| `500` | Claude execution error or unexpected failure | `{ "error": "<message>" }` |
+
+Failures that occur *after* the stream has started (e.g. Claude failing to run)
+are not HTTP errors — they arrive as a terminal `error` event on the stream
+(`run_failed` / `diff_failed` / `internal`).
 
 ### Idempotency & state
 
@@ -110,7 +112,7 @@ curl -sS -X POST "http://$HOST/ask" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"add a HELLO.md","project":"my_app"}' \
-  | jq -r .diff > out.patch
+  | jq -r 'select(.type=="result").diff' > out.patch
 
 git apply --check out.patch && git apply out.patch
 ```
@@ -128,8 +130,21 @@ const res = await request(`http://${host}/ask`, {
   },
   body: JSON.stringify({ prompt, project: 'my_app' }),
 });
-const json = await res.body.json();
-console.log(json.diff);
+// /ask streams NDJSON: parse each line, keep the terminal `result` event.
+let buf = '';
+let result;
+for await (const chunk of res.body) {
+  buf += chunk.toString();
+  const lines = buf.split('\n');
+  buf = lines.pop() ?? '';
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const e = JSON.parse(line);
+    if (e.type === 'result') result = e;
+    else if (e.type === 'error') throw new Error(e.message);
+  }
+}
+console.log(result.diff);
 ```
 
 This is roughly what `patchwire ask` does internally — the CLI is a thin wrapper around this API.
