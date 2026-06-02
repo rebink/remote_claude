@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { ChatBody } from '@patchwire/protocol';
+import type { AskEvent } from '@patchwire/protocol';
 import { existsSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { homedir } from 'node:os';
@@ -177,13 +178,18 @@ export function buildServer(opts: AgentOptions) {
       return { error: 'agent working tree is dirty before run', status: status.status };
     }
 
-    const lease = await concurrency.acquire(username);
-    reply.header('X-Patchwire-Queue-Wait-Ms', String(lease.queueWaitMs));
-    if (lease.positionAtEntry > 0) {
-      reply.header('X-Patchwire-Queue-Position-At-Entry', String(lease.positionAtEntry));
-    }
+    // Pre-flight passed — switch to a streamed NDJSON response.
+    reply.raw.setHeader('content-type', 'application/x-ndjson');
+    reply.hijack();
+    const emit = (e: AskEvent) => reply.raw.write(JSON.stringify(e) + '\n');
+
+    const lease = await concurrency.acquire(username, ({ position }) =>
+      emit({ type: 'queued', position }),
+    );
+    emit({ type: 'accepted', queueWaitMs: lease.queueWaitMs });
+
     try {
-      const start = Date.now();
+      const startRun = Date.now();
       let claudeResult;
       try {
         claudeResult = await runAi({
@@ -194,19 +200,19 @@ export function buildServer(opts: AgentOptions) {
           timeoutMs: opts.timeoutSec * 1000,
         });
       } catch (err) {
-        await resetClean(projectDir).catch(() => {});
-        reply.code(500);
-        return { error: (err as Error).message };
+        emit({ type: 'error', code: 'run_failed', message: (err as Error).message });
+        return;
       }
 
       let diffData;
       try {
         diffData = await captureDiff(projectDir);
-      } finally {
-        await resetClean(projectDir).catch(() => {});
+      } catch (err) {
+        emit({ type: 'error', code: 'diff_failed', message: (err as Error).message });
+        return;
       }
 
-      const durationMs = Date.now() - start;
+      const durationMs = Date.now() - startRun;
       const stats = countDiffLines(diffData.diff);
       opts.auditLog.append({
         route: '/ask',
@@ -221,16 +227,29 @@ export function buildServer(opts: AgentOptions) {
         queue_wait_ms: lease.queueWaitMs,
         exit_code: claudeResult.exitCode,
       });
-      return {
+      emit({
+        type: 'result',
         diff: diffData.diff,
         files: diffData.files,
         durationMs,
         stdout: claudeResult.stdout,
         stderr: claudeResult.stderr,
         exitCode: claudeResult.exitCode,
-      };
+      });
+    } catch (err) {
+      try {
+        emit({ type: 'error', code: 'internal', message: (err as Error).message });
+      } catch {
+        /* socket already gone */
+      }
     } finally {
+      await resetClean(projectDir).catch(() => {});
       concurrency.release(lease);
+      try {
+        reply.raw.end();
+      } catch {
+        /* same */
+      }
     }
   });
 
