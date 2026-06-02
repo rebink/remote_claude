@@ -18,3 +18,33 @@ export type CliEvent =
   | { type: 'cancelled' };
 
 export const SUPPORTED_PROTOCOL = '1';
+
+/** Request body for `POST /ask`. */
+export interface AskRequest {
+  prompt: string;
+  project: string;
+}
+
+/**
+ * Terminal success payload for `/ask`. Identical to the `result` event minus
+ * its `type` tag. `files` are filenames (from `captureDiff`), not ChangedFile.
+ */
+export interface AskResponse {
+  diff: string;
+  files: string[];
+  durationMs: number;
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+/**
+ * NDJSON event stream emitted by `POST /ask` (one JSON object per `\n`-delimited line).
+ * Lifecycle: (`queued`?) -> `accepted` -> (`result` | `error`). `queued` is emitted
+ * at most once, only when the request waits on the global concurrency cap.
+ */
+export type AskEvent =
+  | { type: 'queued'; position: number }
+  | { type: 'accepted'; queueWaitMs: number }
+  | { type: 'result'; diff: string; files: string[]; durationMs: number; stdout: string; stderr: string; exitCode: number }
+  | { type: 'error'; code: string; message: string };
