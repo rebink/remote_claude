@@ -13,10 +13,10 @@ const rev = 'b71dc5e';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0E0E10" />
-    <title>Patchwire: one remote, your whole team, their own diffs</title>
+    <title>Patchwire: only diffs cross the wire</title>
     <meta
       name="description"
-      content="A shared remote runs the AI for your whole team. Per-user tokens, isolated checkouts, a fair queue. Each diff returns to the laptop that asked for it."
+      content="Run Claude, Codex, or Aider on a machine you control, not a coding-tool vendor's cloud. Every change comes back as a reviewable git diff before it touches your codebase."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:type" content="website" />
@@ -24,7 +24,7 @@ const rev = 'b71dc5e';
     <meta property="og:title" content="Patchwire" />
     <meta
       property="og:description"
-      content="One shared remote runs the AI for the whole team. Per-user tokens, isolated checkouts, a fair queue. Diffs come back to each laptop for review."
+      content="Run Claude, Codex, or Aider on a machine you control, not a coding-tool vendor's cloud. Every change comes back as a reviewable git diff before it touches your codebase."
     />
     <meta property="og:image" content="https://patchwire.dev/og.png" />
     <meta property="og:image:width" content="1200" />
@@ -33,7 +33,7 @@ const rev = 'b71dc5e';
     <meta name="twitter:title" content="Patchwire" />
     <meta
       name="twitter:description"
-      content="One box. Every developer. Their own diffs. Patchwire runs the AI on one shared remote — per-user, isolated, queued — and returns a diff to each laptop."
+      content="Only diffs cross the wire. Run Claude, Codex, or Aider on a machine you control, not a vendor's cloud; review every change as a real git diff before it lands."
     />
     <meta name="twitter:image" content="https://patchwire.dev/og.png" />
     <ClientRouter />
@@ -54,6 +54,7 @@ const rev = 'b71dc5e';
       <nav class="topnav" aria-label="Primary">
         <a href="/quickstart/">Quickstart</a>
         <a href="/multi-developer/">Teams</a>
+        <a href="/#pricing">Pricing</a>
         <a href="/architecture/">Architecture</a>
         <a href="/commands/">CLI</a>
         <a href={repo} class="topnav-ext">GitHub ↗</a>
@@ -85,15 +86,15 @@ const rev = 'b71dc5e';
         </div>
 
         <h1 class="hero-h reveal">
-          <span class="hero-h-line">One&nbsp;box.</span>
-          <span class="hero-h-line">Every developer.</span>
-          <span class="hero-h-line">Their own <em>diffs.</em></span>
+          <span class="hero-h-line">Only diffs</span>
+          <span class="hero-h-line">cross the</span>
+          <span class="hero-h-line"><em>wire.</em></span>
         </h1>
 
         <p class="hero-sub reveal">
-          A shared remote runs the AI for the whole team. Per-user tokens,
-          isolated checkouts, a fair queue. Each diff returns to the laptop
-          that asked for it &mdash; nothing else crosses the wire.
+          Run Claude, Codex, or Aider on a machine <strong>you</strong> control
+          &mdash; your box, not a coding-tool vendor's cloud. Every change comes
+          back as a reviewable git diff before it touches your codebase.
         </p>
 
         <!-- ── The animated terminal centerpiece ── -->
@@ -273,26 +274,27 @@ const rev = 'b71dc5e';
     <section class="claim">
       <span class="kicker reveal"><span class="kicker-bar"></span>01 · the stance</span>
       <h2 class="claim-h reveal">
-        Sharing one machine usually <em>ruins</em> it.
+        Your code shouldn&rsquo;t live on someone else&rsquo;s <em>cloud.</em>
       </h2>
       <p class="claim-sub reveal">
-        Point a whole team at one box and you get clobbered checkouts,
-        colliding AI runs, and &ldquo;who&rsquo;s on the machine right now?&rdquo;
-        Patchwire keeps the shared box but gives every developer their
-        <strong>own token, their own checkout, and a fair place in line.</strong>
+        Most remote AI coding tools clone your repo onto the vendor&rsquo;s
+        servers. Patchwire runs the agent on a machine <strong>you</strong>
+        control &mdash; your laptop, a homelab, your VPC &mdash; so your codebase
+        never lands on someone else&rsquo;s dev platform. It&rsquo;s AI-agnostic,
+        so you pick the model (local ones included), and only the diff comes back.
       </p>
 
       <div class="parallel reveal">
         <article class="par-card par-old">
           <header class="par-head">
             <span class="par-dot par-dot-amber"></span>
-            <span class="par-label">SHARED BOX, THE OLD WAY</span>
+            <span class="par-label">MOST REMOTE AI TOOLS</span>
           </header>
           <ul>
-            <li>One checkout everyone fights over</li>
-            <li>Concurrent runs clobber each other</li>
-            <li>No record of who ran what</li>
-            <li>First-come hogs the whole machine</li>
+            <li>Your repo is cloned to a vendor's cloud</li>
+            <li>Execution on infra you don't control</li>
+            <li>Locked to one vendor's model</li>
+            <li>You trust their data-retention policy</li>
           </ul>
         </article>
         <article class="par-card par-new">
@@ -301,10 +303,10 @@ const rev = 'b71dc5e';
             <span class="par-label">PATCHWIRE</span>
           </header>
           <ul>
-            <li>Per-user isolated checkout</li>
-            <li>Fair FIFO queue, live position</li>
-            <li>Every turn in a JSONL audit log</li>
-            <li>Per-user + global concurrency caps</li>
+            <li>Agent runs on infrastructure you control</li>
+            <li>Only the diff crosses the wire</li>
+            <li>Any CLI: Claude, Codex, Aider, local</li>
+            <li>Every run in a JSONL audit log</li>
           </ul>
         </article>
       </div>
@@ -542,6 +544,81 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       </div>
     </section>
 
+    <!-- ───────── SECTION: PRICING (open-core) ───────── -->
+    <section class="pricing" id="pricing">
+      <span class="kicker reveal"><span class="kicker-bar"></span>06 · pricing</span>
+      <h2 class="pricing-h reveal">
+        Open at the core. <em>Paid</em> where orgs need it.
+      </h2>
+      <p class="pricing-sub reveal">
+        The CLI and agent are free and open-source &mdash; run the whole thing
+        yourself, forever. Paid tiers add the governance, control, and support an
+        organization needs.
+      </p>
+
+      <div class="pricegrid">
+        <article class="pricecard reveal">
+          <header class="pricecard-head">
+            <span class="price-name">Open source</span>
+            <span class="price-tag">Free · MIT</span>
+          </header>
+          <p class="price-line">Everything to run Patchwire yourself.</p>
+          <ul class="price-feats">
+            <li>CLI + self-hosted agent</li>
+            <li>Remote runs, reviewable diffs</li>
+            <li>Any AI CLI: Claude, Codex, Aider</li>
+            <li>Per-user tokens, isolated checkouts</li>
+            <li>Fair queue + JSONL audit log</li>
+            <li>VS Code extension</li>
+          </ul>
+          <a class="cta cta-ghost magnet" href="/quickstart/">
+            <span>Get started</span><span class="cta-arrow">→</span>
+          </a>
+        </article>
+
+        <article class="pricecard pricecard-feature reveal">
+          <header class="pricecard-head">
+            <span class="price-name">Teams</span>
+            <span class="price-tag price-tag-soon">Early access</span>
+          </header>
+          <p class="price-line">Managed and measured for a whole team.</p>
+          <ul class="price-feats">
+            <li>Everything in Open source</li>
+            <li>Managed agent hosting (optional)</li>
+            <li>Team dashboard: queue + audit</li>
+            <li>Centralized billing</li>
+            <li>Priority support</li>
+          </ul>
+          <a class="cta cta-primary magnet" href={`${repo}/issues/new?title=Patchwire+Teams+access`}>
+            <span>Request access</span><span class="cta-arrow">→</span>
+          </a>
+        </article>
+
+        <article class="pricecard reveal">
+          <header class="pricecard-head">
+            <span class="price-name">Enterprise</span>
+            <span class="price-tag">Custom</span>
+          </header>
+          <p class="price-line">Governance and control for the org.</p>
+          <ul class="price-feats">
+            <li>Everything in Teams</li>
+            <li>SSO / SAML, RBAC</li>
+            <li>VPC / self-host deployment support</li>
+            <li>Audit exports + compliance</li>
+            <li>SLA + dedicated support</li>
+          </ul>
+          <a class="cta cta-ghost magnet" href={`${repo}/issues/new?title=Patchwire+Enterprise`}>
+            <span>Talk to us</span><span class="cta-arrow">↗</span>
+          </a>
+        </article>
+      </div>
+
+      <p class="price-foot reveal">
+        Teams and Enterprise pricing is still taking shape &mdash;
+        <a href={repo}>tell us what your team would need</a>.
+      </p>
+    </section>
+
     <!-- ───────── SECTION: CTA ───────── -->
     <section class="endcta">
       <div class="endcta-inner">
@@ -598,6 +675,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
             <a href="/commands/">CLI commands</a>
             <a href="/api/">HTTP API</a>
             <a href="/install-extension/">VS Code extension</a>
+            <a href="/#pricing">Pricing</a>
             <a href="/troubleshooting/">Troubleshooting</a>
             <a href="/roadmap/">Roadmap</a>
           </div>
@@ -612,7 +690,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
           <span class="foot-sep" aria-hidden="true">·</span>
           <a href={`${repo}/blob/main/LICENSE`}>MIT License ↗</a>
         </span>
-        <span class="foot-tag">local-first · ai-remote · diff-reviewable</span>
+        <span class="foot-tag">self-hosted · ai-agnostic · diff-reviewable</span>
       </div>
     </footer>
 
@@ -1051,6 +1129,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         margin: 0;
         max-width: 52ch;
       }
+      .hero-sub strong { color: var(--rc-bone); font-weight: 600; }
 
       /* ─── Terminal ─── */
       .term {
@@ -2180,6 +2259,88 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       .strip li span { color: var(--rc-bone-dim); font-size: 11px; opacity: 0.7; }
 
       /* ═══════════════════════════════════════════════════════════
+         SECTION : PRICING  (open-core tiers)
+         ═══════════════════════════════════════════════════════════ */
+      .pricing {
+        padding: clamp(80px, 11vw, 140px) var(--gutter);
+        max-width: var(--max);
+        margin: 0 auto;
+        border-top: 1px solid var(--rc-hairline-ink);
+      }
+      .pricing-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(36px, 6vw, 84px);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        color: var(--rc-bone);
+        margin: 0 0 18px;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        max-width: 20ch;
+      }
+      .pricing-h em {
+        font-style: italic; font-weight: 380; color: var(--rc-phosphor);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+      }
+      .pricing-sub {
+        font-size: 18px; line-height: 1.6; color: var(--rc-bone-dim);
+        max-width: 60ch; margin: 0 0 48px;
+      }
+      .pricegrid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+      @media (min-width: 860px) { .pricegrid { grid-template-columns: repeat(3, 1fr); } }
+      .pricecard {
+        display: flex; flex-direction: column;
+        background: rgba(232, 226, 208, 0.025);
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        padding: 28px;
+        transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+      }
+      .pricecard:hover {
+        background: rgba(232, 226, 208, 0.05);
+        border-color: rgba(232, 226, 208, 0.18);
+        transform: translateY(-2px);
+      }
+      .pricecard-feature {
+        border-color: rgba(201, 245, 100, 0.3);
+        box-shadow: 0 0 0 1px rgba(201, 245, 100, 0.06), 0 24px 60px -36px rgba(0, 0, 0, 0.6);
+      }
+      .pricecard-head {
+        display: flex; align-items: baseline; justify-content: space-between;
+        gap: 12px; margin-bottom: 16px;
+      }
+      .price-name {
+        font-family: var(--rc-font-display); font-weight: 500; font-size: 22px;
+        color: var(--rc-bone); letter-spacing: -0.015em;
+      }
+      .price-tag {
+        font-family: var(--rc-font-mono); font-size: 11px; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--rc-bone-dim);
+        border: 1px solid var(--rc-hairline-ink); border-radius: 999px; padding: 3px 10px;
+        white-space: nowrap;
+      }
+      .price-tag-soon {
+        color: var(--rc-phosphor); border-color: rgba(201, 245, 100, 0.35);
+        background: rgba(201, 245, 100, 0.06);
+      }
+      .price-line { font-size: 14.5px; color: var(--rc-bone-dim); margin: 0 0 18px; }
+      .price-feats { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 0; flex: 1; }
+      .price-feats li {
+        font-size: 14px; line-height: 1.5; color: var(--rc-bone);
+        padding: 8px 0 8px 20px; position: relative;
+        border-bottom: 1px dashed var(--rc-hairline-ink);
+      }
+      .price-feats li::before {
+        content: '+'; position: absolute; left: 0;
+        color: var(--rc-phosphor); font-family: var(--rc-font-mono);
+      }
+      .price-feats li:last-child { border-bottom: none; }
+      .pricecard .cta { justify-content: center; }
+      .price-foot { margin: 28px 0 0; font-family: var(--rc-font-mono); font-size: 12.5px; color: var(--rc-bone-dim); }
+      .price-foot a { color: var(--rc-phosphor); text-decoration: none; }
+      .price-foot a:hover { text-decoration: underline; }
+
+      /* ═══════════════════════════════════════════════════════════
          SECTION : END CTA
          ═══════════════════════════════════════════════════════════ */
       .endcta {
@@ -2313,7 +2474,8 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         .termcard,
         .par-card,
         .feat-card,
-        .teams-panel {
+        .teams-panel,
+        .pricecard {
           transition: none;
         }
         .cta-arrow { transition: none; }
@@ -2338,9 +2500,12 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         .hero-cta { flex-direction: column; align-items: stretch; }
         .hero-cta .cta { justify-content: center; }
 
-        .claim-h, .flow-h, .setup-h, .feats-h, .endcta-h, .editor-h, .teams-h {
+        .claim-h, .flow-h, .setup-h, .feats-h, .endcta-h, .editor-h, .teams-h, .pricing-h {
           font-size: clamp(32px, 9vw, 48px);
         }
+
+        /* Pricing section mobile */
+        .pricing { padding-block: 56px; }
 
         /* Teams section mobile */
         .teams { padding-block: 56px; }
