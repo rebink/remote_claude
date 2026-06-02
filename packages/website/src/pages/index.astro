@@ -1,5 +1,6 @@
 ---
 import '../styles/custom.css';
+import { ClientRouter } from 'astro:transitions';
 
 const repo = 'https://github.com/rebink/patchwire';
 const version = '0.1.0';
@@ -12,26 +13,41 @@ const rev = '263e2e3';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0E0E10" />
-    <title>Patchwire — local stays local, AI stays remote</title>
+    <title>Patchwire: local stays local, AI stays remote</title>
     <meta
       name="description"
       content="Push your project to a remote machine. Run an AI CLI there. Pull back a unified diff. Apply only what you want."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://patchwire.dev/" />
     <meta property="og:title" content="Patchwire" />
     <meta
       property="og:description"
       content="Local-first development. AI executes remotely. Diffs come back for review."
     />
+    <meta property="og:image" content="https://patchwire.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Patchwire" />
+    <meta
+      name="twitter:description"
+      content="Local stays local. AI stays remote. Only diffs cross the wire."
+    />
+    <meta name="twitter:image" content="https://patchwire.dev/og.png" />
+    <ClientRouter />
   </head>
   <body class="page">
+    <a href="#main" class="skip-link">Skip to content</a>
     <!-- ───────── TOP BAR ───────── -->
     <header class="topbar">
       <a class="wordmark" href="/" aria-label="Patchwire home">
-        <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-          <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" fill="none"/>
+        <svg width="26" height="26" viewBox="0 0 22 22" aria-hidden="true">
+          <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
           <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
-          <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-dasharray="1 2"/>
+          <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.4 2"/>
+          <circle cx="11" cy="11" r="1.5" fill="#C9F564"/>
         </svg>
         <span>Patchwire</span>
       </a>
@@ -49,6 +65,7 @@ const rev = '263e2e3';
     </header>
 
     <!-- ───────── HERO ───────── -->
+    <main id="main">
     <section class="hero" id="hero">
       <!-- background atmospherics -->
       <div class="hero-bg" aria-hidden="true">
@@ -148,14 +165,14 @@ const rev = '263e2e3';
           <p class="editor-sub reveal">
             Patchwire ships a VS Code extension. Chat in a side panel.
             Preview the diff inline. <strong>Apply with one keystroke.</strong>
-            Same engine, same diff-return guarantee &mdash; just without the
+            Same engine, same diff-return guarantee, just without the
             terminal context switch.
           </p>
           <ul class="editor-bullets reveal">
-            <li><span class="bullet-mark">▢</span> Native side panel — feels like part of VS Code</li>
+            <li><span class="bullet-mark">▢</span> Native side panel that feels like part of VS Code</li>
             <li><span class="bullet-mark">▢</span> Inline diff preview, hunk-by-hunk apply</li>
             <li><span class="bullet-mark">▢</span> Setup wizard discovers your Tailscale peers</li>
-            <li><span class="bullet-mark">▢</span> Shares the same config as the CLI — swap any time</li>
+            <li><span class="bullet-mark">▢</span> Shares the same config as the CLI, so you can swap any time</li>
           </ul>
           <div class="editor-cta reveal">
             <a href="/install-extension/" class="cta cta-primary magnet">
@@ -181,7 +198,7 @@ const rev = '263e2e3';
               <span class="term-dots" aria-hidden="true">
                 <span></span><span></span><span></span>
               </span>
-              <span class="vscode-title">Visual Studio Code — your-app</span>
+              <span class="vscode-title">Visual Studio Code · your-app</span>
               <span class="vscode-host" aria-hidden="true">·</span>
             </header>
             <div class="vscode-body">
@@ -191,9 +208,10 @@ const rev = '263e2e3';
                 <span class="va">⌥</span>
                 <span class="va va-active" title="Patchwire">
                   <svg width="14" height="14" viewBox="0 0 22 22" aria-hidden="true">
-                    <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" fill="none"/>
+                    <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
                     <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
-                    <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-dasharray="1 2"/>
+                    <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.4 2"/>
+                    <circle cx="11" cy="11" r="1.5" fill="#C9F564"/>
                   </svg>
                 </span>
                 <span class="va">▦</span>
@@ -321,7 +339,7 @@ const rev = '263e2e3';
           <span class="step-no">01</span>
           <div class="step-body">
             <h3>Push code over rsync.</h3>
-            <p>One-way. Your laptop is the source of truth. The remote always mirrors local — never the other direction.</p>
+            <p>One-way. Your laptop is the source of truth. The remote always mirrors local. Never the other direction.</p>
           </div>
         </li>
         <li class="step reveal">
@@ -375,7 +393,7 @@ $ patchwire-agent install
           <pre class="termcard-body"><span class="t-com"># once</span>
 $ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
 $ patchwire setup
-  <span class="t-ok">→ Tailscale peer: remote-host.tail-xyz.ts.net</span>
+  <span class="t-ok">→ Tailscale peer: <your-remote-host></span>
 
 <span class="t-com"># forever</span>
 $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre>
@@ -416,7 +434,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
           <p class="feat-q">
             "Your laptop should be quiet. <em>Your AI</em> should run somewhere bigger."
           </p>
-          <p class="feat-q-meta">— patchwire@0.1.0</p>
+          <p class="feat-q-meta">patchwire@0.1.0</p>
         </article>
         <article class="feat-card reveal feat-card-strip">
           <ul class="strip">
@@ -451,15 +469,18 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       </div>
     </section>
 
+    </main>
+
     <!-- ───────── FOOTER ───────── -->
     <footer class="foot">
       <div class="foot-grid">
         <div class="foot-mark">
           <span class="wordmark wordmark-dark">
-            <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-              <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" fill="none"/>
+            <svg width="26" height="26" viewBox="0 0 22 22" aria-hidden="true">
+              <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
               <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
-              <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-dasharray="1 2"/>
+              <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.4 2"/>
+              <circle cx="11" cy="11" r="1.5" fill="#C9F564"/>
             </svg>
             <span>Patchwire</span>
           </span>
@@ -469,43 +490,58 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         </div>
         <nav class="foot-nav" aria-label="Footer">
           <div>
-            <h4>Docs</h4>
+            <h4>Read</h4>
             <a href="/quickstart/">Quickstart</a>
             <a href="/architecture/">Architecture</a>
             <a href="/configuration/">Configuration</a>
             <a href="/security/">Security model</a>
-          </div>
-          <div>
-            <h4>Reference</h4>
-            <a href="/commands/">CLI commands</a>
-            <a href="/api/">HTTP API</a>
-            <a href="/troubleshooting/">Troubleshooting</a>
             <a href="/faq/">FAQ</a>
           </div>
           <div>
-            <h4>Project</h4>
-            <a href={repo}>GitHub ↗</a>
-            <a href={`${repo}/issues`}>Issues ↗</a>
-            <a href={`${repo}/blob/main/LICENSE`}>License ↗</a>
+            <h4>Build</h4>
+            <a href="/commands/">CLI commands</a>
+            <a href="/api/">HTTP API</a>
+            <a href="/install-extension/">VS Code extension</a>
+            <a href="/troubleshooting/">Troubleshooting</a>
             <a href="/roadmap/">Roadmap</a>
           </div>
         </nav>
       </div>
       <div class="foot-bottom">
         <span>© {new Date().getFullYear()} Patchwire · v{version} · rev&nbsp;{rev}</span>
+        <span class="foot-project-links">
+          <a href={repo}>GitHub ↗</a>
+          <span class="foot-sep" aria-hidden="true">·</span>
+          <a href={`${repo}/issues`}>Issues ↗</a>
+          <span class="foot-sep" aria-hidden="true">·</span>
+          <a href={`${repo}/blob/main/LICENSE`}>MIT License ↗</a>
+        </span>
         <span class="foot-tag">local-first · ai-remote · diff-reviewable</span>
       </div>
     </footer>
 
     <!-- ═══════════════════════════════════════════════════════════
-         INTERACTIVE JS — built with safe DOM methods
+         INTERACTIVE JS — built with safe DOM methods.
+         data-astro-rerun: re-execute these IIFEs after every
+         view-transition navigation back to this page, so the
+         hero typewriter / spotlight / magnet / tilt / reveal
+         observers re-initialise against the fresh DOM.
          ═══════════════════════════════════════════════════════════ -->
-    <script>
+    <script is:inline>
+      // Wrap every page-side IIFE in bindAll() so we can re-attach
+      // observers and event listeners after Astro view transitions.
+      // bindAll() runs once on initial paint, then again on every
+      // `astro:page-load` (which fires both on first load and on
+      // every SPA arrival to this route).
+      function bindAll() {
+      // Single source-of-truth for motion preference
+      const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       // ─── 1. Cursor-tracking spotlight on hero ───
       (() => {
         const spot = document.getElementById('spotlight');
         const hero = document.getElementById('hero');
-        if (!spot || !hero || matchMedia('(pointer: coarse)').matches) return;
+        if (!spot || !hero || matchMedia('(pointer: coarse)').matches || prefersReducedMotion) return;
         let raf = 0, tx = 50, ty = 30;
         function update(e) {
           const r = hero.getBoundingClientRect();
@@ -544,7 +580,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
 
       // ─── 3. Magnetic CTA ───
       (() => {
-        if (matchMedia('(pointer: coarse)').matches) return;
+        if (matchMedia('(pointer: coarse)').matches || prefersReducedMotion) return;
         document.querySelectorAll('.magnet').forEach(el => {
           let raf = 0, tx = 0, ty = 0;
           el.addEventListener('pointermove', (e) => {
@@ -582,6 +618,10 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
           const text = el.dataset.typewrite;
           if (!text) return 0;
           el.textContent = '';
+          if (prefersReducedMotion) {
+            el.textContent = text;
+            return 0;
+          }
           const caret = makeEl('span', 'caret');
           el.appendChild(caret);
           for (let i = 0; i < text.length; i++) {
@@ -633,7 +673,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
 
       // ─── 5. Tilt cards (lightweight 3D hover) ───
       (() => {
-        if (matchMedia('(pointer: coarse)').matches) return;
+        if (matchMedia('(pointer: coarse)').matches || prefersReducedMotion) return;
         document.querySelectorAll('[data-tilt]').forEach(card => {
           let raf = 0, rx = 0, ry = 0;
           card.addEventListener('pointermove', (e) => {
@@ -650,6 +690,12 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
           card.addEventListener('pointerleave', () => { card.style.transform = ''; });
         });
       })();
+      } /* end bindAll() */
+
+      // First paint
+      bindAll();
+      // Subsequent SPA arrivals via Astro view transitions
+      document.addEventListener('astro:page-load', bindAll);
     </script>
 
     <!-- ═══════════════════════════════════════════════════════════
@@ -682,6 +728,51 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       }
       .reveal.is-in { opacity: 1; transform: none; }
 
+      /* ─── skip-to-content link ─── */
+      .skip-link {
+        position: absolute;
+        top: -100px;
+        left: 16px;
+        z-index: 100;
+        padding: 10px 16px;
+        background: var(--rc-phosphor);
+        color: var(--rc-ink);
+        font-family: var(--rc-font-mono);
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 6px;
+        box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+        transition: top 0.18s ease;
+      }
+      .skip-link:focus-visible {
+        top: 12px;
+        outline: 2px solid var(--rc-ink);
+        outline-offset: 2px;
+      }
+
+      /* ─── global focus-visible rings (keyboard a11y) ─── */
+      .page :focus { outline: none; }
+      .page a:focus-visible,
+      .page button:focus-visible,
+      .page [tabindex]:focus-visible {
+        outline: 2px solid var(--rc-phosphor);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+      .page .cta-primary:focus-visible {
+        outline-color: var(--rc-bone);
+      }
+
+      /* ─── active nav state (aria-current=page) ─── */
+      .topnav a[aria-current="page"] {
+        opacity: 1;
+        color: var(--rc-phosphor);
+      }
+      .topnav a[aria-current="page"]::after {
+        right: 0;
+      }
+
       /* ═══════════════════════════════════════════════════════════
          TOP BAR
          ═══════════════════════════════════════════════════════════ */
@@ -702,9 +793,23 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       .wordmark {
         display: inline-flex; align-items: center; gap: 10px;
         font-family: var(--rc-font-display);
-        font-weight: 500; font-size: 17px; letter-spacing: -0.01em;
+        font-weight: 500; font-size: 17px; line-height: 1; letter-spacing: -0.01em;
         color: var(--rc-bone);
+        text-decoration: none;
+        transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+        /* Cross-page morph: the browser animates the wordmark
+           from its position on the previous page to its position
+           on the next page via the View Transitions API. The
+           line-height: 1 above is critical — it matches the docs
+           page's .site-title so the "Patchwire" text baseline
+           stays put during the morph instead of bouncing 2-3px. */
+        view-transition-name: brand-wordmark;
       }
+      .wordmark svg {
+        transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      .wordmark:hover { transform: translateX(0.5px); }
+      .wordmark:hover svg { transform: translateY(-0.5px) scale(1.04); }
       .topnav { display: flex; justify-content: center; gap: 28px; font-size: 14px; }
       .topnav a {
         color: var(--rc-bone);
@@ -1556,11 +1661,14 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         margin: 0 0 56px;
         font-variation-settings: 'SOFT' 30, 'opsz' 144;
       }
+      /* Variation: outlined-stroke treatment instead of italic-phosphor */
       .flow-h em {
-        font-style: italic;
-        font-weight: 380;
-        color: var(--rc-phosphor);
-        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+        font-style: normal;
+        font-weight: 500;
+        color: transparent;
+        -webkit-text-stroke: 1.5px var(--rc-phosphor);
+        text-stroke: 1.5px var(--rc-phosphor);
+        font-variation-settings: 'opsz' 144;
       }
 
       .flowdiagram {
@@ -1685,11 +1793,14 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         margin: 0 0 56px;
         font-variation-settings: 'SOFT' 30, 'opsz' 144;
       }
+      /* Variation: underline-marker treatment instead of italic-phosphor */
       .setup-h em {
-        font-style: italic;
-        font-weight: 380;
-        color: var(--rc-phosphor);
-        font-variation-settings: 'SOFT' 100, 'WONK' 1;
+        font-style: normal;
+        font-weight: 500;
+        color: var(--rc-bone);
+        background: linear-gradient(transparent 78%, rgba(201, 245, 100, 0.55) 78%, rgba(201, 245, 100, 0.55) 94%, transparent 94%);
+        padding: 0 0.04em;
+        font-variation-settings: 'opsz' 144;
       }
       .setup-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
       @media (min-width: 860px) { .setup-grid { grid-template-columns: 1fr 1fr; gap: 28px; } }
@@ -1925,7 +2036,7 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         line-height: 1.55;
         color: var(--rc-bone-dim);
       }
-      .foot-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
+      .foot-nav { display: grid; grid-template-columns: repeat(2, 1fr); gap: 56px; }
       .foot-nav h4 {
         font-family: var(--rc-font-mono);
         font-size: 11px;
@@ -1956,14 +2067,48 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         color: rgba(232, 226, 208, 0.4);
       }
       .foot-tag { letter-spacing: 0.06em; color: var(--rc-phosphor); opacity: 0.7; }
+      .foot-project-links {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .foot-project-links a {
+        color: rgba(232, 226, 208, 0.78);
+        transition: color 0.15s ease;
+      }
+      .foot-project-links a:hover { color: var(--rc-phosphor); }
+      .foot-sep { opacity: 0.35; }
 
       /* ═══════════════════════════════════════════════════════════
          REDUCED MOTION
          ═══════════════════════════════════════════════════════════ */
       @media (prefers-reduced-motion: reduce) {
-        .reveal { opacity: 1; transform: none; transition: none; }
-        .hero-h-line, .meta-dot, .eyebrow-pulse,
-        .flowparticle, .caret, .step-ok { animation: none; }
+        .reveal,
+        .term-line-step,
+        .term-diff,
+        .term-actions {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+        .hero-h-line,
+        .meta-dot,
+        .eyebrow-pulse,
+        .flowparticle,
+        .caret,
+        .step-ok,
+        .vss-conn-dot {
+          animation: none;
+        }
+        .hero-spotlight { transition: none; }
+        .vscode,
+        .termcard,
+        .par-card,
+        .feat-card {
+          transition: none;
+        }
+        .cta-arrow { transition: none; }
       }
 
       /* ═══════════════════════════════════════════════════════════
@@ -2021,11 +2166,11 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         .endcta-actions .cta span:first-child { flex: 1; }
 
         .foot-grid { grid-template-columns: 1fr; gap: 32px; }
-        .foot-nav { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .foot-nav { grid-template-columns: repeat(2, 1fr); gap: 28px; }
         .foot-bottom { flex-direction: column; align-items: flex-start; gap: 8px; font-size: 10px; }
       }
       @media (max-width: 540px) {
-        .foot-nav { grid-template-columns: 1fr 1fr; }
+        .foot-nav { grid-template-columns: 1fr; gap: 22px; }
       }
     </style>
   </body>

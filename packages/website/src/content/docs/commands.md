@@ -15,13 +15,13 @@ patchwire <command> [options]
 patchwire setup [options]
 ```
 
-Interactive one-shot configuration. Reads `tailscale status --json`; if it finds peers, lets you pick the Mac Mini from a list (using its Magic-DNS hostname). Falls back to manual host entry if Tailscale isn't running.
+Interactive one-shot configuration. Reads `tailscale status --json`. If it finds peers, it lets you pick the remote from a list (using its Magic-DNS hostname). Falls back to manual host entry if Tailscale isn't running.
 
 Outputs:
 
 - `patchwire.yml` (committed alongside your code)
-- `~/.patchwire/env` (`export PW_TOKEN=…`, chmod 600)
-- `.patchwire/` cache directory + `.gitignore` entry
+- `~/.patchwire/env` with `export PW_TOKEN=…` (chmod 600)
+- `.patchwire/` cache directory and a `.gitignore` entry
 
 #### Flags
 
@@ -31,7 +31,7 @@ Every prompt has a matching flag. Pass any flag and that prompt is skipped (the 
 | --- | --- |
 | `-f, --force` | Overwrite existing `patchwire.yml`. |
 | `--no-tailscale` | Skip Tailscale auto-detection entirely. |
-| `--host <ip-or-hostname>` | Mac Mini host. **Implies `--no-tailscale`** — the Tailscale picker is skipped. |
+| `--host <ip-or-hostname>` | Remote host. Implies `--no-tailscale` (the Tailscale picker is skipped). |
 | `--user <user>` | Remote SSH user. |
 | `--project <name>` | Project folder name on the remote. |
 | `--path <path>` | Remote project path. `${project}` placeholder is expanded. |
@@ -41,19 +41,19 @@ Every prompt has a matching flag. Pass any flag and that prompt is skipped (the 
 
 #### Common patterns
 
-**You already know the IP** (e.g., a fixed Tailscale `100.x` address you've memorized):
+**You already know the IP** (a fixed Tailscale address you've memorized):
 
 ```bash
-patchwire setup --host 100.64.0.7
+patchwire setup --host <your-ip>
 # everything else is still prompted, with sensible defaults
 ```
 
-**Fully scripted** (e.g., bootstrapping a project from a Makefile):
+**Fully scripted** (bootstrapping a project from a Makefile, for example):
 
 ```bash
 patchwire setup --force \
-  --host mac-mini.tail-abc123.ts.net \
-  --user rebin \
+  --host <your-remote-host> \
+  --user <your-user> \
   --project my_app \
   --path '~/workspace/${project}' \
   --ssh-port 22 \
@@ -61,7 +61,7 @@ patchwire setup --force \
   --token "$PW_TOKEN"
 ```
 
-**You don't have Tailscale and don't want the warning**:
+**You don't have Tailscale and don't want the warning:**
 
 ```bash
 patchwire setup --no-tailscale
@@ -73,7 +73,15 @@ patchwire setup --no-tailscale
 patchwire init [-f, --force]
 ```
 
-Minimal manual setup with no Tailscale auto-detection. Rarely needed — `setup` is preferred. Asks the same questions but skips peer discovery.
+Minimal manual setup with no Tailscale auto-detection. Rarely needed; `setup` is preferred. Asks the same questions but skips peer discovery.
+
+### `init-remote`
+
+```
+patchwire init-remote --from-local
+```
+
+Bootstrap a project on the remote by pushing the current working directory. Useful for first-time project setup when you already have local code that you want to copy up.
 
 ### `sync`
 
@@ -89,19 +97,19 @@ Push local files to the remote with `rsync -az --delete`. Uses your `sync.exclud
 patchwire ask "<prompt>" [--no-sync] [--save-only]
 ```
 
-The main event. Sync → POST `/ask` → preview diff → confirm → apply.
+The main event: sync, then POST `/ask`, then preview the diff, then confirm, then apply.
 
 Flags:
 
-- `--no-sync` — skip the rsync step; use whatever's currently on the remote. Faster for follow-up runs.
-- `--save-only` — write the patch to `.patchwire/last.patch` and exit. Useful in scripts or CI.
+- `--no-sync`: skip the rsync step and use whatever's currently on the remote. Faster for follow-up runs.
+- `--save-only`: write the patch to `.patchwire/last.patch` and exit. Useful in scripts or CI.
 
 After the diff is shown, you'll get four options:
 
-- **Apply all changes** — `git apply` the entire patch.
-- **Apply selected files…** — multi-select per file, applies only those chunks.
-- **Save patch** — write to `.patchwire/last.patch`, don't apply.
-- **Reject** — discard.
+- **Apply all changes:** `git apply` the entire patch.
+- **Apply selected files…**: multi-select per file, applies only those chunks.
+- **Save patch:** write to `.patchwire/last.patch`, don't apply.
+- **Reject:** discard.
 
 ### `apply`
 
@@ -109,7 +117,7 @@ After the diff is shown, you'll get four options:
 patchwire apply [<patch-file>]
 ```
 
-Apply a previously-saved patch. Defaults to `.patchwire/last.patch`. Same preview + confirmation flow as `ask`.
+Apply a previously-saved patch. Defaults to `.patchwire/last.patch`. Same preview and confirmation flow as `ask`.
 
 ### `doctor`
 
@@ -119,15 +127,23 @@ patchwire doctor
 
 Run end-to-end diagnostics:
 
-- `rsync`, `ssh`, `git` are on PATH and runnable
-- the cwd is a git repo
-- `patchwire.yml` exists and validates
-- SSH to `remote.user@remote.host` succeeds (`-o BatchMode=yes`)
-- `GET /health` on `remote.agentUrl` returns 200 and reports `claude.found: true`
+- `rsync`, `ssh`, and `git` are on PATH and runnable.
+- The cwd is a git repo.
+- `patchwire.yml` exists and validates.
+- SSH to `remote.user@remote.host` succeeds (`-o BatchMode=yes`).
+- `GET /health` on `remote.agentUrl` returns 200 and reports `claude.found: true`.
 
-Exits non-zero if any check fails — useful for `make doctor` or pre-commit hooks.
+Exits non-zero if any check fails. Useful for `make doctor` or pre-commit hooks.
 
-## `patchwire-agent` (Mac Mini)
+### Extension-internal commands
+
+The CLI also exposes three commands used by the VS Code extension. You don't need to call them by hand, but they're listed for completeness:
+
+- `patchwire chat <prompt...>`: multi-turn chat with Claude on the remote.
+- `patchwire session-status --session <uuid>`: get the in-memory status of a chat session.
+- `patchwire delete-session --session <uuid>`: remove a chat session from the agent.
+
+## `patchwire-agent` (remote)
 
 ```
 patchwire-agent <command> [options]
@@ -139,7 +155,7 @@ patchwire-agent <command> [options]
 patchwire-agent
 ```
 
-Start the HTTP server. Reads config from env vars — see [Configuration → Agent environment variables](/configuration/#agent-environment-variables).
+Start the HTTP server. Reads config from env vars. See [Configuration → Agent environment variables](/configuration/#agent-environment-variables).
 
 ### `install`
 
@@ -147,15 +163,15 @@ Start the HTTP server. Reads config from env vars — see [Configuration → Age
 patchwire-agent install [options]
 ```
 
-macOS only. Register the agent as a launchd LaunchAgent so it auto-starts on every login.
+macOS only. Registers the agent as a launchd LaunchAgent so it auto-starts on every login.
 
-Flags (all optional — defaults come from env vars or generation):
+Flags (all optional, defaults come from env vars or generation):
 
-- `--projects-root <path>` — defaults to `$PW_PROJECTS_ROOT` or `~/workspace`
-- `--port <n>` — defaults to `$PW_AGENT_PORT` or `7878`
-- `--host <h>` — defaults to `$PW_AGENT_HOST` or `0.0.0.0`
-- `--token <t>` — defaults to `$PW_AGENT_TOKEN` or a fresh `openssl rand`-style 32-byte hex
-- `--claude-bin <path>` — defaults to `$PW_AI_BIN` or `claude`
+- `--projects-root <path>`: defaults to `$PW_PROJECTS_ROOT` or `~/workspace`.
+- `--port <n>`: defaults to `$PW_AGENT_PORT` or `7878`.
+- `--host <h>`: defaults to `$PW_AGENT_HOST` or `0.0.0.0`.
+- `--token <t>`: defaults to `$PW_AGENT_TOKEN` or a fresh `openssl rand`-style 32-byte hex.
+- `--claude-bin <path>`: defaults to `$PW_AI_BIN` or `claude`.
 
 Re-running `install` regenerates the plist and reloads launchd.
 
@@ -165,4 +181,4 @@ Re-running `install` regenerates the plist and reloads launchd.
 patchwire-agent uninstall
 ```
 
-Stop and remove the LaunchAgent. The env file at `~/.patchwire/agent.env` is **kept** — delete it manually if you want a clean slate.
+Stop and remove the LaunchAgent. The env file at `~/.patchwire/agent.env` is **kept**. Delete it manually if you want a clean slate.

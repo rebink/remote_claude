@@ -5,7 +5,7 @@ description: Every endpoint the agent exposes, with examples.
 
 The agent is a tiny Fastify server. `/ask` and `/chat` stream their responses as NDJSON; the other endpoints return plain JSON.
 
-Base URL: whatever you configured as `remote.agentUrl`, e.g. `http://mac-mini.tail-abc123.ts.net:7878`.
+Base URL: whatever you configured as `remote.agentUrl`, e.g. `http://<your-remote-host>:7878`.
 
 ## Auth
 
@@ -22,7 +22,7 @@ The compare is constant-time. A wrong / missing token returns `401`.
 No auth required. Used by `patchwire doctor` and any external monitor.
 
 ```bash
-curl -s http://mini:7878/health
+curl -s http://<your-remote-host>:7878/health
 ```
 
 ```json
@@ -36,7 +36,7 @@ curl -s http://mini:7878/health
 }
 ```
 
-If `claude.found` is `false`, the agent is running but won't be able to fulfil `/ask` — fix `PW_AI_BIN` or install Claude.
+If `claude.found` is `false`, the agent is running but can't fulfill `/ask`. Fix `PW_AI_BIN` or install Claude.
 
 ## `POST /ask`
 
@@ -61,7 +61,7 @@ Content-Type: application/json
 | `prompt` | string | yes | Free-form instruction for Claude. Sent on stdin to `claude --print`. |
 | `project` | string | yes | Folder name under `PW_PROJECTS_ROOT`. Restricted to `[a-zA-Z0-9_.-]+`. |
 
-### Response — 200 OK (NDJSON stream)
+### Response: 200 OK (NDJSON stream)
 
 The body is an NDJSON stream (`application/x-ndjson`): one JSON event per line.
 Lifecycle: an optional `queued`, then `accepted`, then exactly one terminal
@@ -75,8 +75,8 @@ Lifecycle: an optional `queued`, then `accepted`, then exactly one terminal
 
 | Event | Fields |
 | --- | --- |
-| `queued` | `position` — global-queue position at entry. Emitted once, only when the request waits. |
-| `accepted` | `queueWaitMs` — how long the request waited before a slot was granted. |
+| `queued` | `position`: global-queue position at entry. Emitted once, only when the request waits. |
+| `accepted` | `queueWaitMs`: how long the request waited before a slot was granted. |
 | `result` | `diff` (unified git diff; empty string if no changes), `files` (changed filenames), `durationMs`, `stdout`/`stderr` (captured from `claude`), `exitCode` (`claude`'s exit code; a non-zero with empty diff is a hint to check `stderr`). |
 | `error` | `code` (`run_failed`, `diff_failed`, or `internal`), `message`. Terminal failure that occurred after the stream began. |
 
@@ -91,14 +91,14 @@ Lifecycle: an optional `queued`, then `accepted`, then exactly one terminal
 | `412` | Project dir is not a git repo | `{ "error": "project is not a git repository on agent host" }` |
 
 Failures that occur *after* the stream has started (e.g. Claude failing to run)
-are not HTTP errors — they arrive as a terminal `error` event on the stream
+are not HTTP errors; they arrive as a terminal `error` event on the stream
 (`run_failed` / `diff_failed` / `internal`).
 
 ### Idempotency & state
 
 - Every `/ask` runs against a **clean** working tree (or 409s).
 - The agent always restores the tree before responding (in a `finally` block).
-- There is no per-request state on the agent. Two concurrent `/ask`s for the same project would race — don't do that. Two for different projects are fine.
+- There is no per-request state on the agent. Two concurrent `/ask`s for the same project would race, so don't do that. Two for different projects are fine.
 
 ## Examples
 
@@ -106,7 +106,7 @@ are not HTTP errors — they arrive as a terminal `error` event on the stream
 
 ```bash
 TOKEN=…
-HOST=mac-mini.tail-abc123.ts.net:7878
+HOST=<your-remote-host>:7878
 
 curl -sS -X POST "http://$HOST/ask" \
   -H "Authorization: Bearer $TOKEN" \
@@ -147,4 +147,4 @@ for await (const chunk of res.body) {
 console.log(result.diff);
 ```
 
-This is roughly what `patchwire ask` does internally — the CLI is a thin wrapper around this API.
+This is roughly what `patchwire ask` does internally. The CLI is a thin wrapper around this API.

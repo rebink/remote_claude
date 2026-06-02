@@ -1,0 +1,34 @@
+---
+// Starlight `<SiteTitle>` component override.
+//
+// Why this exists:
+// Starlight's default SiteTitle renders the brand mark via
+// <img src="logo.svg">. SVGs loaded that way don't inherit
+// `currentColor` from the parent, so the squares disappeared on
+// the dark theme. By inlining the SVG here we get the exact same
+// DOM as the landing page's .wordmark and the 404 page's
+// .nf-wordmark — single source of truth for brand rendering.
+//
+// All typography, color, sizing, hover motion, view-transition
+// naming, and theme-adaptive color cascade live in
+// `src/styles/custom.css`. This component is intentionally style-
+// free so cascade resolution stays simple.
+const { siteTitle, siteTitleHref } = Astro.props;
+---
+
+<a href={siteTitleHref} class="site-title sl-flex">
+  <svg
+    width="26"
+    height="26"
+    viewBox="0 0 22 22"
+    fill="none"
+    role="img"
+    aria-label="Patchwire logo"
+  >
+    <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
+    <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
+    <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.4 2"/>
+    <circle cx="11" cy="11" r="1.5" fill="#C9F564"/>
+  </svg>
+  <span translate="no">{siteTitle}</span>
+</a>

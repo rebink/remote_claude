@@ -16,12 +16,12 @@ PW_VERBOSE=1 patchwire doctor
 Check from a vanilla shell:
 
 ```bash
-ssh -o BatchMode=yes -o ConnectTimeout=5 rebin@mac-mini.tail-abc123.ts.net true
+ssh -o BatchMode=yes -o ConnectTimeout=5 <your-user>@<your-remote-host> true
 ```
 
 Common causes:
 
-- **Public key not on remote.** Run `ssh-copy-id rebin@<host>`.
+- **Public key not on remote.** Run `ssh-copy-id <your-user>@<your-remote-host>`.
 - **SSH agent doesn't have your key loaded.** `ssh-add -L` to check.
 - **Tailscale isn't up on one of the machines.** `tailscale status` on both.
 - **Wrong port.** Override with `remote.sshPort` in `patchwire.yml`.
@@ -32,9 +32,9 @@ Common causes:
 curl -v http://<host>:7878/health
 ```
 
-- **Connection refused** → agent isn't running. On the Mini: `launchctl list | grep com.patchwire.agent`. If not loaded, `patchwire-agent install` again.
+- **Connection refused** → agent isn't running. On the remote: `launchctl list | grep com.patchwire.agent`. If not loaded, `patchwire-agent install` again.
 - **No route to host** → wrong IP/hostname. If using Tailscale, the device may be offline.
-- **`claude.found: false` in the response** → set `PW_AI_BIN` to the full path on the Mini and re-install the agent.
+- **`claude.found: false` in the response** → set `PW_AI_BIN` to the full path on the remote and re-install the agent.
 
 ### `FAIL  patchwire.yml present`
 
@@ -58,10 +58,10 @@ The agent ran Claude successfully but Claude didn't modify any files. This can m
 ✗ Agent /ask returned 409: agent working tree is dirty before run
 ```
 
-The project on the Mini has uncommitted local changes. Most often: a previous run failed to reset cleanly, or you SSH'd into the Mini and edited something.
+The project on the remote has uncommitted local changes. Most often: a previous run failed to reset cleanly, or you SSH'd into the remote and edited something.
 
 ```bash
-ssh rebin@<host>
+ssh <your-user>@<your-remote-host>
 cd ~/workspace/<project>
 git status            # see what's there
 git stash             # if you want to keep it
@@ -86,11 +86,11 @@ You probably edited the same files locally between sync and apply. Two options:
 
 `rsync --delete` mirrors the local tree to the remote. If a file exists only on the remote (e.g. you SSH'd in and created it), it'll be removed on the next sync. **The remote is not a place to store work.** Treat it as a staging area for AI runs.
 
-If you genuinely need a file to live only on the Mini, add it to `sync.exclude` so rsync ignores it.
+If you genuinely need a file to live only on the remote, add it to `sync.exclude` so rsync ignores it.
 
 ## Agent crashes on Claude error
 
-The agent has a `finally` block that resets the working tree even when `claude` fails. If you see a `409` *immediately after* a crash, log into the Mini and check `git status` — there may be leftover state. Reset manually and resume.
+The agent has a `finally` block that resets the working tree even when `claude` fails. If you see a `409` *immediately after* a crash, log into the remote and check `git status`, there may be leftover state. Reset manually and resume.
 
 If this happens repeatedly, please open an issue with the contents of `~/.patchwire/logs/agent.err.log`.
 
@@ -109,7 +109,7 @@ code -d .patchwire/last.patch
 `patchwire setup` calls `tailscale status --json` on the laptop. If the response has zero peers, you'll fall through to the manual host prompt. Check:
 
 - `tailscale status` shows peers (otherwise you're not logged in)
-- the Mac Mini is online in your Tailscale admin console
+- the remote is online in your Tailscale admin console
 - you're logged into the same tailnet on both machines
 
 ## Resetting from scratch
@@ -123,7 +123,7 @@ rm <your-project>/patchwire.yml
 rm -rf <your-project>/.patchwire
 patchwire setup --force
 
-# mini
+# remote
 patchwire-agent uninstall
 rm -rf ~/.patchwire
 patchwire-agent install

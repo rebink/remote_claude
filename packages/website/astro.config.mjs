@@ -10,7 +10,16 @@ export default defineConfig({
       title: 'Patchwire',
       description:
         'Local-first dev tool: push your project to a remote Mac, run an AI CLI there, and pull back a reviewable unified diff.',
-      logo: { src: './src/assets/logo.svg', replacesTitle: false },
+      // No `logo` config needed — our SiteTitle override below renders
+      // the brand mark as inline SVG (not as <img>) so the strokes
+      // inherit currentColor from the link, exactly like the landing
+      // page's .wordmark. Inline SVG is the only way to get true
+      // currentColor inheritance.
+      components: {
+        Head: './src/components/Head.astro',
+        SiteTitle: './src/components/SiteTitle.astro',
+        Footer: './src/components/Footer.astro',
+      },
       social: { github: repo },
       editLink: {
         baseUrl: `${repo}/edit/main/packages/website/`,
