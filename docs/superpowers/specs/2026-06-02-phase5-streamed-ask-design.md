@@ -59,7 +59,7 @@ export type AskEvent =
   | { type: 'accepted'; queueWaitMs: number }       // slot granted, run starting
   | { type: 'result';                               // terminal success
       diff: string;
-      files: ChangedFile[];
+      files: string[];          // filenames, exactly as today's captureDiff / AskResponse
       durationMs: number;
       stdout: string;
       stderr: string;
