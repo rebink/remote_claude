@@ -201,6 +201,11 @@ Alice's laptop                         agent
 
 ### 6.2 SSE event format
 
+> **Superseded by `2026-06-02-phase5-streamed-ask-design.md`.** Phase 5 ships
+> `/ask` as **NDJSON** (matching the shipped `/chat`), not true SSE, with events
+> `queued {position}` → `accepted {queueWaitMs}` → `result` | `error` in
+> camelCase. See that spec for the authoritative wire protocol.
+
 ```
 event: queued
 data: {"position":2,"total":3}
