@@ -1,5 +1,6 @@
 import { request, fetch } from 'undici';
 import type { Config } from './config.ts';
+import type { AskEvent, AskRequest, AskResponse } from '@patchwire/protocol';
 
 /**
  * Low-level helper that POSTs/GETs JSON to the agent.
@@ -92,18 +93,50 @@ export async function* streamPostNdjson(
   if (buf.trim()) yield JSON.parse(buf);
 }
 
-export interface AskRequest {
-  prompt: string;
-  project: string;
-}
+/**
+ * Parse an NDJSON `/ask` event stream. Forwards every event to `onEvent` and
+ * resolves to the `AskResponse` carried by the terminal `result` event. Throws
+ * on an `error` event (carrying its message) or if the stream ends with no
+ * terminal event.
+ */
+export async function parseAskStream(
+  source: AsyncIterable<Uint8Array>,
+  onEvent: (e: AskEvent) => void,
+): Promise<AskResponse> {
+  const decoder = new TextDecoder();
+  let buf = '';
+  let result: AskResponse | undefined;
 
-export interface AskResponse {
-  diff: string;
-  files: string[];
-  durationMs: number;
-  stdout: string;
-  stderr: string;
-  exitCode: number;
+  const handle = (line: string) => {
+    if (!line.trim()) return;
+    const e = JSON.parse(line) as AskEvent;
+    onEvent(e);
+    if (e.type === 'result') {
+      // Explicit copy (not `{ type, ...rest }`) to avoid an unused `type` binding
+      // under noUnusedLocals.
+      result = {
+        diff: e.diff,
+        files: e.files,
+        durationMs: e.durationMs,
+        stdout: e.stdout,
+        stderr: e.stderr,
+        exitCode: e.exitCode,
+      };
+    } else if (e.type === 'error') {
+      throw new Error(e.message);
+    }
+  };
+
+  for await (const chunk of source) {
+    buf += decoder.decode(chunk, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) handle(line);
+  }
+  if (buf.trim()) handle(buf);
+
+  if (!result) throw new Error('agent stream ended without result');
+  return result;
 }
 
 export interface HealthResponse {
@@ -152,7 +185,7 @@ export class AgentClient {
     return (await res.body.json()) as WhoamiResponse;
   }
 
-  async ask(body: AskRequest): Promise<AskResponse> {
+  async ask(body: AskRequest, onEvent?: (e: AskEvent) => void): Promise<AskResponse> {
     const res = await request(`${this.cfg.remote.agentUrl}/ask`, {
       method: 'POST',
       headers: this.headers(),
@@ -160,10 +193,10 @@ export class AgentClient {
       bodyTimeout: this.cfg.ai.timeoutSec * 1000,
       headersTimeout: this.cfg.ai.timeoutSec * 1000,
     });
-    const text = await res.body.text();
     if (res.statusCode !== 200) {
+      const text = await res.body.text();
       throw new Error(`Agent /ask returned ${res.statusCode}: ${text}`);
     }
-    return JSON.parse(text) as AskResponse;
+    return parseAskStream(res.body, onEvent ?? (() => {}));
   }
 }
