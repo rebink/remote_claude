@@ -28,8 +28,8 @@ Reader `readEntries()` (in `agent/log-reader.ts`) already handles rotation, malf
 
 - Reads all matching entries (no `limit`), aggregates per user, prints a table sorted by request count (desc), then a totals row.
 - `--since` accepts the same `30s|15m|6h|7d` grammar as `patchwire-agent log` (the `parseSince` helper is reused).
-- `--json` emits the structured `UsageReport` instead of the table.
-- Empty result prints `(no usage yet)`.
+- `--json` emits the structured `UsageReport` instead of the table — **always**, including an empty report (`{users:[],totals:{…}}`) when there are no entries, so JSON consumers never receive the human sentinel.
+- Empty result prints `(no usage yet)` on the **human table path only** (i.e. without `--json`).
 
 ### Per-user aggregation (`UserUsage`)
 | field | meaning |
