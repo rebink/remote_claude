@@ -21,6 +21,11 @@ node-compile-cache/
 
 # Runtime/leak directories from the CLI itself
 rc-init-*/
+# Leaked e2e/sandbox temp dirs (tests/agent that mkdtemp into the repo root)
+pw-perusr-e2e-*/
+pw-conc-e2e-*/
+sandbox-id-*/
+devbridge-agent-*/
 
 # TypeScript incremental build info
 *.tsbuildinfo
