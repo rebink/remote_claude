@@ -46,7 +46,11 @@ export interface AgentOptions {
   auditLog: AuditLog;
 }
 
-/** Count this user's audited turns within the trailing window. */
+/**
+ * Count this user's audited turns within the trailing window.
+ * NOTE: only completed (audited) turns count toward the rate limit — in-flight
+ * and errored turns are not recorded, so they do not consume the budget.
+ */
 function countRecentRequests(auditLog: AuditLog, user: string, windowMs: number): number {
   const cutoff = Date.now() - windowMs;
   return auditLog
