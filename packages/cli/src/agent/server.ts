@@ -23,6 +23,7 @@ import { TurnState } from './turn-state.ts';
 import { createHash } from 'node:crypto';
 import type { AuditLog } from './audit-log.ts';
 import { countDiffLines } from './diff-stats.ts';
+import { evaluatePolicy } from './policy.ts';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -43,6 +44,14 @@ export interface AgentOptions {
   concurrency?: ConcurrencyManager;
   /** Audit log sink. Required — use NoopAuditLog in tests that don't care. */
   auditLog: AuditLog;
+}
+
+/** Count this user's audited turns within the trailing window. */
+function countRecentRequests(auditLog: AuditLog, user: string, windowMs: number): number {
+  const cutoff = Date.now() - windowMs;
+  return auditLog
+    .readAll()
+    .filter((e) => e.user === user && Date.parse(e.ts) >= cutoff).length;
 }
 
 const AskBody = z.object({
@@ -158,6 +167,17 @@ export function buildServer(opts: AgentOptions) {
     }
     const { prompt, project } = parsed.data;
     const username = req.username!;
+    {
+      const policy = opts.usersStore.getPolicy(username);
+      const recentCount = policy.rateLimit
+        ? countRecentRequests(opts.auditLog, username, policy.rateLimit.windowMs)
+        : 0;
+      const decision = evaluatePolicy(policy, { project, recentCount });
+      if (!decision.allowed) {
+        reply.code(403);
+        return { error: decision.code, message: decision.message };
+      }
+    }
     const userRoot = resolve(opts.projectsRoot, username);
     const projectDir = resolve(userRoot, project);
     if (!projectDir.startsWith(userRoot + sep)) {
@@ -262,6 +282,16 @@ export function buildServer(opts: AgentOptions) {
     }
     const body = parsed.data;
     const username = req.username!;
+    {
+      const policy = opts.usersStore.getPolicy(username);
+      const recentCount = policy.rateLimit
+        ? countRecentRequests(opts.auditLog, username, policy.rateLimit.windowMs)
+        : 0;
+      const decision = evaluatePolicy(policy, { project: body.projectName, recentCount });
+      if (!decision.allowed) {
+        return reply.status(403).send({ ok: false, code: decision.code, message: decision.message });
+      }
+    }
     const userRoot = resolve(opts.projectsRoot, username);
     const cwd = resolve(userRoot, body.projectName);
     if (!cwd.startsWith(userRoot + sep)) {
