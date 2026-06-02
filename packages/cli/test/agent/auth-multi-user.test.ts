@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { resolveUserFromHeader } from '../../src/agent/auth.ts';
 import { UsersStore } from '../../src/agent/users-store.ts';
 import { buildServer } from '../../src/agent/server.ts';
+import { NoopAuditLog } from '../../src/agent/audit-log.ts';
 
 describe('resolveUserFromHeader', () => {
   let dir: string;
@@ -68,6 +69,7 @@ describe('server auth hook (multi-user)', () => {
       aiArgs: [],
       timeoutSec: 5,
       version: 'x',
+      auditLog: new NoopAuditLog(),
     });
   }
 

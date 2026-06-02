@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { buildServer } from '../../src/agent/server.ts';
 import { UsersStore } from '../../src/agent/users-store.ts';
 import { runWhoami } from '../../src/commands/whoami.ts';
+import { NoopAuditLog } from '../../src/agent/audit-log.ts';
 
 describe('patchwire whoami', () => {
   let dir: string;
@@ -25,6 +26,7 @@ describe('patchwire whoami', () => {
     app = buildServer({
       usersStore: store, projectsRoot,
       aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: '0-test',
+      auditLog: new NoopAuditLog(),
     });
     const addr = await app.listen({ host: '127.0.0.1', port: 0 });
     port = Number(addr.split(':').pop());

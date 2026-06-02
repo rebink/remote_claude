@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { buildServer } from '../../src/agent/server.ts';
 import { UsersStore } from '../../src/agent/users-store.ts';
+import { NoopAuditLog } from '../../src/agent/audit-log.ts';
 
 describe('per-user paths end-to-end', () => {
   let dir: string;
@@ -40,6 +41,7 @@ describe('per-user paths end-to-end', () => {
     app = buildServer({
       usersStore: store, projectsRoot: dir,
       aiCommand: 'sh', aiArgs: ['-c', 'true'], timeoutSec: 5, version: 'e2e',
+      auditLog: new NoopAuditLog(),
     });
   });
   afterEach(async () => {

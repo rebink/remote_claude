@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { buildServer } from '../../src/agent/server.ts';
 import { UsersStore } from '../../src/agent/users-store.ts';
 import { ConcurrencyManager } from '../../src/agent/concurrency.ts';
+import { NoopAuditLog } from '../../src/agent/audit-log.ts';
 
 describe('concurrency end-to-end', () => {
   let dir: string;
@@ -40,6 +41,7 @@ describe('concurrency end-to-end', () => {
       aiArgs: ['-c', 'sleep 0.3'], // each "claude" run takes ~300ms
       timeoutSec: 5, version: 'e2e',
       concurrency: new ConcurrencyManager({ globalCap: 1, perUserCap: 1 }),
+      auditLog: new NoopAuditLog(),
     });
   });
   afterEach(async () => {
