@@ -26,9 +26,11 @@ export async function runAsk(cwd: string, prompt: string, opts: AskOptions = {})
   }
 
   const client = new AgentClient(cfg);
-  log.step('Asking Patchwire…');
   const askStart = Date.now();
-  const res = await client.ask({ prompt, project: cfg.project });
+  const res = await client.ask({ prompt, project: cfg.project }, (e) => {
+    if (e.type === 'queued') log.step(`Queued — position ${e.position}…`);
+    else if (e.type === 'accepted') log.step('Asking Patchwire…');
+  });
   log.ok(`Remote run finished in ${res.durationMs}ms (CLI total ${Date.now() - askStart}ms)`);
 
   if (res.exitCode !== 0) {

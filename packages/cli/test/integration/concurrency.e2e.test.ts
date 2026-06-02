@@ -7,6 +7,18 @@ import { buildServer } from '../../src/agent/server.ts';
 import { UsersStore } from '../../src/agent/users-store.ts';
 import { ConcurrencyManager } from '../../src/agent/concurrency.ts';
 import { NoopAuditLog } from '../../src/agent/audit-log.ts';
+import type { AskEvent } from '@patchwire/protocol';
+
+/** Pull the `queueWaitMs` from the streamed NDJSON `/ask` `accepted` event. */
+function askQueueWaitMs(payload: string): number {
+  const accepted = payload
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => JSON.parse(l) as AskEvent)
+    .find((e) => e.type === 'accepted');
+  return accepted?.type === 'accepted' ? accepted.queueWaitMs : 0;
+}
 
 describe('concurrency end-to-end', () => {
   let dir: string;
@@ -64,8 +76,8 @@ describe('concurrency end-to-end', () => {
     ]);
     expect(a.statusCode).toBe(200);
     expect(b.statusCode).toBe(200);
-    const aWait = Number(a.headers['x-patchwire-queue-wait-ms'] ?? '0');
-    const bWait = Number(b.headers['x-patchwire-queue-wait-ms'] ?? '0');
+    const aWait = askQueueWaitMs(a.payload);
+    const bWait = askQueueWaitMs(b.payload);
     // One of them ran first (wait ≈ 0), the other waited at least the fake AI duration (≈ 300ms).
     const waits = [aWait, bWait].sort((x, y) => x - y);
     expect(waits[0]).toBeLessThan(150);
