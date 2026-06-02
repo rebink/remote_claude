@@ -3,21 +3,10 @@ import { join } from 'node:path';
 import type { Command } from 'commander';
 import { readEntries, type LogFilter } from '../agent/log-reader.ts';
 import type { AuditEntry, AskAuditEntry, ChatAuditEntry } from '../agent/audit-log.ts';
-
-const DURATION_RE = /^(\d+)\s*(s|m|h|d)$/;
+import { parseDurationMs } from '../lib/duration.ts';
 
 export function parseSince(value: string): number {
-  const m = value.match(DURATION_RE);
-  if (!m) {
-    throw new Error(`--since must look like '15m', '6h', '7d', '30s' (got '${value}')`);
-  }
-  const n = Number(m[1]);
-  const unit = m[2];
-  const ms = unit === 's' ? 1000
-    : unit === 'm' ? 60 * 1000
-    : unit === 'h' ? 60 * 60 * 1000
-    : 24 * 60 * 60 * 1000;
-  return Date.now() - n * ms;
+  return Date.now() - parseDurationMs(value);
 }
 
 function basePath(): string {
