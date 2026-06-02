@@ -175,7 +175,10 @@ HTTP_CODE="$(curl -s -o "$RESP_FILE" -w '%{http_code}' \
 # Validate JSON shape (CommonJS — no jq, no ESM ambiguity).
 PW_USE_REAL_CLAUDE="${PW_USE_REAL_CLAUDE:-0}" node -e '
 const { readFileSync } = require("fs");
-const body = JSON.parse(readFileSync(process.argv[1], "utf8"));
+const lines = readFileSync(process.argv[1], "utf8").trim().split("\n").filter(Boolean);
+const events = lines.map((l) => JSON.parse(l));
+const body = events.find((e) => e.type === "result");
+if (!body) { console.error("no result event in stream; got:", events.map((e) => e.type).join(",")); process.exit(1); }
 const must = ["diff", "files", "durationMs", "stdout", "stderr", "exitCode"];
 for (const k of must) if (!(k in body)) { console.error("missing key:", k); process.exit(1); }
 if (typeof body.diff !== "string" || body.diff.length === 0) { console.error("diff was empty"); process.exit(1); }
