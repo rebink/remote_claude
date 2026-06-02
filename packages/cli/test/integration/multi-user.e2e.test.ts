@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildServer } from '../../src/agent/server.ts';
 import { UsersStore } from '../../src/agent/users-store.ts';
+import { NoopAuditLog } from '../../src/agent/audit-log.ts';
 
 describe('multi-user end-to-end', () => {
   let dir: string;
@@ -17,6 +18,7 @@ describe('multi-user end-to-end', () => {
     app = buildServer({
       usersStore: store, projectsRoot: dir,
       aiCommand: 'sh', aiArgs: [], timeoutSec: 5, version: 'e2e',
+      auditLog: new NoopAuditLog(),
     });
   });
   afterEach(async () => {

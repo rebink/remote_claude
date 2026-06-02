@@ -71,6 +71,9 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 | `PW_TIMEOUT_SEC` | no | `600` | Hard kill timeout for `claude`. |
 | `PW_MAX_CONCURRENT_TOTAL` | no | `3` | Maximum simultaneous Claude runs across all users. Requests beyond this cap wait FIFO. |
 | `PW_MAX_CONCURRENT_PER_USER` | no | `1` | Maximum simultaneous Claude runs from any one user. Prevents single-user hogging when the global cap allows it. |
+| `PW_AUDIT_LOG` | no | `~/.patchwire/agent.log` | JSONL audit log path. One line per successful `/ask` or `/chat` turn. No plaintext prompts (only sha256). |
+| `PW_AUDIT_LOG_MAX_BYTES` | no | `52428800` (50 MiB) | Size threshold that triggers rotation to `.1`. |
+| `PW_AUDIT_LOG_MAX_FILES` | no | `3` | How many rotated tail files to keep (`.1`, `.2`, `.3`). Older files are dropped. |
 
 ## Laptop environment variables
 

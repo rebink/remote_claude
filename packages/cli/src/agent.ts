@@ -6,9 +6,11 @@ import { UsersStore } from './agent/users-store.ts';
 import { migrateIfNeeded } from './agent/migrate-v01.ts';
 import { migrateProjectsToDefault } from './agent/migrate-projects.ts';
 import { ConcurrencyManager } from './agent/concurrency.ts';
+import { JsonlAuditLog } from './agent/audit-log.ts';
 import { tryDisableKeychainAutoLock } from './agent/keychain.ts';
 import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 import { registerUserCommands } from './commands/user.ts';
+import { registerAgentLogCommand } from './commands/agent-log.ts';
 
 const VERSION = '0.1.0';
 
@@ -47,6 +49,19 @@ async function runServe(): Promise<void> {
   }
   const concurrency = new ConcurrencyManager({ globalCap, perUserCap });
 
+  const auditLogPath = process.env.PW_AUDIT_LOG ?? join(homedir(), '.patchwire', 'agent.log');
+  const auditMaxBytes = process.env.PW_AUDIT_LOG_MAX_BYTES
+    ? Number(process.env.PW_AUDIT_LOG_MAX_BYTES)
+    : undefined;
+  const auditMaxFiles = process.env.PW_AUDIT_LOG_MAX_FILES
+    ? Number(process.env.PW_AUDIT_LOG_MAX_FILES)
+    : undefined;
+  const auditLog = new JsonlAuditLog({
+    path: auditLogPath,
+    ...(auditMaxBytes !== undefined ? { maxBytes: auditMaxBytes } : {}),
+    ...(auditMaxFiles !== undefined ? { maxFiles: auditMaxFiles } : {}),
+  });
+
   const app = buildServer({
     usersStore,
     projectsRoot,
@@ -55,6 +70,7 @@ async function runServe(): Promise<void> {
     timeoutSec,
     version: VERSION,
     concurrency,
+    auditLog,
   });
 
   if (migration.migrated) {
@@ -99,6 +115,7 @@ async function runServe(): Promise<void> {
     const addr = await app.listen({ host, port });
     app.log.info(`patchwire-agent listening on ${addr}`);
     app.log.info(`concurrency: global=${globalCap}, per_user=${perUserCap}`);
+    app.log.info(`audit log: ${auditLogPath}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -132,6 +149,7 @@ program
   .action(async () => { await runDaemonUninstall(); });
 
 registerUserCommands(program);
+registerAgentLogCommand(program);
 
 program.parseAsync(process.argv).catch((err: Error) => {
   console.error(err.message);
