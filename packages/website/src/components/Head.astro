@@ -1,0 +1,19 @@
+---
+// Starlight `<Head>` component override — preserves all default
+// Starlight head tags and appends Astro's <ClientRouter /> so docs
+// pages participate in the same view-transition layer as the
+// landing page. This is what lets the brand wordmark morph in
+// place during navigation instead of flashing/swapping.
+//
+// IMPORTANT: must forward Astro.props to Default — Starlight passes
+// `entry`, `lang`, `siteTitle` via props and Default destructures
+// them. Without the spread, Default crashes on the auto-404 route.
+import Default from '@astrojs/starlight/components/Head.astro';
+import { ClientRouter } from 'astro:transitions';
+// Type `Astro.props` as Starlight's route data so the `{...Astro.props}`
+// forward below type-checks (Starlight's documented override pattern).
+import type { Props } from '@astrojs/starlight/props';
+---
+
+<Default {...Astro.props}><slot /></Default>
+<ClientRouter />

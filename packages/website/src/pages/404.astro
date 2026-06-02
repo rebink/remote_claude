@@ -1,0 +1,295 @@
+---
+import '../styles/custom.css';
+import { ClientRouter } from 'astro:transitions';
+
+const repo = 'https://github.com/rebink/patchwire';
+---
+
+<!doctype html>
+<html lang="en" class="rc-brand rc-dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0E0E10" />
+    <title>404 · Patchwire</title>
+    <meta name="description" content="The wire crossed. That page isn't here." />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <ClientRouter />
+  </head>
+  <body class="page-404">
+    <a href="#main" class="skip-link">Skip to content</a>
+
+    <header class="nf-bar">
+      <a class="nf-wordmark" href="/" aria-label="Patchwire home">
+        <svg width="26" height="26" viewBox="0 0 22 22" aria-hidden="true">
+          <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
+          <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
+          <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.4 2"/>
+          <circle cx="11" cy="11" r="1.5" fill="#C9F564"/>
+        </svg>
+        <span>Patchwire</span>
+      </a>
+      <span class="nf-status">
+        <span class="nf-dot"></span>
+        404 / not-found
+      </span>
+    </header>
+
+    <main id="main" class="nf-wrap">
+      <div class="nf-grid-bg" aria-hidden="true"></div>
+
+      <p class="nf-eyebrow">err · route not found</p>
+
+      <h1 class="nf-h">
+        <span class="nf-line">The&nbsp;wire</span>
+        <span class="nf-line"><em>crossed.</em></span>
+      </h1>
+
+      <p class="nf-sub">
+        That URL didn&rsquo;t resolve to a page on this site. The address may
+        be stale, mistyped, or you may have arrived here via a broken inbound link.
+      </p>
+
+      <div class="nf-term" aria-hidden="true">
+        <header class="nf-term-bar">
+          <span class="nf-term-dots">
+            <span></span><span></span><span></span>
+          </span>
+          <span class="nf-term-path">~/patchwire</span>
+        </header>
+        <pre class="nf-term-body"><span class="nf-com"># try one of these instead</span>
+$ patchwire <span class="nf-arg">quickstart</span>     <span class="nf-com">→ /quickstart/</span>
+$ patchwire <span class="nf-arg">architecture</span>   <span class="nf-com">→ /architecture/</span>
+$ patchwire <span class="nf-arg">commands</span>       <span class="nf-com">→ /commands/</span>
+$ patchwire <span class="nf-arg">install-extension</span> <span class="nf-com">→ /install-extension/</span></pre>
+      </div>
+
+      <nav class="nf-routes" aria-label="Useful destinations">
+        <a href="/">Home</a>
+        <span class="nf-sep" aria-hidden="true">·</span>
+        <a href="/quickstart/">Quickstart</a>
+        <span class="nf-sep" aria-hidden="true">·</span>
+        <a href="/architecture/">Architecture</a>
+        <span class="nf-sep" aria-hidden="true">·</span>
+        <a href="/install-extension/">VS Code</a>
+        <span class="nf-sep" aria-hidden="true">·</span>
+        <a href={repo}>GitHub ↗</a>
+      </nav>
+    </main>
+
+    <style>
+      :root {
+        --gutter: clamp(20px, 4.5vw, 64px);
+        --max: 920px;
+      }
+      html.rc-brand body.page-404 {
+        background: var(--rc-ink);
+        color: var(--rc-bone);
+        font-family: var(--rc-font-body);
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        -webkit-font-smoothing: antialiased;
+      }
+      .page-404 ::selection { background: var(--rc-phosphor); color: var(--rc-ink); }
+
+      .skip-link {
+        position: absolute;
+        top: -100px;
+        left: 16px;
+        z-index: 100;
+        padding: 10px 16px;
+        background: var(--rc-phosphor);
+        color: var(--rc-ink);
+        font-family: var(--rc-font-mono);
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: top 0.18s ease;
+      }
+      .skip-link:focus-visible { top: 12px; outline: 2px solid var(--rc-ink); outline-offset: 2px; }
+
+      .page-404 a:focus-visible {
+        outline: 2px solid var(--rc-phosphor);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      .nf-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px var(--gutter);
+        border-bottom: 1px solid var(--rc-hairline-ink);
+      }
+      .nf-wordmark {
+        display: inline-flex; align-items: center; gap: 10px;
+        font-family: var(--rc-font-display);
+        font-weight: 500; font-size: 17px; line-height: 1; letter-spacing: -0.01em;
+        color: var(--rc-bone);
+        text-decoration: none;
+        transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+        view-transition-name: brand-wordmark;
+      }
+      .nf-wordmark svg {
+        transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      .nf-wordmark:hover { transform: translateX(0.5px); }
+      .nf-wordmark:hover svg { transform: translateY(-0.5px) scale(1.04); }
+      .nf-status {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 140, 66, 0.08);
+        border: 1px solid var(--rc-hairline-ink);
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        color: var(--rc-amber);
+      }
+      .nf-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--rc-amber);
+        box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.2);
+      }
+
+      .nf-wrap {
+        position: relative;
+        max-width: var(--max);
+        width: 100%;
+        margin: 0 auto;
+        padding: clamp(56px, 9vw, 96px) var(--gutter);
+        display: grid;
+        gap: 28px;
+        align-content: start;
+      }
+      .nf-grid-bg {
+        position: absolute; inset: 0;
+        background:
+          linear-gradient(rgba(232, 226, 208, 0.025) 1px, transparent 1px) 0 0 / 100% 80px,
+          linear-gradient(90deg, rgba(232, 226, 208, 0.025) 1px, transparent 1px) 0 0 / 80px 100%;
+        mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 0%, transparent 90%);
+        -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 0%, transparent 90%);
+        pointer-events: none;
+      }
+
+      .nf-eyebrow {
+        margin: 0;
+        font-family: var(--rc-font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--rc-amber);
+        position: relative;
+      }
+
+      .nf-h {
+        font-family: var(--rc-font-display);
+        font-weight: 400;
+        font-size: clamp(56px, 11vw, 132px);
+        line-height: 0.94;
+        letter-spacing: -0.04em;
+        color: var(--rc-bone);
+        margin: 0;
+        font-variation-settings: 'SOFT' 30, 'opsz' 144;
+        max-width: 12ch;
+        position: relative;
+      }
+      .nf-line { display: block; }
+      .nf-h em {
+        font-style: italic;
+        font-weight: 380;
+        color: var(--rc-amber);
+        font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144;
+      }
+
+      .nf-sub {
+        font-size: clamp(16px, 1.4vw, 19px);
+        line-height: 1.5;
+        color: var(--rc-bone-dim);
+        margin: 0;
+        max-width: 56ch;
+        position: relative;
+      }
+
+      .nf-term {
+        background: #131318;
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 12px;
+        overflow: hidden;
+        max-width: 720px;
+        box-shadow:
+          0 1px 0 rgba(232, 226, 208, 0.04) inset,
+          0 30px 80px -30px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 140, 66, 0.04);
+        position: relative;
+      }
+      .nf-term-bar {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 16px;
+        background: #0F0F12;
+        border-bottom: 1px solid var(--rc-hairline-ink);
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px;
+        color: var(--rc-bone-dim);
+      }
+      .nf-term-dots { display: inline-flex; gap: 6px; }
+      .nf-term-dots span {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        background: rgba(232, 226, 208, 0.16);
+      }
+      .nf-term-dots span:nth-child(1) { background: #FF5F57; opacity: 0.85; }
+      .nf-term-dots span:nth-child(2) { background: #FEBC2E; opacity: 0.85; }
+      .nf-term-dots span:nth-child(3) { background: #28C840; opacity: 0.85; }
+      .nf-term-path { opacity: 0.7; }
+      .nf-term-body {
+        padding: 18px 20px 22px;
+        font-family: var(--rc-font-mono);
+        font-size: clamp(12px, 1vw, 13.5px);
+        line-height: 1.85;
+        color: var(--rc-bone);
+        margin: 0;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+      }
+      .nf-com { color: var(--rc-bone-dim); opacity: 0.7; }
+      .nf-arg { color: var(--rc-phosphor); }
+
+      .nf-routes {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-family: var(--rc-font-mono);
+        font-size: 13px;
+        color: var(--rc-bone);
+        position: relative;
+        margin-top: 4px;
+      }
+      .nf-routes a {
+        color: var(--rc-bone);
+        text-decoration: none;
+        opacity: 0.78;
+        transition: opacity 0.15s ease, color 0.15s ease;
+      }
+      .nf-routes a:hover { opacity: 1; color: var(--rc-phosphor); }
+      .nf-sep { opacity: 0.35; }
+
+      @media (max-width: 900px) {
+        /* Match landing's mobile topbar padding */
+        .nf-bar { padding: 14px var(--gutter); }
+      }
+      @media (max-width: 720px) {
+        .nf-wrap { padding-block: 56px; gap: 22px; }
+        .nf-h { font-size: clamp(44px, 13vw, 84px); }
+      }
+    </style>
+  </body>
+</html>

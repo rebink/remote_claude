@@ -7,14 +7,14 @@ description: What's protected, by what, and where the trust boundaries live.
 
 Patchwire is **single-developer** software. The threat model assumes:
 
-- One person controls both the laptop and the Mac Mini.
+- One person controls both the laptop and the remote.
 - Both machines live behind your home firewall (or, ideally, inside a Tailscale tailnet).
 - The attacker is *not* on your private network. If they are, you have bigger problems than Patchwire.
 
 It does *not* assume:
 
-- A multi-tenant Mac Mini with hostile users — that's out of scope for v1.
-- Public internet exposure — strongly discouraged (see [Networking](/networking/)).
+- A multi-tenant remote with hostile users, that's out of scope for v1.
+- Public internet exposure, strongly discouraged (see [Networking](/networking/)).
 
 ## Layers of defense
 
@@ -33,7 +33,7 @@ If any one layer fails, the next still applies. We rely on no single check.
 
 | Channel | Protected by |
 | --- | --- |
-| Laptop ↔ Mini transport | Tailscale's WireGuard (or your equivalent) |
+| Laptop ↔ remote transport | Tailscale's WireGuard (or your equivalent) |
 | Bearer token in HTTP | Same as above. **Plain HTTP** is fine *only* over Tailscale/VPN. If you ever expose the agent on the public internet, terminate TLS in front (nginx + Let's Encrypt) and rotate the token. |
 | SSH | Standard SSH host keys + your client key. |
 
@@ -48,7 +48,7 @@ The agent refuses to run if the project's git working tree is dirty (`409`). Why
 1. We use `git diff --cached` to capture changes *the AI made*. Any pre-existing dirt would corrupt that diff.
 2. We restore the tree afterwards with `git reset --hard HEAD && git clean -fd`. If there were pre-existing untracked files, that reset would destroy them. The 409 prevents that.
 
-If you ever see a `409`, **don't** force the run — investigate. Either the previous run failed in a way that didn't reset, or someone (you, a hook, another tool) edited the project on the Mini.
+If you ever see a `409`, **don't** force the run, investigate. Either the previous run failed in a way that didn't reset, or someone (you, a hook, another tool) edited the project on the remote.
 
 ## What we don't do
 
@@ -60,12 +60,12 @@ If you ever see a `409`, **don't** force the run — investigate. Either the pre
 ## Token handling
 
 - `patchwire-agent install` generates a 32-byte hex token (256 bits of entropy).
-- Stored on the Mini in `~/.patchwire/agent.env` and embedded in the launchd plist (which lives under `~/Library/LaunchAgents` — only your user can read it).
+- Stored on the remote in `~/.patchwire/agent.env` and embedded in the launchd plist (which lives under `~/Library/LaunchAgents`, only your user can read it).
 - Stored on the laptop in `~/.patchwire/env`, chmod 600.
 - Never written to git (the `.gitignore` is auto-configured by `setup`).
 - Comparison is `crypto.timingSafeEqual` to defeat timing attacks.
 
-To rotate: regenerate on the Mini (`patchwire-agent install --token <new>`) and update `~/.patchwire/env` on the laptop. Re-source.
+To rotate: regenerate on the remote (`patchwire-agent install --token <new>`) and update `~/.patchwire/env` on the laptop. Re-source.
 
 ## Per-user tokens (v0.2+)
 
@@ -82,7 +82,7 @@ hash. Existing laptops keep working with no config change.
 
 ## What Anthropic sees
 
-Same as if you ran `claude` locally. Claude Code on the Mini sends prompts and relevant file context to Anthropic's API per its own data policy. Patchwire doesn't add to or subtract from that surface. Read [Anthropic's data handling docs](https://docs.claude.com/en/docs/claude-code/security) for specifics.
+Same as if you ran `claude` locally. Claude Code on the remote sends prompts and relevant file context to Anthropic's API per its own data policy. Patchwire doesn't add to or subtract from that surface. Read [Anthropic's data handling docs](https://docs.claude.com/en/docs/claude-code/security) for specifics.
 
 ## What we'd like to add
 

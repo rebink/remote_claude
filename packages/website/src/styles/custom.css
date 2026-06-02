@@ -31,7 +31,8 @@
   --rc-charcoal:     #1A1A1F;
   --rc-charcoal-dim: #4A4A52;   /* dimmer body copy on paper */
   --rc-bone:         #E8E2D0;
-  --rc-bone-dim:     rgba(232, 226, 208, 0.62);
+  --rc-bone-dim:     rgba(232, 226, 208, 0.72);  /* bumped from 0.62 — tighter contrast on small mono labels */
+  --rc-bone-soft:    rgba(232, 226, 208, 0.55);  /* intentionally softer for decorative/ambient text only */
   --rc-phosphor:     #C9F564;
   --rc-phosphor-dim: #8EAE3F;
   --rc-amber:        #FF8C42;
@@ -208,25 +209,177 @@ html.rc-brand ::selection {
   color: var(--rc-ink);
 }
 
-/* ── HEADER ───────────────────────────────────────────────────── */
-.header {
-  border-bottom: 1px solid var(--sl-color-hairline-light);
-  background: var(--sl-color-bg-nav);
-  backdrop-filter: blur(8px);
+/* ── PHOSPHOR BRAND STRIP ────────────────────────────────────────
+   A 1.5px phosphor line pinned to the top edge of every page. The
+   brand's signature signal: subtle but always present, echoes the
+   phosphor dot inside the wordmark. Same rule applies on landing,
+   docs, and 404 because all three pull this stylesheet. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: var(--rc-phosphor);
+  z-index: 200;
+  pointer-events: none;
 }
 
-/* Wordmark next to logo — uses display serif at correct color */
+/* ── HEADER ─────────────────────────────────────────────────────
+   Goal: zero perceived "jump" of the wordmark between the
+   landing page (custom .topbar in index.astro) and any Starlight
+   docs page (Starlight's <header class="header">). Match
+   horizontal gutter, vertical padding, logo size, gap, font.
+
+   NOTE: Starlight uses class="header" on BOTH the outer <header>
+   and an inner <div>. We must target only the outer with
+   `header.header` and zero out the inner's padding. */
+header.header {
+  border-bottom: 1px solid var(--sl-color-hairline-light);
+  background: var(--sl-color-bg-nav);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  /* match landing topbar gutter: clamp(20px, 4.5vw, 64px) */
+  padding: 0 !important;
+  height: auto !important;
+}
+
+/* The inner grid that holds title + search + right-group */
+header.header > div.header {
+  padding: 14px clamp(20px, 4.5vw, 64px) !important;
+  gap: 24px !important;
+  align-items: center !important;
+}
+
+/* Mobile / tablet: match the landing topbar's tighter 14px block padding
+   and force the inner row to a fixed min-height so the wordmark Y stays
+   at ~15.5px to match `.topbar` mobile geometry. Without this, Starlight's
+   menu button (~32px tall) inflates the centered row and the wordmark
+   sits 3-4px lower than on the landing — the jump the user reported. */
+@media (max-width: 900px) {
+  header.header > div.header {
+    padding: 10.5px clamp(20px, 4.5vw, 64px) !important;
+    min-height: 32px;
+    align-items: center !important;
+  }
+  /* Tame Starlight's mobile menu button so it doesn't dominate the row */
+  header.header starlight-menu-button button {
+    padding: 4px !important;
+  }
+}
+
+/* Wordmark — must visually equal the landing page's .wordmark */
 .site-title {
   font-family: var(--rc-font-display);
   font-weight: 500;
-  font-size: 1.05rem;
+  font-size: 17px !important;        /* matches landing .wordmark */
+  line-height: 1 !important;         /* matches landing — Starlight inherits 1.75 which bloats container */
   letter-spacing: -0.01em;
+  gap: 10px !important;              /* matches landing .wordmark */
+  /* Critical for view-transition stability: without this, .site-title's
+     flex `align-items: normal` (= stretch) stretches the "Patchwire"
+     span to 26px tall to match the icon, while landing's .wordmark
+     uses align-items: center so the span stays its natural 17px.
+     The mismatched span box height makes the title text jitter
+     during the cross-page wordmark morph. */
+  align-items: center !important;
   color: var(--sl-color-text-accent) !important;
+  text-decoration: none;
+  /* Pin the wordmark vertical center to match the landing topbar's
+     wordmark Y. The parent .title-wrapper centers content within a
+     ~25px row that sits below landing's wordmark Y; we shift via
+     translate (NOT margin) to avoid layout impact, and we keep the
+     baseline translateY here so the hover transform can still add
+     translateX without losing the Y offset. */
+  align-self: center;
+  --pw-wm-y: -4.25px;
+  transform: translateY(var(--pw-wm-y));
+  transition: color 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+              transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  /* Same name as the landing .wordmark → seamless cross-page morph */
+  view-transition-name: brand-wordmark;
+}
+
+/* Starlight's .title-wrapper sets `overflow: clip` which chops the
+   top of the wordmark when we transform-translate above the inner
+   row's bounds. Let it render in full. */
+.title-wrapper {
+  overflow: visible !important;
+}
+
+/* The logo image — Starlight renders it via <img>; lock it to 26px
+   to match the landing's inline 26×26 SVG (bumped for legibility). */
+.site-title img,
+.site-title svg {
+  width: 26px !important;
+  height: 26px !important;
+  color: currentColor;
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Hover micro-interaction: subtle x-translate of the whole wordmark,
+   the logo lifts a hair — all via transform/opacity, GPU-safe.
+   Compose translateX with the existing translateY (via CSS var)
+   so the Y baseline isn't reset on hover. */
+.site-title:hover { transform: translate(0.5px, var(--pw-wm-y)); }
+.site-title:hover img,
+.site-title:hover svg { transform: translateY(-0.5px) scale(1.04); }
+
+.site-title:focus-visible {
+  outline: 2px solid var(--rc-phosphor);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 :root[data-theme='light'] .site-title { color: var(--rc-ink) !important; }
 :root[data-theme='dark']  .site-title,
 :root:not([data-theme='light']) .site-title { color: var(--rc-bone) !important; }
+
+/* The logo SVG now uses currentColor — so it inherits .site-title's
+   theme-aware color automatically across light/dark Starlight. */
+
+/* ── VIEW TRANSITIONS ────────────────────────────────────────────
+   Astro's <ClientRouter /> hands page-to-page navigations to the
+   browser's View Transitions API. The default morph is 0.25s
+   linear — we tune it to match the rest of the brand's motion
+   language (spring-like cubic-bezier, slightly longer dwell on
+   the named wordmark so the morph reads as intentional).        */
+@keyframes pw-vt-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pw-vt-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.38s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+::view-transition-old(root) { animation-name: pw-vt-fade-out; }
+::view-transition-new(root) { animation-name: pw-vt-fade-in; }
+
+/* The brand wordmark gets a longer, more obvious morph so the
+   logo continuity is visible to the eye. */
+::view-transition-old(brand-wordmark),
+::view-transition-new(brand-wordmark) {
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Honor the user's motion preference: no transition at all. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(brand-wordmark),
+  ::view-transition-new(brand-wordmark) {
+    animation-duration: 0.001s;
+    animation-name: none;
+  }
+}
 
 /* Search field — embrace the brand */
 site-search button[data-open-modal] {

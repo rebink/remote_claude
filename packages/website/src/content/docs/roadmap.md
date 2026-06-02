@@ -26,16 +26,16 @@ description: What's shipped, what's next, and what's intentionally deferred.
 
 ## Mid-term (v0.3.x)
 
-- 📋 Smart context selection — pre-trim the prompt to imports/dependencies of the touched files (Dart-aware first, language-by-language)
-- 📋 VS Code extension — surface the diff preview in the editor side panel
+- 📋 Smart context selection, pre-trim the prompt to imports/dependencies of the touched files (Dart-aware first, language-by-language)
+- 📋 VS Code extension, surface the diff preview in the editor side panel
 - 📋 Optional TLS for the agent (self-signed + cert pinning)
-- 📋 Multiple agents per laptop (e.g. one Mini at home, one at the office)
+- 📋 Multiple agents per laptop (e.g. one remote at home, one at the office)
 
 ## Long-term (vision)
 
-- 💭 Multi-developer isolation on a single Mini (per-user `PW_PROJECTS_ROOT`, per-user tokens, fair queuing)
+- 💭 Multi-developer isolation on a single remote (per-user `PW_PROJECTS_ROOT`, per-user tokens, fair queuing)
 - 💭 Plugin layer for non-Claude LLMs (anything with a "edit files in cwd" mode)
-- 💭 Hosted/cloud agent option for teams without a Mini
+- 💭 Hosted/cloud agent option for teams without a remote
 - 💭 Pre-flight `git apply --check` against your laptop's *local* tree as part of the agent response, so you know up-front if a patch will need rebasing
 
 ## Explicit non-goals
