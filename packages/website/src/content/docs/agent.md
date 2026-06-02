@@ -94,10 +94,13 @@ The agent caps simultaneous Claude runs to avoid melting the box under team load
 - `PW_MAX_CONCURRENT_PER_USER` (default `1`) — per-user ceiling so no single
   developer hogs all slots while teammates wait.
 
-Requests that exceed either cap wait in arrival order (FIFO). The response carries:
+Requests that exceed either cap wait in arrival order (FIFO). Because `/ask` is a
+streamed NDJSON endpoint (see "Streamed `/ask`" below), queue state is delivered
+as events rather than headers:
 
-- `X-Patchwire-Queue-Wait-Ms` — how long the request waited (always present).
-- `X-Patchwire-Queue-Position-At-Entry` — position in the global queue at entry (only when wait > 0).
+- a one-shot `queued` event carrying the global-queue `position`, emitted only
+  when the request actually waits;
+- an `accepted` event carrying `queueWaitMs` once a slot is granted.
 
 A read-only `GET /queue` endpoint returns the current snapshot:
 
@@ -109,6 +112,24 @@ A read-only `GET /queue` endpoint returns the current snapshot:
   "queued": [{"user": "bob", "position": 1}]
 }
 ```
+
+### Streamed `/ask` (v0.2.4+)
+
+`POST /ask` responds with an NDJSON stream (`application/x-ndjson`), one JSON
+event per line:
+
+- `{"type":"queued","position":N}` — emitted once, only when the request waits
+  behind others on the global concurrency cap.
+- `{"type":"accepted","queueWaitMs":N}` — a slot was granted; the run is starting.
+- `{"type":"result","diff":…,"files":[…],"durationMs":N,"stdout":…,"stderr":…,"exitCode":N}`
+  — terminal success.
+- `{"type":"error","code":…,"message":…}` — terminal failure mid-run
+  (`run_failed`, `diff_failed`, or `internal`).
+
+Pre-flight rejections (bad body, missing project, not a git repo, dirty tree) are
+still returned as plain HTTP status codes (400/404/412/409) before the stream
+begins. The `patchwire ask` CLI surfaces the queue position live, e.g.
+`Queued — position 2…`.
 
 ### Audit log (v0.2.3+)
 
