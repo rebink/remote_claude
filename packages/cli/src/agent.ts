@@ -12,8 +12,7 @@ import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 import { registerUserCommands } from './commands/user.ts';
 import { registerAgentLogCommand } from './commands/agent-log.ts';
 import { registerUsageCommand } from './commands/usage.ts';
-
-const VERSION = '0.1.0';
+import { VERSION } from './version.ts';
 
 function envRequired(name: string): string {
   const v = process.env[name];

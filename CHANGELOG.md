@@ -5,17 +5,25 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] — 2026-06-03
+
+### Added
+- `patchwire-agent usage` — per-user activity summary (requests, accepted, lines changed, duration) from the audit log.
+- Per-user policy enforcement — project allowlist and rate limit, configured via `patchwire-agent user policy …`, enforced on `/ask` and `/chat`.
 
 ### Changed
-- **BREAKING:** Rebranded from "Remote Claude" to "Patchwire". The
-  product is the same; only identifiers changed. See the rebrand
-  spec at `docs/specs/2026-05-31-rebrand-to-patchwire-design.md`
-  for the full identifier mapping. Existing users must reinstall
-  under the new package names and migrate `remote-claude.yml` →
-  `patchwire.yml` and `~/.remote-claude/` → `~/.patchwire/`. The
-  launchd service label changed from `com.remote-claude.agent` to
-  `com.patchwire.agent`.
+- **BREAKING:** Rebranded from "Remote Claude" to "Patchwire". The product is the
+  same; only identifiers changed. Existing users must reinstall under the new
+  package names and migrate `remote-claude.yml` → `patchwire.yml` and
+  `~/.remote-claude/` → `~/.patchwire/`. The launchd service label changed from
+  `com.remote-claude.agent` to `com.patchwire.agent`.
+
+### Security
+- The `patchwire-agent install` (launchd) default host is now `127.0.0.1` instead
+  of `0.0.0.0` — network reachability must be opted into via `--host`/`PW_AGENT_HOST`.
+- `/health` no longer discloses the AI binary's absolute path.
+- `/ask` and `/chat` 404 responses no longer disclose server-side project paths.
+- The launchd plist is now written with `0600` permissions.
 
 ## [0.1.0] — 2026-04-30
 
