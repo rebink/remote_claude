@@ -15,9 +15,13 @@ The defensible model (rare in combination):
 1. The agent runs on infrastructure **you** control — never a vendor cloud.
 2. Developers don't need AI credentials; one subscription lives on the server.
 3. The agent works on a clean checkout and never touches the working tree.
-4. Every change returns as a real Git diff; nothing lands without a human.
+4. Every change returns as a real Git diff, applied to the developer's **local**
+   project — so they run and hot-reload Flutter locally as usual; nothing lands
+   without a human.
 5. A team safely shares one expensive AI environment — isolation, queue, and
    (roadmap) audit + cost visibility.
+6. Only the code you sync crosses the wire — sync respects `.gitignore`, so `.env`
+   and secrets never leave the laptop, and the rest of your machine is never read.
 
 **Flutter is the proving ground / origin story, never the product identity.** The
 model is horizontal: any repo, any agent.
@@ -25,8 +29,10 @@ model is horizontal: any repo, any agent.
 **Roadmap tiers:**
 - *High:* queue visibility, diff-review UX, multi-model, usage/cost tracking,
   audit history, policy enforcement.
-- *Medium:* Android device bridge (adb-over-Tailscale), simulator forwarding,
-  build-cache sharing.
+- *Medium:* build-cache sharing (heavy builds on the remote).
+- *Removed (off-model):* the Android device bridge — because the agent's edits are
+  applied **locally**, developers run Flutter on their own machine, so bridging adb
+  to a remote Flutter run is unnecessary. Simulator/device forwarding falls away too.
 - *Low / out of scope:* full remote Flutter dev, Codespaces replacement, remote IDE.
 
 See `docs/marketing-positioning-monetization.md` and
