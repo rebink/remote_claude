@@ -60,7 +60,8 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
   const nodeBin = which('node') ?? '/usr/bin/env node';
   const projectsRoot = opts.projectsRoot ?? process.env.PW_PROJECTS_ROOT ?? join(homedir(), 'workspace');
   const port = opts.port ?? Number(process.env.PW_AGENT_PORT ?? 7878);
-  const host = opts.host ?? process.env.PW_AGENT_HOST ?? '0.0.0.0';
+  // Default to loopback; network reachability (Tailscale/LAN) must be opted into.
+  const host = opts.host ?? process.env.PW_AGENT_HOST ?? '127.0.0.1';
   const token = opts.token ?? process.env.PW_AGENT_TOKEN ?? randomBytes(32).toString('hex');
   const aiBin = opts.aiBin ?? process.env.PW_AI_BIN ?? 'claude';
 
@@ -103,7 +104,7 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
 `;
 
   await mkdir(join(homedir(), 'Library', 'LaunchAgents'), { recursive: true });
-  await writeFile(plistPath(), plist, 'utf8');
+  await writeFile(plistPath(), plist, { encoding: 'utf8', mode: 0o600 });
 
   spawnSync('launchctl', ['unload', plistPath()], { stdio: 'ignore' });
   const load = spawnSync('launchctl', ['load', plistPath()], { encoding: 'utf8' });

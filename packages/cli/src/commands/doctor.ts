@@ -61,7 +61,7 @@ export async function runDoctor(cwd: string): Promise<void> {
         checks.push({
           name: `agent ${cfg.remote.agentUrl}/health`,
           pass: h.ok,
-          detail: `version=${h.version} claude=${h.claude.found ? h.claude.path : 'NOT FOUND'}`,
+          detail: `version=${h.version} claude=${h.claude.found ? 'found' : 'NOT FOUND'}`,
         });
       } catch (err) {
         checks.push({ name: 'agent /health', pass: false, detail: (err as Error).message });
