@@ -5,7 +5,6 @@ import { runSync } from './commands/sync.ts';
 import { runAsk } from './commands/ask.ts';
 import { runApply } from './commands/apply.ts';
 import { runDoctor } from './commands/doctor.ts';
-import { registerDeviceCommands } from './commands/device.ts';
 import { log } from './lib/log.ts';
 import { VERSION } from './version.ts';
 
@@ -214,8 +213,6 @@ program
     const { runWhoami } = await import('./commands/whoami.ts');
     await runWhoami(process.cwd());
   });
-
-registerDeviceCommands(program);
 
 program.parseAsync(process.argv).catch((err: Error) => {
   log.err(err.message);
