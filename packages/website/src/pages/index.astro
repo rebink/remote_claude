@@ -91,9 +91,10 @@ const rev = 'b71dc5e';
         </h1>
 
         <p class="hero-sub reveal">
-          Run Claude, Codex, Aider &mdash; any coding agent &mdash; on machines
-          <strong>you</strong> control. Every change comes back as a reviewable
-          git diff. Built for teams, not individual seats.
+          Your coding agent runs on a machine <strong>you</strong> control and only
+          ever sees the project you sync &mdash; never your <code>.env</code>, never
+          the rest of your laptop. Its edits come back as a git diff applied locally,
+          so your Flutter hot reload and debugger keep working exactly as before.
         </p>
         <p class="hero-tagline reveal">Only diffs cross the wire.</p>
 
@@ -345,14 +346,14 @@ total          902        822   <span class="t-ok">$134.30</span>   <span class=
     <section class="claim">
       <span class="kicker reveal"><span class="kicker-bar"></span>04 · the stance</span>
       <h2 class="claim-h reveal">
-        Your code shouldn&rsquo;t live on someone else&rsquo;s <em>cloud.</em>
+        Only the code you share <em>crosses the wire.</em>
       </h2>
       <p class="claim-sub reveal">
-        Most remote AI coding tools clone your repo onto the vendor&rsquo;s
-        servers. Patchwire runs the agent on a machine <strong>you</strong>
-        control &mdash; your laptop, a homelab, your VPC &mdash; so your codebase
-        never lands on someone else&rsquo;s dev platform. It&rsquo;s AI-agnostic,
-        so you pick the model (local ones included), and only the diff comes back.
+        The agent runs on a machine <strong>you</strong> control and only ever sees
+        the project you sync. Your <code>.env</code>, your secrets, and everything
+        git ignores never leave your laptop &mdash; and the rest of your machine is
+        never touched. It&rsquo;s AI-agnostic (pick any model, local included), and
+        only the resulting diff comes back.
       </p>
 
       <div class="parallel reveal">
@@ -398,9 +399,10 @@ total          902        822   <span class="t-ok">$134.30</span>   <span class=
         &mdash; but mobile teams feel the pain first.
       </p>
       <p class="claim-sub reveal">
-        <span class="roadmap-pill">roadmap</span> Android device bridge
-        (adb-over-Tailscale) &mdash; run on the shared box, hot-reload to the phone
-        in your hand.
+        The agent runs on the remote; its edits land on <em>your</em> laptop. You
+        <code>flutter run</code> locally &mdash; full hot reload, full debugger, a real
+        device over USB &mdash; exactly as before. The remote does the AI; your machine
+        does the running.
       </p>
     </section>
 
