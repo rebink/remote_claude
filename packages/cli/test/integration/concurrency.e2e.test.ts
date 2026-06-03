@@ -91,14 +91,20 @@ describe('concurrency end-to-end', () => {
       headers: { authorization: 'Bearer alice-token', 'content-type': 'application/json' },
       payload: { prompt: 'p', project: 'app' },
     });
-    // Give the handler a moment to acquire the lease. Use 100ms to account for slower systems.
-    await new Promise((r) => setTimeout(r, 100));
-    const snap = await app.inject({
-      method: 'GET', url: '/queue',
-      headers: { authorization: 'Bearer bob-token' },
-    });
-    expect(snap.statusCode).toBe(200);
-    const body = snap.json() as { inFlight: string[]; globalCap: number };
+    // Poll /queue until alice holds the in-flight lease, rather than guessing a
+    // fixed sleep (which races the handler's lease acquisition on slow systems).
+    let body: { inFlight: string[]; globalCap: number } = { inFlight: [], globalCap: 0 };
+    const deadline = Date.now() + 2000;
+    do {
+      const snap = await app.inject({
+        method: 'GET', url: '/queue',
+        headers: { authorization: 'Bearer bob-token' },
+      });
+      expect(snap.statusCode).toBe(200);
+      body = snap.json() as { inFlight: string[]; globalCap: number };
+      if (body.inFlight.includes('alice')) break;
+      await new Promise((r) => setTimeout(r, 25));
+    } while (Date.now() < deadline);
     expect(body.inFlight).toContain('alice');
     expect(body.globalCap).toBe(1);
     await pending;
