@@ -1,6 +1,6 @@
 {
   "name": "patchwire",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Local-first dev tool: push your project to a remote Mac Mini, run Claude Code there, and pull back a reviewable unified diff.",
   "type": "module",
   "license": "MIT",

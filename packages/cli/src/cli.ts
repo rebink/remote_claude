@@ -6,8 +6,7 @@ import { runAsk } from './commands/ask.ts';
 import { runApply } from './commands/apply.ts';
 import { runDoctor } from './commands/doctor.ts';
 import { log } from './lib/log.ts';
-
-const VERSION = '0.1.0';
+import { VERSION } from './version.ts';
 
 const program = new Command();
 program

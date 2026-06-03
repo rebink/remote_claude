@@ -2,7 +2,7 @@
   "name": "patchwire-vscode",
   "displayName": "Patchwire",
   "description": "Chat with an AI on a remote Mac from VS Code. Diffs come back for review.",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "patchwire",
   "private": true,
   "repository": {
