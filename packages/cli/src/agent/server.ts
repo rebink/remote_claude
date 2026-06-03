@@ -146,7 +146,8 @@ export function buildServer(opts: AgentOptions) {
 
   app.get('/health', async () => {
     const claude = findAiBin(opts.aiCommand);
-    return { ok: true, version: opts.version, claude };
+    // Do not disclose the binary's absolute path on an unauthenticated route.
+    return { ok: true, version: opts.version, claude: { found: claude.found } };
   });
 
   app.get('/me', async (req) => {
@@ -190,7 +191,7 @@ export function buildServer(opts: AgentOptions) {
     }
     if (!existsSync(projectDir)) {
       reply.code(404);
-      return { error: `project not found: ${projectDir}` };
+      return { error: 'project not found' };
     }
     if (!(await isGitRepo(projectDir))) {
       reply.code(412);
@@ -302,7 +303,7 @@ export function buildServer(opts: AgentOptions) {
       return reply.status(400).send({ ok: false, code: 'invalid_project_name' });
     }
     if (!existsSync(cwd)) {
-      return reply.status(404).send({ ok: false, code: 'project_not_found', path: cwd });
+      return reply.status(404).send({ ok: false, code: 'project_not_found' });
     }
 
     const lease = await concurrency.acquire(username);
