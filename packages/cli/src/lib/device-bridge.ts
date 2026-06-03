@@ -16,7 +16,7 @@ export function parseAdbDevices(stdout: string): AdbDevice[] {
     if (!t || t.startsWith('List of devices') || t.startsWith('*')) continue;
     const parts = t.split(/\s+/);
     if (parts.length < 2) continue;
-    out.push({ serial: parts[0], state: parts[1] });
+    out.push({ serial: parts[0]!, state: parts[1]! });
   }
   return out;
 }
@@ -40,7 +40,7 @@ export function selectAndroidDevice(devices: AdbDevice[], serial?: string): Sele
   if (authorized.length > 1) {
     return { ok: false, error: `multiple devices attached (${authorized.map((d) => d.serial).join(', ')}) — pass --device <serial>` };
   }
-  return { ok: true, value: authorized[0] };
+  return { ok: true, value: authorized[0]! };
 }
 
 /** Choose the phone's online Tailscale peer (an Android peer, or one matched by name). */
@@ -58,7 +58,7 @@ export function selectAndroidPeer(peers: TailscalePeer[], name?: string): Select
   if (androids.length > 1) {
     return { ok: false, error: `multiple Android peers online (${androids.map((p) => p.hostname).join(', ')}) — pass --name <peer>` };
   }
-  return { ok: true, value: androids[0] };
+  return { ok: true, value: androids[0]! };
 }
 
 export function tcpipArgs(serial: string, port: number): string[] {
