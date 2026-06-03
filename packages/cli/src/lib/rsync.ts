@@ -17,6 +17,31 @@ export interface RsyncProgress {
   total: number;
 }
 
+export interface RsyncArgsInput {
+  cwd: string;
+  remoteTarget: string;
+  /** ssh transport string, or '' for a local copy (no -e). */
+  sshArg: string;
+  excludeFile: string;
+}
+
+/**
+ * Build the rsync argv. Excludes `.git/`, `.devbridge/`, and configured excludes via
+ * the exclude file, AND honors each directory's `.gitignore` via a per-dir merge filter
+ * — so anything git ignores (`.env`, secrets, build dirs) never crosses the wire.
+ */
+export function buildRsyncArgs(input: RsyncArgsInput): string[] {
+  const args = [
+    '-az',
+    '--update',
+    '--filter=dir-merge,- .gitignore',
+    '--exclude-from', input.excludeFile,
+  ];
+  if (input.sshArg) args.push('-e', input.sshArg);
+  args.push(`${input.cwd.replace(/\/?$/, '/')}`, input.remoteTarget);
+  return args;
+}
+
 export async function rsyncPush(
   cfg: Config,
   cwd: string,
@@ -47,14 +72,7 @@ export async function rsyncPush(
     // laptop no longer propagate automatically — user must clean up via
     // SSH or via the Claude session. Phase 2: track per-file send history
     // so we only delete what we previously sent.
-    const args = [
-      '-az',
-      '--update',
-      '--exclude-from', excludeFile,
-      '-e', sshArg,
-      `${cwd.replace(/\/?$/, '/')}`,
-      remoteTarget,
-    ];
+    const args = buildRsyncArgs({ cwd, remoteTarget, sshArg, excludeFile });
 
     log.debug(`rsync ${args.join(' ')}`);
     const start = Date.now();
