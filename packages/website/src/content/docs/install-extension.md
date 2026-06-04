@@ -5,11 +5,22 @@ description: Get the Patchwire extension running in VS Code or Antigravity in un
 
 The Patchwire extension turns any VS Code-based editor into a bidirectional Claude session against your remote machine. Your laptop edits and the remote's edits stay byte-identical, automatically (the extension uses Mutagen for live sync, unlike the CLI's one-way `rsync` model).
 
-## Download
-
 import { Badge, LinkButton } from '@astrojs/starlight/components';
 
-<LinkButton href="https://github.com/rebink/patchwire/releases/latest" icon="download">
+## Install in one click
+
+<LinkButton href="vscode:extension/patchwire.patchwire-vscode" icon="external">
+  Install in VS Code
+</LinkButton>
+
+This opens VS Code on the Patchwire extension page — just click **Install**. It works once the extension is published to the Marketplace; until then, grab the `.vsix` below (it works today).
+
+- **Marketplace page:** <https://marketplace.visualstudio.com/items?itemName=patchwire.patchwire-vscode>
+- **Cursor / VSCodium / Windsurf (Open VSX):** <https://open-vsx.org/extension/patchwire/patchwire-vscode>
+
+## Download the `.vsix` (works today)
+
+<LinkButton href="https://github.com/rebink/remote_claude/releases/latest" icon="download">
   Download latest `.vsix`
 </LinkButton>
 
@@ -31,7 +42,7 @@ Drag the `.vsix` file onto the **Extensions** panel in VS Code.
 ### Option 3: command line
 
 ```bash
-code --install-extension ~/Downloads/patchwire-vscode-0.1.0.vsix
+code --install-extension ~/Downloads/patchwire-vscode-0.3.0.vsix
 ```
 
 If `code` isn't on your PATH, run `Cmd+Shift+P`, then **Shell Command: Install 'code' command in PATH** once and try again.
@@ -41,7 +52,7 @@ If `code` isn't on your PATH, run `Cmd+Shift+P`, then **Shell Command: Install '
 Antigravity is a VS Code fork, so the same `.vsix` file works. The CLI command is `antigravity` instead of `code`:
 
 ```bash
-antigravity --install-extension ~/Downloads/patchwire-vscode-0.1.0.vsix
+antigravity --install-extension ~/Downloads/patchwire-vscode-0.3.0.vsix
 ```
 
 You can also use the command palette in Antigravity (it has the same **Extensions: Install from VSIX…** action).
@@ -51,7 +62,7 @@ You can also use the command palette in Antigravity (it has the same **Extension
 Same flow. Cursor also accepts `.vsix` files via the command palette, or:
 
 ```bash
-cursor --install-extension ~/Downloads/patchwire-vscode-0.1.0.vsix
+cursor --install-extension ~/Downloads/patchwire-vscode-0.3.0.vsix
 ```
 
 ## What you need on your machine first
@@ -60,7 +71,7 @@ The extension shells out to a few binaries:
 
 | Binary | Why | Install |
 |---|---|---|
-| `patchwire` (the CLI) | Bootstraps the project on the remote | `pnpm add -g github:rebink/patchwire` |
+| `patchwire` (the CLI) | Bootstraps the project on the remote | `npm i -g @rebink/patchwire` |
 | `mutagen` | Two-way file sync between laptop and remote | `brew install mutagen-io/mutagen/mutagen` |
 | `ssh` | Transport | Built into macOS |
 | `rsync` | Initial bootstrap | macOS ships `openrsync`, but brew rsync 3.x is more reliable: `brew install rsync` |
@@ -87,4 +98,4 @@ Mutagen deploys its own agent binary to the remote automatically the first time 
 
 When a new release ships, download the new `.vsix` and re-run the install. The extension replaces the old version cleanly. Your `patchwire.yml`, SSH keys, and Mutagen session all survive.
 
-You can also pin to a specific release by downloading from [github.com/rebink/patchwire/releases](https://github.com/rebink/patchwire/releases).
+You can also pin to a specific release by downloading from [github.com/rebink/remote_claude/releases](https://github.com/rebink/remote_claude/releases).
