@@ -40,10 +40,33 @@ jobs:
       - name: Package VS Code extension (.vsix)
         run: pnpm --filter patchwire-vscode package
 
+      # Each publish step runs only when its token/secret is configured, so a
+      # tag push always produces the GitHub release + .vsix even before the
+      # npm / Marketplace / Open VSX accounts are set up.
+      - name: Check which publish secrets are configured
+        id: secrets
+        run: |
+          echo "npm=${{ secrets.NPM_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+          echo "vsce=${{ secrets.VSCE_PAT != '' }}" >> "$GITHUB_OUTPUT"
+          echo "ovsx=${{ secrets.OVSX_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
       - name: Publish CLI to npm
+        if: steps.secrets.outputs.npm == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm --filter patchwire publish --access public --provenance --no-git-checks
+
+      - name: Publish extension to the VS Code Marketplace
+        if: steps.secrets.outputs.vsce == 'true'
+        working-directory: packages/extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: pnpm exec vsce publish --no-dependencies --packagePath *.vsix
+
+      - name: Publish extension to Open VSX
+        if: steps.secrets.outputs.ovsx == 'true'
+        working-directory: packages/extension
+        run: pnpm dlx ovsx publish *.vsix --pat ${{ secrets.OVSX_TOKEN }}
 
       - name: Create GitHub release with .vsix attached
         uses: softprops/action-gh-release@v2
