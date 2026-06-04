@@ -46,7 +46,8 @@ Add the secrets under **GitHub → repo → Settings → Secrets and variables �
    namespace** (Profile → Namespaces).
 2. Create an access token (Profile → Access Tokens). Add it as the `OVSX_TOKEN`
    repo secret.
-3. The workflow runs `pnpm dlx ovsx publish *.vsix --pat $OVSX_TOKEN`.
+3. The workflow runs `pnpm exec ovsx publish *.vsix` with `OVSX_PAT` from the secret
+   (ovsx is a pinned devDep, not fetched at run time).
 
 ---
 
