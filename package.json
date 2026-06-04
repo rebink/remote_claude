@@ -7,7 +7,7 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "cli": "pnpm --filter patchwire",
+    "cli": "pnpm --filter @rebink/patchwire",
     "extension": "pnpm --filter patchwire-vscode",
     "website": "pnpm --filter patchwire-docs"
   },

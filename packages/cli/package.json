@@ -1,5 +1,5 @@
 {
-  "name": "patchwire",
+  "name": "@rebink/patchwire",
   "version": "0.3.0",
   "description": "Local-first dev tool: push your project to a remote Mac Mini, run Claude Code there, and pull back a reviewable unified diff.",
   "type": "module",

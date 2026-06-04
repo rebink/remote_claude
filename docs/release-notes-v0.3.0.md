@@ -34,7 +34,7 @@ Shared AI infrastructure for engineering teams — run any coding agent on hardw
 
 ## Install
 ```bash
-pnpm add -g github:rebink/patchwire   # or npm i -g patchwire once published
+npm i -g @rebink/patchwire            # or: pnpm add -g github:rebink/remote_claude
 ```
 Requires Node ≥ 20.
 
