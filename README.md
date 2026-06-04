@@ -35,7 +35,7 @@ pnpm -r build          # build every package
 pnpm -r test           # run all unit tests
 pnpm -r typecheck      # typecheck every package
 
-pnpm cli <args>        # shorthand for pnpm --filter patchwire <args>
+pnpm cli <args>        # shorthand for pnpm --filter @rebink/patchwire <args>
 pnpm extension <args>  # shorthand for pnpm --filter patchwire-vscode <args>
 pnpm website <args>    # shorthand for pnpm --filter patchwire-docs <args>
 ```

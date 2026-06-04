@@ -7,7 +7,7 @@ configured**, so you can enable channels one at a time. The GitHub Release (with
 
 | Channel | Package | Install | Secret needed |
 |---|---|---|---|
-| npm | `patchwire` (CLI) | `npm i -g patchwire` | `NPM_TOKEN` |
+| npm | `@rebink/patchwire` (CLI) | `npm i -g @rebink/patchwire` | `NPM_TOKEN` |
 | VS Code Marketplace | `patchwire.patchwire-vscode` | Extensions panel → "Patchwire" | `VSCE_PAT` |
 | Open VSX (Cursor/VSCodium) | `patchwire/patchwire-vscode` | Extensions panel | `OVSX_TOKEN` |
 
@@ -17,17 +17,20 @@ Add the secrets under **GitHub → repo → Settings → Secrets and variables �
 
 ## 1. CLI → npm
 
-1. **Check the name is free:** `npm view patchwire`. If it's taken, rename the
-   package in `packages/cli/package.json` to a scope you own (e.g.
-   `@rebink/patchwire`) and update the install docs.
+   The CLI publishes under the **scoped** name `@rebink/patchwire` (the unscoped
+   `patchwire` is taken on npm). The installed binaries are still `patchwire` /
+   `patchwire-agent`, so day-to-day commands don't change — only the install id.
+1. **Own the scope:** the `@rebink` scope must belong to your npm account/org. Create
+   the org (or use your username scope) at npmjs.com if you haven't.
 2. **Create a token:** npmjs.com → Access Tokens → *Generate New Token* →
    **Automation**. Add it as the `NPM_TOKEN` repo secret.
-3. The workflow publishes with `--access public --provenance` (provenance needs the
-   `id-token: write` permission already set in `release.yml`).
+3. The workflow publishes with `--access public --provenance` (`--access public` is
+   required for scoped packages; provenance needs the `id-token: write` permission
+   already set in `release.yml`).
 4. **Heads-up — `postinstall`:** the CLI runs `scripts/fetch-sshpass.sh` on install
    (`|| true`, so failures are non-fatal). Some users/CI disable install scripts
-   (`npm i -g patchwire --ignore-scripts`); the CLI still works, it just won't vendor
-   `sshpass` for password-based SSH.
+   (`npm i -g @rebink/patchwire --ignore-scripts`); the CLI still works, it just won't
+   vendor `sshpass` for password-based SSH.
 
 ## 2. Extension → VS Code Marketplace
 
@@ -61,12 +64,12 @@ git push origin v0.3.0
 ```
 The workflow builds + tests, packages the `.vsix`, creates the GitHub Release, and
 publishes to every channel whose secret is set. Verify after:
-- `npm view patchwire version`
+- `npm view @rebink/patchwire version`
 - Marketplace: <https://marketplace.visualstudio.com/items?itemName=patchwire.patchwire-vscode>
 - Open VSX: <https://open-vsx.org/extension/patchwire/patchwire-vscode>
 
 ## Local dry-runs (no secrets, nothing published)
 ```bash
-pnpm --filter patchwire build && pnpm --filter patchwire pack            # npm tarball
+pnpm --filter @rebink/patchwire build && pnpm --filter @rebink/patchwire pack   # npm tarball
 pnpm --filter patchwire-vscode build && pnpm --filter patchwire-vscode package  # .vsix
 ```
