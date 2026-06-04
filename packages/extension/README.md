@@ -1,10 +1,8 @@
 # Patchwire — VS Code Extension
 
-Chat with an AI on a remote Mac from inside VS Code. Your workspace stays local; Claude runs on the remote and returns reviewable unified diffs.
+Chat with an AI coding agent that runs on a machine **you** control — your Mac Mini, a homelab, any box — and review every change as a diff before it touches your code.
 
-Driving use case: Flutter developers who keep a USB device plugged into their laptop and can't run their app on the remote, but still want Claude's context-aware help.
-
-Design spec: [`../../docs/specs/2026-05-20-vscode-extension-v2-design.md`](../../docs/specs/2026-05-20-vscode-extension-v2-design.md)
+Your workspace stays on your laptop. Only the code you sync crosses the wire — your `.env` and anything git ignores never leave your machine — and the agent's edits come back as diffs you **apply locally**. So a Flutter dev keeps the phone on USB and runs/hot-reloads locally as usual, while the heavy AI runs on the shared box.
 
 ---
 
@@ -31,10 +29,10 @@ pnpm --filter patchwire-vscode build
 pnpm --filter patchwire-vscode package
 ```
 
-This produces `patchwire-vscode-0.1.0.vsix`. Install it in VS Code:
+This produces `patchwire-vscode-0.3.0.vsix`. Install it in VS Code:
 
 - **GUI:** Extensions sidebar → `…` menu (top right) → **Install from VSIX…** → pick the file.
-- **CLI:** `code --install-extension patchwire-vscode-0.1.0.vsix`
+- **CLI:** `code --install-extension patchwire-vscode-0.3.0.vsix`
 
 Reload VS Code when prompted. A **Patchwire** icon (speech bubble) appears in the activity bar.
 

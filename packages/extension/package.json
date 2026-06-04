@@ -1,10 +1,13 @@
 {
   "name": "patchwire-vscode",
   "displayName": "Patchwire",
-  "description": "Chat with an AI on a remote Mac from VS Code. Diffs come back for review.",
+  "description": "Chat with an AI coding agent on a machine you control; review every change as a diff before it touches your code.",
   "version": "0.3.0",
   "publisher": "patchwire",
   "private": true,
+  "icon": "media/icon.png",
+  "galleryBanner": { "color": "#0E0E10", "theme": "dark" },
+  "keywords": ["ai", "claude", "flutter", "diff", "code review", "remote", "patchwire"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rebink/patchwire.git",
