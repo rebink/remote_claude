@@ -5,13 +5,13 @@
   "type": "module",
   "license": "MIT",
   "author": "Mohamed Rebin K",
-  "homepage": "https://github.com/rebink/patchwire#readme",
+  "homepage": "https://github.com/rebink/remote_claude#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rebink/patchwire.git"
+    "url": "git+https://github.com/rebink/remote_claude.git"
   },
   "bugs": {
-    "url": "https://github.com/rebink/patchwire/issues"
+    "url": "https://github.com/rebink/remote_claude/issues"
   },
   "keywords": [
     "claude",
