@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm install --no-frozen-lockfile && pnpm --filter patchwire-docs build",
-  "outputDirectory": "packages/website/dist",
+  "outputDirectory": "dist",
   "installCommand": "echo 'install handled by buildCommand'",
-  "framework": null,
+  "framework": "astro",
   "cleanUrls": true,
   "trailingSlash": true
 }
