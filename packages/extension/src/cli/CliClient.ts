@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import type { CliEvent } from '@patchwire/protocol';
+import type { CliInvocation } from './resolveCli.ts';
 
 export function parseJsonl(onEvent: (e: CliEvent) => void): (chunk: string) => void {
   let buf = '';
@@ -26,12 +27,12 @@ export interface SpawnResult {
 
 export class CliClient {
   constructor(
-    private readonly cliPath: string,
+    private readonly inv: CliInvocation,
     private readonly cwd: string,
   ) {}
 
   spawn(args: string[]): SpawnResult {
-    const child: ChildProcess = spawn(this.cliPath, args, { cwd: this.cwd });
+    const child: ChildProcess = spawn(this.inv.command, [...this.inv.baseArgs, ...args], { cwd: this.cwd, env: this.inv.env });
 
     // Eager buffering: events accumulate even before the consumer iterates.
     const queue: CliEvent[] = [];

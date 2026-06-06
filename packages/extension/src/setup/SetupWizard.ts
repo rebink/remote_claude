@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { resolveCli } from '../cli/resolveCli.ts';
 
 export interface WizardState {
   step: 1 | 2 | 3 | 4;
@@ -70,7 +71,8 @@ export class SetupWizard {
         // since the runJsonl helper is for streaming subcommands. See M5.T30.
         try {
           const cp = await import('node:child_process');
-          const r = cp.spawnSync('patchwire', ['setup', '--list-peers', '--json'], { encoding: 'utf8' });
+          const inv = resolveCli(this.extensionUri.fsPath);
+          const r = cp.spawnSync(inv.command, [...inv.baseArgs, 'setup', '--list-peers', '--json'], { encoding: 'utf8', env: inv.env });
           const peers = r.status === 0 ? JSON.parse(r.stdout || '[]') : [];
           this.panel?.webview.postMessage({ type: 'step1Peers', peers });
         } catch (err) {
@@ -120,7 +122,8 @@ export class SetupWizard {
         ];
         if (trustNewKey) args.push('--trust-new-key');
 
-        const child = cp.spawn('patchwire', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+        const inv = resolveCli(this.extensionUri.fsPath);
+        const child = cp.spawn(inv.command, [...inv.baseArgs, ...args], { stdio: ['pipe', 'pipe', 'pipe'], env: inv.env });
 
         const pwBuf = Buffer.from(password + '\n');
         child.stdin.write(pwBuf);
@@ -265,7 +268,8 @@ export class SetupWizard {
         if (overwrite) args.push('--overwrite');
         if (useExisting) args.push('--use-existing');
 
-        const child = cp.spawn('patchwire', args, { cwd: expandedLocalPath, stdio: ['ignore', 'pipe', 'pipe'] });
+        const inv = resolveCli(this.extensionUri.fsPath);
+        const child = cp.spawn(inv.command, [...inv.baseArgs, ...args], { cwd: expandedLocalPath, stdio: ['ignore', 'pipe', 'pipe'], env: inv.env });
         let stdoutBuf = '';
         let stderrBuf = '';
         let lastFailure: { code?: string; stderr?: string; name?: string } | undefined;
@@ -376,7 +380,8 @@ export class SetupWizard {
           : localPath;
 
         const r = await new Promise<{ ok: boolean; stdout: string; stderr: string }>((resolve) => {
-          const child = cp.spawn('patchwire', ['doctor'], { cwd: expandedLocalPath });
+          const inv = resolveCli(this.extensionUri.fsPath);
+          const child = cp.spawn(inv.command, [...inv.baseArgs, 'doctor'], { cwd: expandedLocalPath, env: inv.env });
           let stdout = '';
           let stderr = '';
           child.stdout?.on('data', (c: Buffer) => { stdout += c.toString(); });

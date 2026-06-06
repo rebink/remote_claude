@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CliClient, parseJsonl } from './CliClient.ts';
+import type { CliInvocation } from './resolveCli.ts';
 
 describe('parseJsonl', () => {
   it('handles buffer splits across newlines', () => {
@@ -13,7 +14,8 @@ describe('parseJsonl', () => {
 
 describe('CliClient.spawn', () => {
   it('delivers events emitted before the consumer iterates', async () => {
-    const cli = new CliClient(process.execPath, process.cwd());
+    const inv: CliInvocation = { command: process.execPath, baseArgs: [], env: process.env };
+    const cli = new CliClient(inv, process.cwd());
     const run = cli.spawn([
       '-e',
       `process.stdout.write('{"type":"chat_text","chunk":"hi"}\\n');` +
@@ -29,7 +31,8 @@ describe('CliClient.spawn', () => {
   });
 
   it('terminates with a synthetic error event when the binary is missing', async () => {
-    const cli = new CliClient('/this/binary/does/not/exist', process.cwd());
+    const inv: CliInvocation = { command: '/this/binary/does/not/exist', baseArgs: [], env: process.env };
+    const cli = new CliClient(inv, process.cwd());
     const run = cli.spawn(['--whatever']);
     const seen: { type: string }[] = [];
     for await (const e of run.events) seen.push(e);
@@ -39,7 +42,8 @@ describe('CliClient.spawn', () => {
   });
 
   it('emits an error event for stderr and terminates cleanly', async () => {
-    const cli = new CliClient(process.execPath, process.cwd());
+    const inv: CliInvocation = { command: process.execPath, baseArgs: [], env: process.env };
+    const cli = new CliClient(inv, process.cwd());
     const run = cli.spawn([
       '-e',
       `process.stdout.write('{"type":"chat_text","chunk":"ok"}\\n');` +

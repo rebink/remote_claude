@@ -20,6 +20,9 @@ export function resolveCli(extensionFsPath: string): CliInvocation {
   if (override) {
     return { command: override, baseArgs: [], env: process.env };
   }
+  if (!extensionFsPath) {
+    return { command: 'patchwire', baseArgs: [], env: process.env };
+  }
   const bundled = join(extensionFsPath, 'dist', 'cli', 'cli.js');
   if (existsSync(bundled)) {
     return {
