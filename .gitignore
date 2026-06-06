@@ -34,3 +34,4 @@ devbridge-agent-*/
 # Editor / AI tool caches
 .qodo/
 .playwright-mcp/
+.vercel
