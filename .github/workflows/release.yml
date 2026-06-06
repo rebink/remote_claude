@@ -52,7 +52,13 @@ jobs:
         if: steps.secrets.outputs.npm == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm --filter @rebink/patchwire publish --access public --provenance --no-git-checks
+        run: |
+          VER=$(node -p "require('./packages/cli/package.json').version")
+          if npm view "@rebink/patchwire@$VER" version >/dev/null 2>&1; then
+            echo "@rebink/patchwire@$VER already on npm — skipping (idempotent re-run)."
+          else
+            pnpm --filter @rebink/patchwire publish --access public --provenance --no-git-checks
+          fi
 
       - name: Publish extension to the VS Code Marketplace
         if: steps.secrets.outputs.vsce == 'true'
