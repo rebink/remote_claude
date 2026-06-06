@@ -21,7 +21,7 @@ brew install tailscale && sudo tailscale up
 
 ```bash
 # 1. install
-pnpm add -g github:rebink/patchwire
+npm i -g @rebink/patchwire
 
 # 2. register as a launchd LaunchAgent (auto-starts on login, macOS only)
 patchwire-agent install
@@ -42,7 +42,7 @@ That's it on the remote. The agent now serves on `PW_AGENT_PORT` (default `7878`
 
 ```bash
 # 1. install
-pnpm add -g github:rebink/patchwire
+npm i -g @rebink/patchwire
 
 # 2. interactive setup
 cd ~/code/my_flutter_app

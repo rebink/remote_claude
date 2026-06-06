@@ -2,8 +2,8 @@
 import '../styles/custom.css';
 import { ClientRouter } from 'astro:transitions';
 
-const repo = 'https://github.com/rebink/patchwire';
-const version = '0.2.4';
+const repo = 'https://github.com/rebink/remote_claude';
+const version = '0.3.0';
 const rev = 'b71dc5e';
 ---
 
@@ -77,7 +77,7 @@ const rev = 'b71dc5e';
 
       <div class="hero-inner">
         <div class="hero-eyebrow reveal">
-          <span class="eyebrow-tag">0.2.4 / 2026</span>
+          <span class="eyebrow-tag">0.3.0 / 2026</span>
           <span class="eyebrow-sep">·</span>
           <span class="eyebrow-rev">rev {rev}</span>
           <span class="eyebrow-sep">·</span>
@@ -147,7 +147,7 @@ const rev = 'b71dc5e';
         <div class="hero-byline reveal">
           <span aria-hidden="true">↓ scroll</span>
           <span class="byline-line" aria-hidden="true"></span>
-          <a href={repo} class="byline-link">github.com/rebink/patchwire ↗</a>
+          <a href={repo} class="byline-link">github.com/rebink/remote_claude ↗</a>
         </div>
       </div>
     </section>
@@ -301,42 +301,42 @@ const rev = 'b71dc5e';
         <article class="termcard reveal" data-tilt>
           <header class="termcard-bar">
             <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="termcard-host">$ patchwire usage --month</span>
-            <span class="roadmap-pill">roadmap</span>
+            <span class="termcard-host">$ patchwire-agent usage</span>
           </header>
-          <pre class="termcard-body"><span class="t-com">DEVELOPER   REQUESTS   ACCEPTED      COST</span>
-ana            412        388    <span class="t-ok">$61.40</span>
-ben            301        274    <span class="t-ok">$44.80</span>
-rebin          189        160    <span class="t-ok">$28.10</span>
-<span class="t-com">─────────────────────────────────────────</span>
-total          902        822   <span class="t-ok">$134.30</span>   <span class="t-str">claude · june</span></pre>
+          <pre class="termcard-body"><span class="t-com">USER           REQ   OK   ASK  CHAT     +LN     -LN  DUR</span>
+ana            412  388   400    12    1240     320  1h 2m
+ben            301  274   289    12     880     140  41m 18s
+rebin          189  160   180     9     460      70  22m 3s
+<span class="t-com">───────────────────────────────────────────────────────</span>
+total          902  822   869    33    2580     530  <span class="t-str">2h 5m</span></pre>
         </article>
 
         <div class="teams-prose">
           <article class="teampillar reveal">
             <span class="teampillar-no">01</span>
             <div>
-              <h3>Cost visibility <span class="roadmap-pill">roadmap</span></h3>
-              <p>Per-developer spend on a single bill, derived from the same turns the agent already records.</p>
+              <h3>Usage at a glance</h3>
+              <p>Per-developer requests, accepted runs, lines changed, and time spent &mdash; straight from the audit log, no setup.</p>
             </div>
           </article>
           <article class="teampillar reveal">
             <span class="teampillar-no">02</span>
             <div>
-              <h3>Audit trail <span class="roadmap-pill">roadmap</span></h3>
-              <p>Who asked what, and which diff actually landed &mdash; building on today's JSONL log.</p>
+              <h3>Audit trail</h3>
+              <p>Every turn appends one JSONL line: who, which project, prompt <em>hash</em>, lines changed, duration. Prompts are hashed, never stored.</p>
             </div>
           </article>
           <article class="teampillar reveal">
             <span class="teampillar-no">03</span>
             <div>
-              <h3>Policy <span class="roadmap-pill">roadmap</span></h3>
-              <p>Allowed models, repos, and rate limits, enforced at the one box every request flows through.</p>
+              <h3>Policy</h3>
+              <p>Per-user project allowlists and rate limits, enforced on every request through the one box you control.</p>
             </div>
           </article>
           <p class="teams-sub reveal">
-            The controlled-environment foundation ships today; usage, audit, and
-            cost reporting are the near-term roadmap.
+            Usage, the audit log, and policy enforcement ship today. Per-developer
+            <span class="roadmap-pill">roadmap</span> dollar-cost reporting is the
+            near-term addition, once the agent records model + token usage.
           </p>
         </div>
       </div>
@@ -567,7 +567,7 @@ total          902        822   <span class="t-ok">$134.30</span>   <span class=
           <p class="feat-q">
             "One box should serve the whole team. <em>Quietly,</em> and without taking turns by hand."
           </p>
-          <p class="feat-q-meta">patchwire@0.2.4</p>
+          <p class="feat-q-meta">patchwire@0.3.0</p>
         </article>
         <article class="feat-card reveal feat-card-strip">
           <ul class="strip">
@@ -594,7 +594,7 @@ total          902        822   <span class="t-ok">$134.30</span>   <span class=
             <span class="termcard-host">on the remote · admin</span>
           </header>
           <pre class="termcard-body"><span class="t-com"># once</span>
-$ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
+$ npm i -g <span class="t-str">@rebink/patchwire</span>
 $ patchwire-agent install
   <span class="t-ok">→ launchd: com.patchwire.agent</span>
 
@@ -608,7 +608,7 @@ $ patchwire-agent user add <span class="t-str">ana</span>
             <span class="termcard-host">on each laptop · ana</span>
           </header>
           <pre class="termcard-body"><span class="t-com"># once</span>
-$ pnpm add -g <span class="t-str">github:rebink/patchwire</span>
+$ npm i -g <span class="t-str">@rebink/patchwire</span>
 $ patchwire setup --token <span class="t-str">pw_b9f...</span>
   <span class="t-ok">→ identity: ana · remote: <your-remote-host></span>
 
