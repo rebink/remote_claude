@@ -103,7 +103,9 @@ describe('SetupWizard step3Submit', () => {
       projectName: 'demo',
     });
 
-    const call = spawnCalls.find((c) => c.cmd === 'patchwire');
+    // In the test environment extensionUri.fsPath is undefined → resolver falls back
+    // to the bare 'patchwire' command; baseArgs is empty so the CLI args are unchanged.
+    const call = spawnCalls.find((c) => c.args.includes('init-remote'));
     expect(call).toBeDefined();
     expect(call!.args).toContain('init-remote');
     expect(call!.args).toContain('--from-local');

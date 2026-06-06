@@ -29,6 +29,9 @@ export const workspace = {
   }),
   asRelativePath: (uri: { fsPath?: string; path?: string } | string): string =>
     typeof uri === 'string' ? uri : (uri.fsPath ?? uri.path ?? ''),
+  getConfiguration: (_section?: string) => ({
+    get: <T>(_key: string): T | undefined => undefined,
+  }),
 };
 
 export const Uri = {
