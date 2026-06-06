@@ -65,14 +65,26 @@ jobs:
         working-directory: packages/extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: pnpm exec vsce publish --no-dependencies --packagePath *.vsix
+        run: |
+          out=$(pnpm exec vsce publish --no-dependencies --packagePath *.vsix 2>&1) || {
+            echo "$out"
+            echo "$out" | grep -qi "already exists" && { echo "version already on the Marketplace — skipping (idempotent)."; exit 0; }
+            exit 1
+          }
+          echo "$out"
 
       - name: Publish extension to Open VSX
         if: steps.secrets.outputs.ovsx == 'true'
         working-directory: packages/extension
         env:
           OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
-        run: pnpm exec ovsx publish *.vsix
+        run: |
+          out=$(pnpm exec ovsx publish *.vsix 2>&1) || {
+            echo "$out"
+            echo "$out" | grep -qi "already exists\|already published" && { echo "version already on Open VSX — skipping (idempotent)."; exit 0; }
+            exit 1
+          }
+          echo "$out"
 
       - name: Create GitHub release with .vsix attached
         uses: softprops/action-gh-release@v2
