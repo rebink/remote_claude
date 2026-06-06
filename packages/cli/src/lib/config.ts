@@ -39,18 +39,35 @@ const ENV_INTERPOLATION = /\$\{([A-Z0-9_]+)\}/g;
  * like the VS Code extension pick up PW_TOKEN even when their PATH-stripped
  * environment doesn't have it set.
  */
+/**
+ * Map pre-rebrand "Remote Claude" `RC_*` env vars to their `PW_*` equivalents
+ * when the `PW_*` form is unset (e.g. `RC_TOKEN` → `PW_TOKEN`). Lets configs and
+ * `~/.patchwire/env` files written before the rebrand keep working without a
+ * manual rename. Pure + idempotent.
+ */
+export function applyLegacyEnvFallback(env: NodeJS.ProcessEnv = process.env): void {
+  for (const key of Object.keys(env)) {
+    if (!key.startsWith('RC_')) continue;
+    const pwKey = `PW_${key.slice(3)}`;
+    if (env[pwKey] === undefined) env[pwKey] = env[key];
+  }
+}
+
 let rcEnvLoaded = false;
 function ensureRcEnvLoaded(): void {
   if (rcEnvLoaded) return;
   rcEnvLoaded = true;
   const envPath = join(homedir(), '.patchwire', 'env');
-  if (!existsSync(envPath)) return;
-  for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
-    const m = line.match(/^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)=(.*)$/);
-    if (!m) continue;
-    const [, name, value] = m;
-    if (process.env[name!] === undefined) process.env[name!] = value!;
+  if (existsSync(envPath)) {
+    for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)=(.*)$/);
+      if (!m) continue;
+      const [, name, value] = m;
+      if (process.env[name!] === undefined) process.env[name!] = value!;
+    }
   }
+  // Backward-compat: pre-rebrand setups used RC_* vars (notably RC_TOKEN).
+  applyLegacyEnvFallback(process.env);
 }
 
 function interpolateEnv(value: unknown): unknown {
