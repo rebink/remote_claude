@@ -51,12 +51,12 @@ Bidirectional sync sounds nicer in theory and is a nightmare in practice. Confli
 
 ```bash
 # laptop
-pnpm remove -g patchwire
+pnpm remove -g @rebink/patchwire
 rm -rf ~/.patchwire
 
 # remote
 patchwire-agent uninstall
-pnpm remove -g patchwire
+pnpm remove -g @rebink/patchwire
 rm -rf ~/.patchwire
 ```
 

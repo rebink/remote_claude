@@ -25,7 +25,6 @@ It's two binaries:
 
 - Not a full remote IDE. Your editor, formatter, debugger, and hot-reload all stay local. Only the AI is remote.
 - Not a sync product. `rsync` runs on demand, one-way, with explicit excludes. Nothing watches your filesystem in the background.
-- Not multi-tenant. v1 assumes one developer, one remote. Multi-developer isolation is a future enhancement.
 - Not a Claude replacement. It calls `claude` on the remote, so you still need a Claude Code subscription.
 
 ## Design principles
@@ -38,4 +37,4 @@ It's two binaries:
 
 ## Status
 
-v0.1.0. Core MVP is shipped. See [Roadmap](/roadmap/) for what's next.
+v0.3.0. Now ships: multi-developer mode (per-user bearer tokens, isolated project directories, fair queue), streamed `/ask`, VS Code extension, secret-safe sync (respects `.gitignore`), `patchwire-agent usage` per-user reporting, and per-user policy enforcement (project allowlist + rate limit). See [Roadmap](/roadmap/) for what's next.
