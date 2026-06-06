@@ -2,7 +2,7 @@
   "name": "patchwire-vscode",
   "displayName": "Patchwire",
   "description": "Chat with an AI coding agent on a machine you control; review every change as a diff before it touches your code.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "patchwire",
   "private": true,
   "icon": "media/icon.png",

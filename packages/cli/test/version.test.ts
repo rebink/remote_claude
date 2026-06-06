@@ -12,6 +12,6 @@ describe('VERSION', () => {
     expect(VERSION).toBe(pkg.version);
   });
   it('is 0.3.1', () => {
-    expect(VERSION).toBe('0.3.1');
+    expect(VERSION).toBe('0.3.2');
   });
 });
