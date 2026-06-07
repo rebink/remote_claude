@@ -46,6 +46,8 @@ export interface AgentOptions {
   verifyTimeoutSec?: number;
   /** Optional operator pricing table; used only to estimate cost when the provider doesn't report one. */
   pricing?: PricingTable | null;
+  /** When set, the AI runs under a default-deny egress sandbox (seatbelt profile path). */
+  egressProfilePath?: string;
   version: string;
   /** Path to the persistent session-store JSON. Defaults to `~/.patchwire/agent-sessions.json`. */
   sessionStorePath?: string;
@@ -133,7 +135,11 @@ export function buildServer(opts: AgentOptions) {
 
   // Streaming runner configured from AgentOptions (not env). Honors `--aiCommand`
   // / `--aiArgs` exactly the same way the `/ask` path does via `runAi`.
-  const aiRunner = makeAiRunner({ bin: opts.aiCommand, args: opts.aiArgs });
+  const aiRunner = makeAiRunner({
+    bin: opts.aiCommand,
+    args: opts.aiArgs,
+    ...(opts.egressProfilePath ? { egressProfilePath: opts.egressProfilePath } : {}),
+  });
 
   const concurrency =
     opts.concurrency ?? new ConcurrencyManager({ globalCap: 3, perUserCap: 1 });
@@ -232,6 +238,7 @@ export function buildServer(opts: AgentOptions) {
           prompt,
           cwd: projectDir,
           timeoutMs: opts.timeoutSec * 1000,
+          ...(opts.egressProfilePath ? { egressProfilePath: opts.egressProfilePath } : {}),
         });
       } catch (err) {
         emit({ type: 'error', code: 'run_failed', message: (err as Error).message });
