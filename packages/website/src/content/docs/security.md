@@ -87,10 +87,14 @@ and the audit log) see [Multi-developer](/multi-developer/).
 
 Same as if you ran `claude` locally. Claude Code on the remote sends prompts and relevant file context to Anthropic's API per its own data policy. Patchwire doesn't add to or subtract from that surface. Read [Anthropic's data handling docs](https://docs.claude.com/en/docs/claude-code/security) for specifics.
 
+## Already shipped
+
+- **Audit log** of every `/ask` and `/chat` — JSONL with timestamps and a `prompt_sha256` (never the plaintext prompt). View it with `patchwire-agent log`. See [Multi-developer](/multi-developer/).
+
 ## What we'd like to add
 
 - **Optional TLS** for the agent (likely a flag on `install` that wires up a self-signed cert + cert pinning on the CLI).
 - **Per-project tokens** so each project has its own credential.
-- **Audit log** of every `/ask` with timestamps and prompt hash.
+- **Default-deny egress** on the remote, so even a compromised agent can't exfiltrate synced code (the read-minimization counterpart). See [Roadmap](/roadmap/).
 
 Open an issue if you'd find any of these load-bearing.
