@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { ChatBody } from '@patchwire/protocol';
-import type { AskEvent } from '@patchwire/protocol';
+import type { AskEvent, VerifyResult } from '@patchwire/protocol';
 import { existsSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { homedir } from 'node:os';
@@ -17,6 +17,7 @@ import {
   resetClean,
 } from './git.ts';
 import { findAiBin, makeAiRunner, runAi } from './ai-runner.ts';
+import { runVerify } from './verify-runner.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
 import { TurnState } from './turn-state.ts';
@@ -37,6 +38,10 @@ export interface AgentOptions {
   aiCommand: string;
   aiArgs: string[];
   timeoutSec: number;
+  /** Optional operator-configured verify command (e.g. `flutter analyze`) run on the checkout before the diff is returned. */
+  verifyCommand?: string;
+  /** Timeout for the verify command in seconds. Defaults to 300. */
+  verifyTimeoutSec?: number;
   version: string;
   /** Path to the persistent session-store JSON. Defaults to `~/.patchwire/agent-sessions.json`. */
   sessionStorePath?: string;
@@ -237,6 +242,15 @@ export function buildServer(opts: AgentOptions) {
         return;
       }
 
+      // Optional: run the operator-configured verify command on the checkout
+      // (which still holds the AI's changes) so the developer reviews a diff
+      // that already passed validation. Only when there's something to verify.
+      let verify: VerifyResult | undefined;
+      if (opts.verifyCommand && diffData.diff.trim()) {
+        emit({ type: 'verifying' });
+        verify = await runVerify(opts.verifyCommand, projectDir, (opts.verifyTimeoutSec ?? 300) * 1000);
+      }
+
       const durationMs = Date.now() - startRun;
       const stats = countDiffLines(diffData.diff);
       opts.auditLog.append({
@@ -251,6 +265,7 @@ export function buildServer(opts: AgentOptions) {
         duration_ms: durationMs,
         queue_wait_ms: lease.queueWaitMs,
         exit_code: claudeResult.exitCode,
+        ...(verify ? { verify_passed: verify.passed } : {}),
       });
       emit({
         type: 'result',
@@ -260,6 +275,7 @@ export function buildServer(opts: AgentOptions) {
         stdout: claudeResult.stdout,
         stderr: claudeResult.stderr,
         exitCode: claudeResult.exitCode,
+        ...(verify ? { verify } : {}),
       });
     } catch (err) {
       try {

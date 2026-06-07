@@ -26,6 +26,19 @@ export interface AskRequest {
 }
 
 /**
+ * Result of an operator-configured verify command (e.g. `flutter analyze`) run
+ * on the agent's checkout after the AI's diff is captured, before it is returned.
+ * Absent when the agent has no verify command configured.
+ */
+export interface VerifyResult {
+  passed: boolean;
+  exitCode: number;
+  durationMs: number;
+  /** bounded tail of the command's combined stdout+stderr. */
+  output: string;
+}
+
+/**
  * Terminal success payload for `/ask`. Identical to the `result` event minus
  * its `type` tag. `files` are filenames (from `captureDiff`), not ChangedFile.
  */
@@ -36,6 +49,8 @@ export interface AskResponse {
   stdout: string;
   stderr: string;
   exitCode: number;
+  /** present only when the agent ran a verify command. */
+  verify?: VerifyResult;
 }
 
 /**
@@ -46,5 +61,6 @@ export interface AskResponse {
 export type AskEvent =
   | { type: 'queued'; position: number }
   | { type: 'accepted'; queueWaitMs: number }
-  | { type: 'result'; diff: string; files: string[]; durationMs: number; stdout: string; stderr: string; exitCode: number }
+  | { type: 'verifying' }
+  | { type: 'result'; diff: string; files: string[]; durationMs: number; stdout: string; stderr: string; exitCode: number; verify?: VerifyResult }
   | { type: 'error'; code: string; message: string };

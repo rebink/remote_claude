@@ -24,6 +24,8 @@ export interface AskAuditEntry extends BaseEntry {
   lines_added: number;
   lines_removed: number;
   exit_code: number;
+  /** present only when a verify command ran: whether it passed. */
+  verify_passed?: boolean;
 }
 
 export interface ChatAuditEntry extends BaseEntry {

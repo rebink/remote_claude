@@ -168,6 +168,52 @@ printf 'brand new\\n' > c.txt`,
     await app.close();
   });
 
+  // Quarantined on CI: reads the hijacked /ask NDJSON stream via app.inject.
+  it.skipIf(!!process.env.CI)('runs the verify command and reports passed=true in the result', async () => {
+    fakeClaudeBin = await makeFakeClaude(`printf 'edited\\n' >> a.txt`);
+    const app = buildServer({
+      usersStore: makeStore(), projectsRoot,
+      aiCommand: fakeClaudeBin, aiArgs: [], timeoutSec: 10, version: 'x',
+      verifyCommand: 'test -f a.txt', verifyTimeoutSec: 10,
+      auditLog: new NoopAuditLog(),
+    });
+    const res = await app.inject({
+      method: 'POST', url: '/ask',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      payload: { prompt: 'p', project: 'sample' },
+    });
+    const events = parseAskEvents(res.payload);
+    expect(events.some((e) => e.type === 'verifying')).toBe(true);
+    const result = events.find((e) => e.type === 'result');
+    if (result?.type !== 'result') throw new Error('no result event');
+    expect(result.verify?.passed).toBe(true);
+    expect(result.verify?.exitCode).toBe(0);
+    await app.close();
+  });
+
+  it.skipIf(!!process.env.CI)('reports verify failure (passed=false + exit code) without blocking the diff', async () => {
+    fakeClaudeBin = await makeFakeClaude(`printf 'edited\\n' >> a.txt`);
+    const app = buildServer({
+      usersStore: makeStore(), projectsRoot,
+      aiCommand: fakeClaudeBin, aiArgs: [], timeoutSec: 10, version: 'x',
+      verifyCommand: 'exit 7', verifyTimeoutSec: 10,
+      auditLog: new NoopAuditLog(),
+    });
+    const res = await app.inject({
+      method: 'POST', url: '/ask',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      payload: { prompt: 'p', project: 'sample' },
+    });
+    const events = parseAskEvents(res.payload);
+    const result = events.find((e) => e.type === 'result');
+    if (result?.type !== 'result') throw new Error('no result event');
+    expect(result.verify?.passed).toBe(false);
+    expect(result.verify?.exitCode).toBe(7);
+    // diff is still returned — verify informs, it does not block
+    expect(result.diff).toContain('a.txt');
+    await app.close();
+  });
+
   it('returns 412 when project is not a git repo', async () => {
     const noGitDir = join(projectsRoot, 'tester', 'plain');
     await mkdir(noGitDir, { recursive: true });
