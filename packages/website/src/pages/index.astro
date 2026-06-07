@@ -442,6 +442,11 @@ total          902  822   869    33    2580     530  <span class="t-str">2h 5m</
               <span class="cta-arrow">→</span>
             </a>
           </div>
+          <p class="editor-cta-fallback reveal">
+            Button not opening VS Code? Install from the
+            <a href="https://marketplace.visualstudio.com/items?itemName=patchwire.patchwire-vscode" target="_blank" rel="noopener">Marketplace</a>
+            or <a href="https://open-vsx.org/extension/patchwire/patchwire-vscode" target="_blank" rel="noopener">Open VSX</a>.
+          </p>
         </div>
 
         <div class="editor-mock reveal">
@@ -1461,6 +1466,19 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         gap: 14px;
         align-items: center;
         flex-wrap: wrap;
+      }
+      .editor-cta-fallback {
+        margin-top: 14px;
+        font-size: 0.85rem;
+        color: var(--rc-bone-dim);
+      }
+      .editor-cta-fallback a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .editor-cta-fallback a:hover {
+        color: var(--rc-bone);
       }
 
       /* ─── VS Code mock window ─── */
