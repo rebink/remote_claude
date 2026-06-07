@@ -5,6 +5,32 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] — 2026-06-07
+
+Research-driven reliability + security improvements (M1, M2, M4) and the
+foundation for cost tracking (M6 step 1).
+
+### Added
+- **Reliable 3-way apply (M1).** `patchwire apply` now detects when the local
+  tree drifted since sync and offers a 3-way merge that absorbs non-overlapping
+  edits automatically, inserting conflict markers only where local and AI edits
+  overlap — instead of failing outright. (`detectDrift`, `gitApply3way`.)
+- **Test-before-return (M2).** The agent can run an operator-configured verify
+  command (`PW_VERIFY_CMD`, e.g. `flutter analyze`) on the checkout after the
+  diff is captured, returning a `verify` result so you review a diff that already
+  passed validation. New `verifying` NDJSON event; verify informs, never blocks.
+- **Pre-sync secret scan (M4).** `sync.secretScan: off|warn|block` runs gitleaks
+  over the about-to-sync files before they cross the wire, closing the hole where
+  a secret in a *tracked* file would otherwise sync. New `--force` flag on
+  `sync`/`ask`.
+
+### Fixed
+- **Real token counts (M6 step 1).** The chat path reported `tokensOut =
+  output.length` (a character count) and `tokensIn = 0`. `parseAiUsage` now
+  extracts real provider-reported usage (Claude JSON/stream-json, Aider text).
+  No user-visible change yet — the `usage` table has no token/cost column — but
+  the underlying audit data is now correct.
+
 ## [0.3.2] — 2026-06-06
 
 Backward-compatible config migration: the CLI now maps pre-rebrand `RC_*` env
