@@ -116,3 +116,31 @@ export function parseAiUsage(output: string): UsageReport {
 
   return empty();
 }
+
+/**
+ * Get the human-readable assistant text from an AI CLI's stdout. When the agent
+ * is configured for JSON output (to capture usage), the raw stdout is JSON; this
+ * unwraps the `result` field so the developer never sees raw JSON. For plain-text
+ * output it returns the text unchanged.
+ */
+export function extractDisplayText(output: string): string {
+  const text = (output ?? '').trim();
+  if (!text) return output ?? '';
+
+  const single = tryParseJsonObject(text);
+  if (single && typeof single.result === 'string') return single.result;
+
+  // stream-json: the final result event carries the full text.
+  const objects = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map(tryParseJsonObject)
+    .filter((o): o is Record<string, unknown> => o !== null);
+  if (objects.length) {
+    const result = [...objects].reverse().find((o) => typeof o.result === 'string');
+    if (result && typeof result.result === 'string') return result.result;
+  }
+
+  return output ?? '';
+}
