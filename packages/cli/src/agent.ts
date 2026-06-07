@@ -12,6 +12,7 @@ import { runDaemonInstall, runDaemonUninstall } from './commands/daemon.ts';
 import { registerUserCommands } from './commands/user.ts';
 import { registerAgentLogCommand } from './commands/agent-log.ts';
 import { registerUsageCommand } from './commands/usage.ts';
+import { loadPricing } from './agent/pricing.ts';
 import { VERSION } from './version.ts';
 
 function envRequired(name: string): string {
@@ -32,6 +33,7 @@ async function runServe(): Promise<void> {
   const timeoutSec = Number(process.env.PW_TIMEOUT_SEC ?? 600);
   const verifyCommand = process.env.PW_VERIFY_CMD?.trim() || undefined;
   const verifyTimeoutSec = Number(process.env.PW_VERIFY_TIMEOUT_SEC ?? 300);
+  const pricing = loadPricing(process.env.PW_PRICING_FILE ?? join(homedir(), '.patchwire', 'pricing.yml'));
 
   const usersJsonPath = process.env.PW_USERS_FILE ?? join(homedir(), '.patchwire', 'users.json');
   const legacyToken = process.env.PW_AGENT_TOKEN;
@@ -71,6 +73,7 @@ async function runServe(): Promise<void> {
     aiArgs,
     timeoutSec,
     ...(verifyCommand ? { verifyCommand, verifyTimeoutSec } : {}),
+    ...(pricing ? { pricing } : {}),
     version: VERSION,
     concurrency,
     auditLog,

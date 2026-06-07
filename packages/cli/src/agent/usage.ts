@@ -13,6 +13,12 @@ export interface UserUsage {
   queue_wait_ms: number;
   tokens_in: number;
   tokens_out: number;
+  /** summed dollar cost (reported or estimated); 0 when no entry carried cost. */
+  cost_usd: number;
+  /** true if any contributing entry's cost was estimated (vs provider-reported). */
+  cost_estimated: boolean;
+  /** true if at least one entry carried a cost figure at all. */
+  has_cost: boolean;
 }
 
 export interface UsageReport {
@@ -25,6 +31,7 @@ function emptyUsage(user: string): UserUsage {
     user, requests: 0, accepted: 0, ask: 0, chat: 0,
     files: 0, lines_added: 0, lines_removed: 0,
     duration_ms: 0, queue_wait_ms: 0, tokens_in: 0, tokens_out: 0,
+    cost_usd: 0, cost_estimated: false, has_cost: false,
   };
 }
 
@@ -41,6 +48,14 @@ export function aggregateUsage(entries: AuditEntry[]): UsageReport {
       acc.requests += 1;
       acc.duration_ms += e.duration_ms;
       acc.queue_wait_ms += e.queue_wait_ms;
+      // Tokens + cost apply to both routes (recorded when the provider reports them).
+      acc.tokens_in += e.tokens_in ?? 0;
+      acc.tokens_out += e.tokens_out ?? 0;
+      if (typeof e.cost_usd === 'number') {
+        acc.cost_usd += e.cost_usd;
+        acc.has_cost = true;
+        if (e.cost_source === 'estimated') acc.cost_estimated = true;
+      }
       if (e.route === '/ask') {
         acc.ask += 1;
         if (e.exit_code === 0) acc.accepted += 1;
@@ -50,8 +65,6 @@ export function aggregateUsage(entries: AuditEntry[]): UsageReport {
       } else {
         acc.chat += 1;
         acc.accepted += 1;
-        acc.tokens_in += e.tokens_in;
-        acc.tokens_out += e.tokens_out;
       }
     }
   }
