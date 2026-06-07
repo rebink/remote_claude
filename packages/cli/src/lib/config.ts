@@ -18,8 +18,10 @@ export const ConfigSchema = z.object({
   sync: z
     .object({
       exclude: z.array(z.string()).default([]),
+      /** Pre-sync secret scan (gitleaks): off (default), warn, or block. */
+      secretScan: z.enum(['off', 'warn', 'block']).default('off'),
     })
-    .default({ exclude: [] }),
+    .default({ exclude: [], secretScan: 'off' }),
   ai: z
     .object({
       command: z.string().default('claude'),

@@ -5,10 +5,12 @@ import { loadConfig } from '../lib/config.ts';
 import * as rsync from '../lib/rsync.ts';
 import { runSsh } from '../lib/ssh-runner.ts';
 import { log } from '../lib/log.ts';
+import { preSyncSecretGate } from '../lib/secret-scan.ts';
 import type { Config } from '../lib/config.ts';
 
 export interface SyncOpts {
   json?: boolean;
+  force?: boolean;
 }
 
 /**
@@ -47,6 +49,11 @@ async function commitPostPush(cfg: Config): Promise<void> {
 
 export async function runSync(cwd: string, opts: SyncOpts = {}): Promise<void> {
   const cfg = await loadConfig(cwd);
+
+  if (!(await preSyncSecretGate(cwd, cfg.sync.secretScan, !!opts.force))) {
+    process.exitCode = 1;
+    return;
+  }
 
   if (opts.json) {
     const emit = (e: unknown): void => {
