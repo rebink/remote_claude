@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAiUsage } from '../src/agent/usage-parser.ts';
+import { parseAiUsage, extractDisplayText } from '../src/agent/usage-parser.ts';
 
 describe('parseAiUsage — claude --output-format json', () => {
   const obj = {
@@ -91,5 +91,24 @@ describe('parseAiUsage — no usable data', () => {
   it('malformed JSON does not throw', () => {
     expect(() => parseAiUsage('{ not valid json')).not.toThrow();
     expect(parseAiUsage('{ not valid json').costSource).toBe('none');
+  });
+});
+
+describe('extractDisplayText', () => {
+  it('unwraps the result field from a single claude JSON object', () => {
+    const out = JSON.stringify({ type: 'result', result: 'the assistant answer', total_cost_usd: 0.01 });
+    expect(extractDisplayText(out)).toBe('the assistant answer');
+  });
+
+  it('unwraps the result from a stream-json transcript', () => {
+    const out = [
+      JSON.stringify({ type: 'system' }),
+      JSON.stringify({ type: 'result', result: 'streamed answer' }),
+    ].join('\n');
+    expect(extractDisplayText(out)).toBe('streamed answer');
+  });
+
+  it('returns plain text unchanged when it is not JSON', () => {
+    expect(extractDisplayText('just normal prose')).toBe('just normal prose');
   });
 });

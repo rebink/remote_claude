@@ -18,6 +18,8 @@ import {
 } from './git.ts';
 import { findAiBin, makeAiRunner, runAi } from './ai-runner.ts';
 import { runVerify } from './verify-runner.ts';
+import { parseAiUsage, extractDisplayText } from './usage-parser.ts';
+import { estimateCost, type PricingTable } from './pricing.ts';
 import { runChatTurn } from './chat.ts';
 import { SessionStore } from './session-store.ts';
 import { TurnState } from './turn-state.ts';
@@ -42,6 +44,8 @@ export interface AgentOptions {
   verifyCommand?: string;
   /** Timeout for the verify command in seconds. Defaults to 300. */
   verifyTimeoutSec?: number;
+  /** Optional operator pricing table; used only to estimate cost when the provider doesn't report one. */
+  pricing?: PricingTable | null;
   version: string;
   /** Path to the persistent session-store JSON. Defaults to `~/.patchwire/agent-sessions.json`. */
   sessionStorePath?: string;
@@ -251,6 +255,21 @@ export function buildServer(opts: AgentOptions) {
         verify = await runVerify(opts.verifyCommand, projectDir, (opts.verifyTimeoutSec ?? 300) * 1000);
       }
 
+      // Real token/cost usage if the provider's output carries it (when the
+      // operator configured a JSON output format). Provider-reported cost wins;
+      // estimateCost only fills in from the price table when none was reported.
+      const usage = estimateCost(parseAiUsage(claudeResult.stdout), opts.pricing ?? null);
+      const usageFields =
+        usage.costSource !== 'none' || usage.tokensIn || usage.tokensOut
+          ? {
+              ...(usage.model ? { model: usage.model } : {}),
+              tokens_in: usage.tokensIn,
+              tokens_out: usage.tokensOut,
+              ...(usage.costUsd !== undefined ? { cost_usd: usage.costUsd } : {}),
+              cost_source: usage.costSource,
+            }
+          : {};
+
       const durationMs = Date.now() - startRun;
       const stats = countDiffLines(diffData.diff);
       opts.auditLog.append({
@@ -266,13 +285,16 @@ export function buildServer(opts: AgentOptions) {
         queue_wait_ms: lease.queueWaitMs,
         exit_code: claudeResult.exitCode,
         ...(verify ? { verify_passed: verify.passed } : {}),
+        ...usageFields,
       });
       emit({
         type: 'result',
         diff: diffData.diff,
         files: diffData.files,
         durationMs,
-        stdout: claudeResult.stdout,
+        // Unwrap JSON output back to plain assistant text so the developer
+        // never sees raw JSON when cost capture is enabled.
+        stdout: extractDisplayText(claudeResult.stdout),
         stderr: claudeResult.stderr,
         exitCode: claudeResult.exitCode,
         ...(verify ? { verify } : {}),

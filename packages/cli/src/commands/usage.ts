@@ -9,6 +9,19 @@ function basePath(): string {
   return process.env.PW_AUDIT_LOG ?? join(homedir(), '.patchwire', 'agent.log');
 }
 
+/** Humanize a token count: "880", "12.3k", "1.2M". */
+function humanizeTokens(n: number): string {
+  if (n < 1_000) return String(n);
+  if (n < 1_000_000) return `${(n / 1_000).toFixed(1)}k`;
+  return `${(n / 1_000_000).toFixed(1)}M`;
+}
+
+/** "$1.23" (reported), "~$1.23" (estimated), or "—" when no cost was recorded. */
+function formatCost(u: UserUsage): string {
+  if (!u.has_cost) return '—';
+  return `${u.cost_estimated ? '~$' : '$'}${u.cost_usd.toFixed(2)}`;
+}
+
 function row(u: UserUsage): string {
   return (
     u.user.padEnd(12) +
@@ -18,6 +31,8 @@ function row(u: UserUsage): string {
     String(u.chat).padStart(6) +
     String(u.lines_added).padStart(8) +
     String(u.lines_removed).padStart(8) +
+    humanizeTokens(u.tokens_in + u.tokens_out).padStart(8) +
+    formatCost(u).padStart(9) +
     '  ' + humanizeMs(u.duration_ms)
   );
 }
@@ -49,10 +64,17 @@ export function registerUsageCommand(program: Command): void {
       }
       const header =
         'USER'.padEnd(12) + 'REQ'.padStart(6) + 'OK'.padStart(5) +
-        'ASK'.padStart(6) + 'CHAT'.padStart(6) + '+LN'.padStart(8) + '-LN'.padStart(8) + '  DUR';
+        'ASK'.padStart(6) + 'CHAT'.padStart(6) + '+LN'.padStart(8) + '-LN'.padStart(8) +
+        'TOK'.padStart(8) + '$EQV'.padStart(9) + '  DUR';
       process.stdout.write(header + '\n');
       for (const u of report.users) process.stdout.write(row(u) + '\n');
-      process.stdout.write('─'.repeat(57) + '\n');
+      process.stdout.write('─'.repeat(74) + '\n');
       process.stdout.write(row(report.totals) + '\n');
+      if (report.totals.has_cost) {
+        process.stdout.write(
+          '\n$EQV = API-equivalent cost (provider-reported; ~ = estimated from a price table).\n' +
+          'With a flat-rate subscription this is attribution across the team, not extra spend.\n',
+        );
+      }
     });
 }

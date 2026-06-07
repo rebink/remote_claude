@@ -18,7 +18,17 @@ interface BaseEntry {
   queue_wait_ms: number;
 }
 
-export interface AskAuditEntry extends BaseEntry {
+/** Token + cost usage, recorded when the provider reports it. All optional so old log lines still parse. */
+export interface UsageFields {
+  model?: string;
+  tokens_in?: number;
+  tokens_out?: number;
+  cost_usd?: number;
+  /** 'reported' = provider gave a $ figure; 'estimated' = tokens × operator rate; absent = unknown. */
+  cost_source?: 'reported' | 'estimated' | 'none';
+}
+
+export interface AskAuditEntry extends BaseEntry, UsageFields {
   route: '/ask';
   files: number;
   lines_added: number;
@@ -28,7 +38,7 @@ export interface AskAuditEntry extends BaseEntry {
   verify_passed?: boolean;
 }
 
-export interface ChatAuditEntry extends BaseEntry {
+export interface ChatAuditEntry extends BaseEntry, UsageFields {
   route: '/chat';
   uuid: string;
   tokens_in: number;

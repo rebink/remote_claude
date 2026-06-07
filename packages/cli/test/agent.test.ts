@@ -282,6 +282,41 @@ printf 'brand new\\n' > c.txt`,
     await app.close();
   });
 
+  // Quarantined on CI: reads the hijacked /ask NDJSON stream via app.inject. (M6 steps 3-4)
+  it.skipIf(!!process.env.CI)('persists real token/cost usage from JSON output and unwraps the displayed text', async () => {
+    // fake claude: make a change AND print a claude --output-format json object
+    fakeClaudeBin = await makeFakeClaude(
+      `printf 'edited\\n' >> a.txt\n` +
+        `printf '%s' '{"type":"result","result":"made the edit","total_cost_usd":0.0042,"model":"claude-opus-4-8","usage":{"input_tokens":1000,"output_tokens":200}}'`,
+    );
+    const auditPath = pathJoin(projectsRoot, 'audit-usage.log');
+    const log = new JsonlAuditLog({ path: auditPath });
+    const app = buildServer({
+      usersStore: makeStore(), projectsRoot,
+      aiCommand: fakeClaudeBin, aiArgs: [], timeoutSec: 10, version: 'x',
+      auditLog: log,
+    });
+    const res = await app.inject({
+      method: 'POST', url: '/ask',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      payload: { prompt: 'edit it', project: 'sample' },
+    });
+    const result = parseAskEvents(res.payload).find((e) => e.type === 'result');
+    if (result?.type !== 'result') throw new Error('no result event');
+    // displayed stdout is the unwrapped assistant text, not raw JSON
+    expect(result.stdout).toBe('made the edit');
+
+    const e = log.readAll()[0] as {
+      tokens_in: number; tokens_out: number; cost_usd: number; cost_source: string; model: string;
+    };
+    expect(e.tokens_in).toBe(1000);
+    expect(e.tokens_out).toBe(200);
+    expect(e.cost_usd).toBeCloseTo(0.0042);
+    expect(e.cost_source).toBe('reported');
+    expect(e.model).toBe('claude-opus-4-8');
+    await app.close();
+  });
+
   // Quarantined on CI: reads the hijacked /ask NDJSON stream via app.inject (timing-fragile on CI). See note above.
   it.skipIf(!!process.env.CI)('emits a queued event when the request waits behind another (globalCap=1)', async () => {
     fakeClaudeBin = await makeFakeClaude(`sleep 0.3; printf 'edited\\n' >> a.txt`);
