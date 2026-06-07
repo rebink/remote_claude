@@ -13,6 +13,8 @@ import { registerUserCommands } from './commands/user.ts';
 import { registerAgentLogCommand } from './commands/agent-log.ts';
 import { registerUsageCommand } from './commands/usage.ts';
 import { loadPricing } from './agent/pricing.ts';
+import { mergeAllowHosts, resolveHosts, buildSeatbeltProfile, egressAvailable, runEgressProbe } from './agent/egress.ts';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { VERSION } from './version.ts';
 
 function envRequired(name: string): string {
@@ -34,6 +36,32 @@ async function runServe(): Promise<void> {
   const verifyCommand = process.env.PW_VERIFY_CMD?.trim() || undefined;
   const verifyTimeoutSec = Number(process.env.PW_VERIFY_TIMEOUT_SEC ?? 300);
   const pricing = loadPricing(process.env.PW_PRICING_FILE ?? join(homedir(), '.patchwire', 'pricing.yml'));
+
+  // Default-deny egress (M3, macOS). When enabled, the AI runs under a seatbelt
+  // profile that blocks all outbound except localhost, DNS, and the resolved
+  // allowlist (Anthropic API by default). Fail-closed: refuse to start if the
+  // mechanism is unavailable rather than silently running unconfined.
+  let egressProfilePath: string | undefined;
+  if ((process.env.PW_EGRESS ?? 'off').toLowerCase() === 'deny') {
+    if (!egressAvailable()) {
+      console.error(
+        'PW_EGRESS=deny requires macOS `sandbox-exec`, which was not found on PATH. ' +
+          'Refusing to start (fail-closed). Unset PW_EGRESS to run without egress confinement.',
+      );
+      process.exit(1);
+    }
+    const hosts = mergeAllowHosts(process.env.PW_EGRESS_ALLOW);
+    const allowDns = process.env.PW_EGRESS_ALLOW_DNS !== '0';
+    const ips = await resolveHosts(hosts);
+    const profile = buildSeatbeltProfile({ allowIps: ips, allowDns });
+    egressProfilePath = join(homedir(), '.patchwire', 'egress.sb');
+    mkdirSync(join(homedir(), '.patchwire'), { recursive: true });
+    writeFileSync(egressProfilePath, profile, { mode: 0o600 });
+    console.error(
+      `egress: default-deny enabled — allow ${hosts.join(', ')} (${ips.length} IP(s))` +
+        `${allowDns ? ' + DNS' : ''}; profile ${egressProfilePath}`,
+    );
+  }
 
   const usersJsonPath = process.env.PW_USERS_FILE ?? join(homedir(), '.patchwire', 'users.json');
   const legacyToken = process.env.PW_AGENT_TOKEN;
@@ -74,6 +102,7 @@ async function runServe(): Promise<void> {
     timeoutSec,
     ...(verifyCommand ? { verifyCommand, verifyTimeoutSec } : {}),
     ...(pricing ? { pricing } : {}),
+    ...(egressProfilePath ? { egressProfilePath } : {}),
     version: VERSION,
     concurrency,
     auditLog,
@@ -153,6 +182,35 @@ program
   .command('uninstall')
   .description('Remove the launchd LaunchAgent')
   .action(async () => { await runDaemonUninstall(); });
+
+async function runEgressCheck(): Promise<void> {
+  if (!egressAvailable()) {
+    console.error('egress-check needs macOS `sandbox-exec` (not found on PATH).');
+    process.exit(1);
+  }
+  const hosts = mergeAllowHosts(process.env.PW_EGRESS_ALLOW);
+  const allowDns = process.env.PW_EGRESS_ALLOW_DNS !== '0';
+  const ips = await resolveHosts(hosts);
+  const profilePath = join(homedir(), '.patchwire', 'egress-check.sb');
+  mkdirSync(join(homedir(), '.patchwire'), { recursive: true });
+  writeFileSync(profilePath, buildSeatbeltProfile({ allowIps: ips, allowDns }), { mode: 0o600 });
+  console.log(`Profile ${profilePath} — allow ${hosts.join(', ')} = ${ips.length} IP(s)${allowDns ? ' + DNS' : ''}`);
+
+  const allowedReachable = await runEgressProbe(profilePath, 'https://api.anthropic.com');
+  const blockedReachable = await runEgressProbe(profilePath, 'https://example.com');
+  console.log(`  allowlisted (api.anthropic.com) reachable: ${allowedReachable ? 'YES ✅' : 'NO ❌'}`);
+  console.log(`  non-allowlisted (example.com) blocked:     ${!blockedReachable ? 'YES ✅' : 'NO ❌ — egress NOT enforced'}`);
+  if (!allowedReachable || blockedReachable) {
+    console.error('egress-check FAILED — see above.');
+    process.exit(1);
+  }
+  console.log('egress-check passed.');
+}
+
+program
+  .command('egress-check')
+  .description('Verify default-deny egress on this box: allowlist reachable, other hosts blocked (macOS)')
+  .action(async () => { await runEgressCheck(); });
 
 registerUserCommands(program);
 registerAgentLogCommand(program);
