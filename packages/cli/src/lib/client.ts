@@ -121,6 +121,7 @@ export async function parseAskStream(
         stdout: e.stdout,
         stderr: e.stderr,
         exitCode: e.exitCode,
+        ...(e.verify ? { verify: e.verify } : {}),
       };
     } else if (e.type === 'error') {
       throw new Error(e.message);

@@ -30,6 +30,8 @@ async function runServe(): Promise<void> {
   const aiCommand = process.env.PW_AI_BIN ?? 'claude';
   const aiArgs = (process.env.PW_AI_ARGS ?? '--print').split(/\s+/).filter(Boolean);
   const timeoutSec = Number(process.env.PW_TIMEOUT_SEC ?? 600);
+  const verifyCommand = process.env.PW_VERIFY_CMD?.trim() || undefined;
+  const verifyTimeoutSec = Number(process.env.PW_VERIFY_TIMEOUT_SEC ?? 300);
 
   const usersJsonPath = process.env.PW_USERS_FILE ?? join(homedir(), '.patchwire', 'users.json');
   const legacyToken = process.env.PW_AGENT_TOKEN;
@@ -68,6 +70,7 @@ async function runServe(): Promise<void> {
     aiCommand,
     aiArgs,
     timeoutSec,
+    ...(verifyCommand ? { verifyCommand, verifyTimeoutSec } : {}),
     version: VERSION,
     concurrency,
     auditLog,

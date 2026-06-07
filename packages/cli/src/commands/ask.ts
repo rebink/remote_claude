@@ -30,12 +30,23 @@ export async function runAsk(cwd: string, prompt: string, opts: AskOptions = {})
   const res = await client.ask({ prompt, project: cfg.project }, (e) => {
     if (e.type === 'queued') log.step(`Queued — position ${e.position}…`);
     else if (e.type === 'accepted') log.step('Asking Patchwire…');
+    else if (e.type === 'verifying') log.step('Verifying on the remote…');
   });
   log.ok(`Remote run finished in ${res.durationMs}ms (CLI total ${Date.now() - askStart}ms)`);
 
   if (res.exitCode !== 0) {
     log.warn(`Claude exited with code ${res.exitCode}`);
     if (res.stderr.trim()) log.dim(res.stderr.trim());
+  }
+
+  if (res.verify) {
+    if (res.verify.passed) {
+      log.ok(`Verify passed on the remote (${res.verify.durationMs}ms).`);
+    } else {
+      log.warn(`Verify FAILED on the remote (exit ${res.verify.exitCode}) — review the diff carefully before applying.`);
+      const tail = res.verify.output.trim().split('\n').slice(-15).join('\n');
+      if (tail) log.dim(tail);
+    }
   }
 
   if (!res.diff.trim()) {
