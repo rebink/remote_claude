@@ -5,6 +5,28 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] — 2026-06-08
+
+Cost & token visibility in `patchwire-agent usage` (M6 steps 2–5).
+
+### Added
+- **`TOK` and `$EQV` columns in `usage`.** Per-user token totals and dollar cost.
+  Cost is **opt-in**: set a JSON output format (e.g. `PW_AI_ARGS="--print
+  --output-format json"`) so the provider reports usage; the default `--print`
+  is unchanged (columns read `—`).
+- **Tariff strategy.** Prefer the provider's own reported cost (Claude
+  `total_cost_usd`, Aider `Cost:`) — no price list to maintain. Optional operator
+  `~/.patchwire/pricing.yml` (`PW_PRICING_FILE`) estimates cost for token-only
+  providers; estimated rows show as `~$…`. `$EQV` is API-equivalent cost — with a
+  flat-rate subscription it's attribution across the team, not a second bill
+  (stated in a footnote under the table).
+- The `/ask` audit entry now records `model`, `tokens_in`, `tokens_out`,
+  `cost_usd`, and `cost_source` (all optional; old log lines still parse).
+
+### Changed
+- When a JSON output format is configured, the agent unwraps the assistant text
+  for display so you never see raw JSON.
+
 ## [0.3.3] — 2026-06-07
 
 Research-driven reliability + security improvements (M1, M2, M4) and the
