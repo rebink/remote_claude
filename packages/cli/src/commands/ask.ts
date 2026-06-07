@@ -2,11 +2,13 @@ import { loadConfig } from '../lib/config.ts';
 import { rsyncPush } from '../lib/rsync.ts';
 import { AgentClient } from '../lib/client.ts';
 import { applyPatchInteractive, savePatch } from '../lib/patch.ts';
+import { preSyncSecretGate } from '../lib/secret-scan.ts';
 import { log } from '../lib/log.ts';
 
 export interface AskOptions {
   skipSync?: boolean;
   saveOnly?: boolean;
+  force?: boolean;
 }
 
 export async function runAsk(cwd: string, prompt: string, opts: AskOptions = {}): Promise<void> {
@@ -18,6 +20,10 @@ export async function runAsk(cwd: string, prompt: string, opts: AskOptions = {})
   const cfg = await loadConfig(cwd);
 
   if (!opts.skipSync) {
+    if (!(await preSyncSecretGate(cwd, cfg.sync.secretScan, !!opts.force))) {
+      process.exitCode = 1;
+      return;
+    }
     log.step('Syncing project to remote…');
     const r = await rsyncPush(cfg, cwd);
     log.ok(`Synced in ${r.durationMs}ms`);
