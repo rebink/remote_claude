@@ -3,7 +3,7 @@ title: Roadmap
 description: What's shipped, what's next, and what's intentionally deferred.
 ---
 
-## Shipped (through v0.3.0)
+## Shipped (through v0.3.3)
 
 - ✅ `patchwire` CLI with `setup`, `init`, `init-remote`, `sync`, `ask`, `apply`, `chat`, `doctor`, `whoami`
 - ✅ `patchwire-agent` HTTP server with `/health`, `/ask`, `/chat`
@@ -16,16 +16,21 @@ description: What's shipped, what's next, and what's intentionally deferred.
 - ✅ Per-user policy enforcement — project allowlist + rate limit on `/ask` and `/chat`
 - ✅ JSONL audit log (every `/ask` and `/chat`; stores `prompt_sha256`, never plaintext)
 - ✅ `patchwire-agent log` — filtered audit log viewer
-- ✅ `patchwire-agent usage` — per-user requests / accepted / ask / chat / lines added-removed / duration
+- ✅ `patchwire-agent usage` — per-user requests / accepted / ask / chat / lines added-removed / duration / **tokens + dollar cost** (`TOK` / `$EQV`)
 - ✅ Streamed `/ask` (NDJSON live queue visibility while Claude runs)
-- ✅ VS Code extension (bundled; surfaced diff preview and multi-turn chat in the editor)
+- ✅ VS Code extension (bundled; surfaced diff preview and multi-turn chat in the editor); published to the **Marketplace + Open VSX**
 - ✅ Secret-safe sync (rsync respects `.gitignore` and `sync.exclude`)
+- ✅ **Reliable 3-way apply** — detects local drift since sync and merges instead of failing
+- ✅ **Test-before-return** — optional `PW_VERIFY_CMD` runs on the checkout so you review a validated diff
+- ✅ **Pre-sync secret scan** (`sync.secretScan`) — gitleaks blocks/warns before a tracked-file secret can cross
+- ✅ **Cost & token visibility** — `usage` shows `TOK` and `$EQV`; provider-reported cost where available, operator price-table fallback (`~estimated`). See [Configuration → Cost tracking](/configuration/#cost-tracking).
 - ✅ GitHub repo: [rebink/remote_claude](https://github.com/rebink/remote_claude)
 
 ## Near-term
 
-- 🔜 Per-developer **dollar-cost** reporting — needs model name + token counts captured in the audit log; `usage` will then show estimated spend
-- 🔜 Publish VS Code extension to the Marketplace and Open VSX Registry
+- 🔜 **Default-deny egress** on the remote — so even a compromised agent can't exfiltrate synced code (the security counterpart to read-minimization)
+- 🔜 Per-request **model selection** + an "allowed models" policy
+- 🔜 Dollar-cost **on the chat path** (chat already records real tokens; cost attribution is next)
 
 ## Exploring / not committed
 
