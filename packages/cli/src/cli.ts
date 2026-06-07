@@ -133,8 +133,9 @@ program
   .command('sync')
   .description('Sync project files to the remote Mac Mini')
   .option('--json', 'JSONL output (for the VS Code extension)')
-  .action(async (opts: { json?: boolean }) => {
-    await runSync(process.cwd(), { json: !!opts.json });
+  .option('--force', 'sync even if the secret scan (secretScan: block) finds secrets')
+  .action(async (opts: { json?: boolean; force?: boolean }) => {
+    await runSync(process.cwd(), { json: !!opts.json, force: !!opts.force });
   });
 
 program
@@ -143,11 +144,13 @@ program
   .argument('<prompt...>', 'instruction for Claude')
   .option('--no-sync', 'skip sync (use last synced state on remote)')
   .option('--save-only', 'save the patch without prompting to apply')
-  .action(async (promptParts: string[], opts: { sync?: boolean; saveOnly?: boolean }) => {
+  .option('--force', 'sync even if the secret scan (secretScan: block) finds secrets')
+  .action(async (promptParts: string[], opts: { sync?: boolean; saveOnly?: boolean; force?: boolean }) => {
     const prompt = promptParts.join(' ');
     await runAsk(process.cwd(), prompt, {
       skipSync: opts.sync === false,
       saveOnly: opts.saveOnly,
+      force: opts.force,
     });
   });
 
