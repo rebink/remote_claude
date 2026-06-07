@@ -41,6 +41,7 @@ ai:
 | `remote.agentUrl` | URL | yes | (none) | Where the CLI will POST `/ask`. |
 | `remote.token` | string | yes | (none) | Bearer token. Use `${PW_TOKEN}` interpolation. Don't commit secrets. |
 | `sync.exclude` | string[] | no | `[]` | Passed to `rsync --exclude-from`. `.git/` and `.patchwire/` are always excluded. |
+| `sync.secretScan` | `off`\|`warn`\|`block` | no | `off` | Run a [gitleaks](https://github.com/gitleaks/gitleaks) scan over the files about to sync. `warn` reports findings and continues; `block` refuses the sync (override with `--force`). Closes the gap where a secret in a *tracked* file would otherwise cross. Best-effort — if gitleaks isn't installed it logs and continues. |
 | `ai.command` | string | no | `claude` | Path or name of the AI CLI to spawn on the remote. |
 | `ai.args` | string[] | no | `[--print]` | Args passed to `ai.command`. The prompt is sent on stdin. |
 | `ai.timeoutSec` | number | no | 600 | Hard kill after this many seconds. |
@@ -67,8 +68,11 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 | `PW_AGENT_HOST` | no | `127.0.0.1` | Bind interface. Use `0.0.0.0` to bind all, or your tailnet IP. |
 | `PW_AGENT_PORT` | no | `7878` | TCP port. |
 | `PW_AI_BIN` | no | `claude` | Path to the Claude CLI. |
-| `PW_AI_ARGS` | no | `--print` | Space-separated args. |
+| `PW_AI_ARGS` | no | `--print` | Space-separated args. Add a JSON output format (e.g. `--print --output-format json`) to enable **cost tracking** — see below. |
 | `PW_TIMEOUT_SEC` | no | `600` | Hard kill timeout for `claude`. |
+| `PW_VERIFY_CMD` | no | — | Optional command run on the checkout after the diff is captured (e.g. `flutter analyze`, `npm test`). Its pass/fail is returned with `/ask` so you review a diff that already passed validation. Informs, never blocks. |
+| `PW_VERIFY_TIMEOUT_SEC` | no | `300` | Timeout for `PW_VERIFY_CMD`. |
+| `PW_PRICING_FILE` | no | `~/.patchwire/pricing.yml` | Optional operator price table, used **only** to estimate cost when the provider doesn't report one itself. |
 | `PW_MAX_CONCURRENT_TOTAL` | no | `3` | Maximum simultaneous Claude runs across all users. Requests beyond this cap wait FIFO. |
 | `PW_MAX_CONCURRENT_PER_USER` | no | `1` | Maximum simultaneous Claude runs from any one user. Prevents single-user hogging when the global cap allows it. |
 | `PW_AUDIT_LOG` | no | `~/.patchwire/agent.log` | JSONL audit log path. One line per successful `/ask` or `/chat` turn. No plaintext prompts (only sha256). |
@@ -77,6 +81,38 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 
 The users, concurrency, and audit settings above work together to run one agent
 across a team. See [Multi-developer](/multi-developer/) for how they fit.
+
+## Cost tracking
+
+`patchwire-agent usage` shows `TOK` (tokens) and `$EQV` (dollar cost) columns
+once the agent can see real usage. It's **opt-in** so the default stays unchanged:
+
+1. **Capture usage.** Configure a JSON output format so the provider reports
+   tokens (and, for Claude, cost) instead of plain text:
+
+   ```sh
+   PW_AI_ARGS="--print --output-format json"
+   ```
+
+   The agent parses the usage out and still shows you clean assistant text — you
+   never see raw JSON. With the default `--print`, no usage is captured and the
+   columns read `—`.
+
+2. **Where the dollar figure comes from.** We prefer the provider's *own* reported
+   cost — Claude's `total_cost_usd`, Aider's `Cost:` line — so there's no price
+   list to keep in sync. For a provider that reports tokens but not dollars, add
+   an optional `~/.patchwire/pricing.yml` (or `PW_PRICING_FILE`); those rows show
+   as `~$…` (estimated):
+
+   ```yaml
+   models:
+     "claude-opus-4-8": { in_per_mtok: 15.00, out_per_mtok: 75.00, cache_read_per_mtok: 1.50 }
+     "gpt-5.2":         { in_per_mtok: 10.00, out_per_mtok: 30.00 }
+   ```
+
+3. **What `$EQV` means.** Patchwire's premise is one shared subscription. If that's
+   a flat-rate plan, `$EQV` is the **API-equivalent** cost — the right number for
+   fair-share **attribution** across the team, *not* a second bill you pay.
 
 ## Laptop environment variables
 
