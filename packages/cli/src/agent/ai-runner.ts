@@ -2,6 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import { isNotLoggedIn, NOT_LOGGED_IN_REMEDIATION, tryDisableKeychainAutoLock } from './keychain.ts';
+import { parseAiUsage } from './usage-parser.ts';
 
 export interface AiResult {
   stdout: string;
@@ -139,7 +140,11 @@ export function makeAiRunner(opts: AiStreamingOptions) {
         child.on('error', (err: Error) => settleReject(err));
         child.on('close', (code) => {
           if (code === 0) {
-            settleResolve({ tokensIn: 0, tokensOut: out.length });
+            // Real token counts from the provider's output (Claude JSON/stream-json,
+            // Aider text). Falls back to {0,0} for plain-text output — honest, unlike
+            // the previous `out.length` character count. See usage-parser.ts.
+            const usage = parseAiUsage(out);
+            settleResolve({ tokensIn: usage.tokensIn, tokensOut: usage.tokensOut });
             return;
           }
           // Auth-locked? Best-effort fix the keychain auto-lock setting (only
