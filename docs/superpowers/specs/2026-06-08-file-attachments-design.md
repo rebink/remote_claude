@@ -33,19 +33,20 @@ A gitignored **`.patchwire-inbox/`** at the project root is a shared staging are
 ### Extension — an "Attach" action that types the path into the session terminal
 **Architecture note (verified):** the extension's AI interaction is **not a webview chat input**. `openSessionTerminal` (`session/sessionTerminal.ts`) opens a VS Code **terminal** that SSHes to the Mac Mini and runs the interactive `claude` REPL; the `ChatPanel` webview is only a sync-status + controls panel. So there is no outgoing prompt string to inject into — the developer types into a terminal. The attach flow integrates with that terminal instead.
 
-- New `packages/extension/src/attach/attachFile.ts` (host-side): given a local file path (or pasted image bytes) + the workspace folder + the session terminal:
-  1. `ensureInbox` + `stageAttachment` (reused from the CLI `lib/attachments.ts` — bundled into the extension the same way the CLI already is).
-  2. `await mutagen.flush()` so the file is on the remote before referencing it.
-  3. Insert the **remote path** into the active `claude` REPL via `terminal.sendText('<remote.path>/.patchwire-inbox/<name>', false)` (no newline — it appears in the prompt for the developer to send). If no session terminal is open, fall back to `vscode.env.clipboard.writeText(remotePath)` and show "remote path copied — paste it into your session."
-- Wiring: a command `patchwire.attachFile` (file picker → `attachFile`) registered in `commands.ts`, surfaced as an **"📎 Attach file"** button in the `ChatPanel` webview (`postMessage({ type: 'attachFile' })` → host runs the command) and in the command palette. A second command `patchwire.attachClipboardImage` grabs a pasted screenshot (macOS `pngpaste`/`osascript`) → same flow.
-- The remote path is computed from `patchwire.yml`'s `remote.path` (already read by `ChatPanel.loadConfig()` → `SessionTarget.remotePath`).
-- No change to the terminal/session transport — the bytes ride Mutagen, and the path is typed into the REPL.
+- New `packages/extension/src/attach/attachFile.ts` (host-side). It **spawns the bundled CLI** (via the existing `resolveCli` pattern) rather than importing CLI source across the package boundary — consistent with how the extension already runs everything:
+  1. `patchwire push <localPath> --stage-only --json` (or `--clip --stage-only --json` for a clipboard image) → stages into the workspace's `.patchwire-inbox/` and returns `{remotePath}`. `--stage-only` skips rsync because Mutagen carries the inbox.
+  2. `await mutagen.flush()` so the staged file is on the remote before referencing it.
+  3. Insert `remotePath` into the active `claude` REPL via `terminal.sendText(remotePath, false)` (no newline — it appears in the prompt for the developer to send). If no session terminal is open, fall back to `vscode.env.clipboard.writeText(remotePath)` + a "remote path copied — paste it into your session" notification.
+- Wiring: command `patchwire.attachFile` (file picker → `attachFile`) registered in `commands.ts`, surfaced as a **"📎 Attach file"** button in the `ChatPanel` webview (`postMessage({ type: 'attachFile' })` → host runs the command) and in the command palette. Command `patchwire.attachClipboardImage` → same flow with `--clip`.
+- No change to the terminal/session transport — Mutagen carries the bytes, the CLI is the single staging implementation, and the path is typed into the REPL.
 
-### CLI — `patchwire push`
+### CLI — `patchwire push` (the single implementation both surfaces use)
 - `packages/cli/src/commands/push.ts` + registration in `cli.ts`.
-- `patchwire push <file>...` → `ensureInbox`, copy locally into `.patchwire-inbox/` (collision-safe), rsync **just that file** to `<remote.path>/.patchwire-inbox/<name>`, print the remote path to paste into the SSH `claude` session. Always copies — no "translate, it's already synced" optimization, because the SSH user may not be running Patchwire's rsync sync at all, so we can't assume the project is mirrored.
-- `patchwire push --clip` → read the clipboard image (`pngpaste` if present, else `osascript` fallback), write to a temp file, push it.
-- `patchwire push --clean` → `pruneInbox` locally and `rm -rf` the remote inbox.
+- `patchwire push <file>...` → `ensureInbox`, copy locally into `.patchwire-inbox/` (collision-safe), rsync **just that file** to `<remote.path>/.patchwire-inbox/<name>`, print the remote path to paste into the SSH `claude` session. Always copies — no "translate, it's already synced" optimization, because the SSH user may not be running Patchwire's rsync sync at all.
+- `--stage-only` → stage into the local inbox and print the remote path, but **skip the rsync**. For callers where transfer is handled externally (the extension, whose Mutagen sync carries the inbox).
+- `--json` → emit `{"remotePath":"…"}` instead of human text (for the extension to parse).
+- `--clip` → read the clipboard image (`pngpaste` if present, else `osascript` fallback), write to a temp file, push it.
+- `--clean` → `pruneInbox` locally and (unless `--stage-only`) `rm -rf` the remote inbox.
 
 ## Data flow (extension happy path)
 `Attach action (picker / clipboard) → host stageAttachment into .patchwire-inbox/ → mutagen.flush() → terminal.sendText(remotePath) → developer's claude REPL prompt now holds the remote path → they hit enter → remote claude reads the file`
@@ -67,7 +68,7 @@ A gitignored **`.patchwire-inbox/`** at the project root is a shared staging are
 **In-repo (TDD):**
 - `ensureInbox` idempotent (dir + single `.gitignore` line); `sanitizeName` strips separators; `stageAttachment` collision suffixing + returns project-relative path; `remoteAttachmentPath` posix-joins correctly; `pruneInbox` empties; size-cap rejection.
 - CLI `push`: rsync argv construction for a single file into the remote inbox; remote-path output formatting; `--clip`/`--clean` flag plumbing.
-- Extension host: `attachFile(localPath, target, deps)` stages → flushes → calls `terminal.sendText(remotePath)`; with no terminal it writes the path to the clipboard instead. Unit-tested with stubbed Mutagen + vscode terminal/clipboard (the webview button + command registration stay thin).
+- Extension host: `attachFile(localPath, deps)` runs the CLI (stubbed to return `{remotePath}`) → `mutagen.flush()` → `terminal.sendText(remotePath)`; with no terminal it writes the path to the clipboard instead. Unit-tested with stubbed CLI spawn + Mutagen + vscode terminal/clipboard (the webview button + command registration stay thin).
 
 **Manual, on the box (can't automate here):**
 - Real Mutagen carry of a dropped file; remote `claude` actually reading an attached **image for vision**; the SSH `push` round-trip.
