@@ -1,6 +1,6 @@
 // packages/cli/src/lib/attachments.ts
 import {
-  existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, statSync, readdirSync, rmSync,
+  existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, lstatSync, readdirSync, rmSync,
 } from 'node:fs';
 import { basename, join } from 'node:path';
 
@@ -20,13 +20,17 @@ export function ensureInbox(projectDir: string): void {
 
 /** Strip path separators / unsafe chars down to a safe basename. */
 export function sanitizeName(name: string): string {
-  return basename(name).replace(/[^A-Za-z0-9._-]/g, '_');
+  const safe = basename(name).replace(/[^A-Za-z0-9._-]/g, '_');
+  if (!safe) throw new Error(`Cannot derive a safe filename from: ${name}`);
+  return safe;
 }
 
 /** Copy `localPath` into the inbox (collision-safe). Returns the project-relative path. */
 export function stageAttachment(localPath: string, projectDir: string): string {
   if (!existsSync(localPath)) throw new Error(`Attachment not found: ${localPath}`);
-  if (statSync(localPath).size > MAX_ATTACHMENT_BYTES) {
+  const st = lstatSync(localPath);
+  if (!st.isFile()) throw new Error(`Attachment must be a regular file: ${localPath}`);
+  if (st.size > MAX_ATTACHMENT_BYTES) {
     throw new Error(`Attachment too large (> ${Math.round(MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB): ${localPath}`);
   }
   ensureInbox(projectDir);
