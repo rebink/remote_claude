@@ -104,6 +104,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         case 'resumeSync':      this.mutagen?.resume(); return;
         case 'restartSync':     return this.startMutagen();
         case 'viewOutput':      return this.deps.output.show();
+        case 'attachFile':      return vscode.commands.executeCommand('patchwire.attachFile');
         default:
           this.deps.output.appendLine(`ChatPanel: unknown message type "${(msg as { type?: string }).type}"`);
           return;
@@ -113,6 +114,20 @@ export class ChatPanel implements vscode.WebviewViewProvider {
 
   refresh(): void {
     this.postState();
+  }
+
+  /**
+   * Force a Mutagen sync flush so staged files reach the remote immediately.
+   * Used by the attach-file command (there is no `patchwire.flushSync` command;
+   * the flush lives on the live Mutagen session this panel owns).
+   */
+  async flush(): Promise<void> {
+    await this.mutagen?.flush();
+  }
+
+  /** The configured project name from patchwire.yml, or undefined if unconfigured. */
+  getProject(): string | undefined {
+    return this.loadConfig()?.project;
   }
 
   private loadConfig(): SessionTarget | null {

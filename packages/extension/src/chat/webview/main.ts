@@ -64,6 +64,10 @@ function renderActions(): HTMLElement {
       className: 'primary',
       events: { click: () => vscode.postMessage({ type: 'openSession' }) },
     }, currentState.sessionRunning ? '⎈ Focus Claude session' : '⎈ Open Claude session'),
+    h('button', {
+      className: 'attach',
+      events: { click: () => vscode.postMessage({ type: 'attachFile' }) },
+    }, '📎 Attach file'),
   );
 }
 
