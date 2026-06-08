@@ -33,6 +33,14 @@ describe('attachFile', () => {
     const d = deps();
     await attachFile(null, d, { clip: true });
     expect(d.runCliJson).toHaveBeenCalledWith(['push', '--clip', '--stage-only', '--json']);
+    expect(d.flushSync).toHaveBeenCalledOnce();
+  });
+
+  it('does not call the CLI and notifies when no file is selected (no clip)', async () => {
+    const d = deps();
+    await attachFile(null, d);
+    expect(d.runCliJson).not.toHaveBeenCalled();
+    expect(d.notify).toHaveBeenCalledWith(expect.stringMatching(/no file selected/i));
   });
 
   it('surfaces a clear error if staging fails', async () => {

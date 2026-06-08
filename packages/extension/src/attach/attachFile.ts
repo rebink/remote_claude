@@ -22,15 +22,20 @@ export async function attachFile(
   opts: { clip?: boolean } = {},
 ): Promise<void> {
   try {
+    if (!opts.clip && localPath === null) {
+      deps.notify('Attach failed: no file selected.');
+      return;
+    }
     const args = opts.clip
       ? ['push', '--clip', '--stage-only', '--json']
-      : ['push', localPath!, '--stage-only', '--json'];
+      : ['push', localPath as string, '--stage-only', '--json'];
     const { remotePath } = await deps.runCliJson(args);
     await deps.flushSync();
     if (deps.sendToTerminal(remotePath)) return;
     await deps.copyToClipboard(remotePath);
     deps.notify(`Attachment synced — remote path copied to clipboard: ${remotePath}`);
   } catch (err) {
-    deps.notify(`Attach failed: ${(err as Error).message}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    deps.notify(`Attach failed: ${msg}`);
   }
 }
