@@ -29,15 +29,20 @@ function makeAttachDeps(
   return {
     runCliJson: (args) =>
       new Promise((resolve, reject) => {
+        let settled = false;
         const child = spawn(inv.command, [...inv.baseArgs, ...args], { cwd, env: inv.env });
         let out = '';
         let err = '';
         child.stdout.on('data', (b) => (out += b.toString()));
         child.stderr.on('data', (b) => (err += b.toString()));
-        child.on('error', reject);
+        child.on('error', (e) => {
+          settled = true;
+          reject(e);
+        });
         child.on('close', (code) => {
+          if (settled) return;
           if (code !== 0) {
-            reject(new Error(err.trim() || `patchwire push exited ${code}`));
+            reject(new Error(err.trim() || `patchwire push exited ${code ?? 'null'}`));
             return;
           }
           const lastLine = out.trim().split('\n').filter(Boolean).pop() ?? '';
