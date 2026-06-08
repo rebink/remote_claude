@@ -200,7 +200,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         const child = spawn(
           inv.command,
           [...inv.baseArgs, 'push', '--clean', '--stage-only', '--json'],
-          { cwd: this.workspaceFolder, env: inv.env },
+          { cwd: this.workspaceFolder, env: inv.env, stdio: ['ignore', 'ignore', 'pipe'] },
         );
         let err = '';
         child.stderr.on('data', (b) => (err += b.toString()));
