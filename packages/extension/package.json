@@ -23,7 +23,9 @@
       { "command": "patchwire.openSetup", "title": "Patchwire: Setup…" },
       { "command": "patchwire.newChat", "title": "Patchwire: New Chat" },
       { "command": "patchwire.toggleLiveSync", "title": "Patchwire: Toggle Live Sync" },
-      { "command": "patchwire.viewOutput", "title": "Patchwire: Show Output" }
+      { "command": "patchwire.viewOutput", "title": "Patchwire: Show Output" },
+      { "command": "patchwire.attachFile", "title": "Attach file to claude session", "category": "Patchwire" },
+      { "command": "patchwire.attachClipboardImage", "title": "Attach clipboard image to claude session", "category": "Patchwire" }
     ],
     "viewsContainers": {
       "activitybar": [
