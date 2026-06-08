@@ -1,6 +1,6 @@
 // packages/cli/test/attachments.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync, mkdirSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -26,6 +26,11 @@ describe('sanitizeName', () => {
   it('strips path separators and keeps a safe basename', () => {
     expect(sanitizeName('../../etc/passwd')).toBe('passwd');
     expect(sanitizeName('a b/c?.png')).toBe('c_.png');
+  });
+
+  it('throws when no safe filename can be derived', () => {
+    expect(() => sanitizeName('')).toThrow(/Cannot derive/i);
+    expect(() => sanitizeName('/')).toThrow(/Cannot derive/i);
   });
 });
 
@@ -56,6 +61,20 @@ describe('stageAttachment', () => {
 
   it('throws a clear error when the source is missing', () => {
     expect(() => stageAttachment(join(dir, 'nope.txt'), dir)).toThrow(/not found|no such/i);
+  });
+
+  it('rejects staging a directory', () => {
+    const srcDir = join(dir, 'adir');
+    mkdirSync(srcDir);
+    expect(() => stageAttachment(srcDir, dir)).toThrow(/regular file/i);
+  });
+
+  it('rejects staging a symlink to a real file', () => {
+    const target = join(dir, 'target.png');
+    writeFileSync(target, 'PNGDATA');
+    const link = join(dir, 'link.png');
+    symlinkSync(target, link);
+    expect(() => stageAttachment(link, dir)).toThrow(/regular file/i);
   });
 });
 
