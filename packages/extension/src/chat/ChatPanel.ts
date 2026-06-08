@@ -2,12 +2,14 @@ import * as vscode from 'vscode';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 import {
   openSessionTerminal,
   findExistingSessionTerminal,
   type SessionTarget,
 } from '../session/sessionTerminal.ts';
+import { resolveCli } from '../cli/resolveCli.ts';
 import { MutagenController, type MutagenStatus } from '../sync/MutagenController.ts';
 
 interface SessionState {
@@ -104,6 +106,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         case 'resumeSync':      this.mutagen?.resume(); return;
         case 'restartSync':     return this.startMutagen();
         case 'viewOutput':      return this.deps.output.show();
+        case 'attachFile':      return vscode.commands.executeCommand('patchwire.attachFile');
         default:
           this.deps.output.appendLine(`ChatPanel: unknown message type "${(msg as { type?: string }).type}"`);
           return;
@@ -113,6 +116,20 @@ export class ChatPanel implements vscode.WebviewViewProvider {
 
   refresh(): void {
     this.postState();
+  }
+
+  /**
+   * Force a Mutagen sync flush so staged files reach the remote immediately.
+   * Used by the attach-file command (there is no `patchwire.flushSync` command;
+   * the flush lives on the live Mutagen session this panel owns).
+   */
+  async flush(): Promise<void> {
+    await this.mutagen?.flush();
+  }
+
+  /** The configured project name from patchwire.yml, or undefined if unconfigured. */
+  getProject(): string | undefined {
+    return this.loadConfig()?.project;
   }
 
   private loadConfig(): SessionTarget | null {
@@ -162,8 +179,48 @@ export class ChatPanel implements vscode.WebviewViewProvider {
       vscode.window.showErrorMessage('No patchwire.yml found — run Patchwire: Setup first.');
       return;
     }
+    // Best-effort, non-blocking: prune the local attachment inbox so old
+    // attachments don't accumulate. Mutagen propagates the deletion to the
+    // remote. Never block (or fail) opening the session on this.
+    void this.pruneInbox().catch(() => {});
     openSessionTerminal(cfg);
     this.postState();
+  }
+
+  /**
+   * Fire-and-forget prune of the local `.patchwire-inbox/`. Spawns the bundled
+   * CLI `patchwire push --clean --stage-only --json` in the workspace folder.
+   * Any failure is swallowed (logged if possible); it never throws and never
+   * blocks the session from opening.
+   */
+  private pruneInbox(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      try {
+        const inv = resolveCli(this.extensionUri.fsPath);
+        const child = spawn(
+          inv.command,
+          [...inv.baseArgs, 'push', '--clean', '--stage-only', '--json'],
+          { cwd: this.workspaceFolder, env: inv.env, stdio: ['ignore', 'ignore', 'pipe'] },
+        );
+        let err = '';
+        child.stderr.on('data', (b) => (err += b.toString()));
+        child.on('error', (e) => {
+          this.deps.output.appendLine(`Inbox prune failed: ${(e as Error).message}`);
+          resolve();
+        });
+        child.on('close', (code) => {
+          if (code !== 0) {
+            this.deps.output.appendLine(
+              `Inbox prune exited ${code ?? 'null'}: ${err.trim()}`,
+            );
+          }
+          resolve();
+        });
+      } catch (e) {
+        this.deps.output.appendLine(`Inbox prune failed: ${(e as Error).message}`);
+        resolve();
+      }
+    });
   }
 
   private renderHtml(webview: vscode.Webview): string {
