@@ -4,6 +4,7 @@ import { runSetup } from './commands/setup.ts';
 import { runSync } from './commands/sync.ts';
 import { runAsk } from './commands/ask.ts';
 import { runApply } from './commands/apply.ts';
+import { runPush } from './commands/push.ts';
 import { runDoctor } from './commands/doctor.ts';
 import { log } from './lib/log.ts';
 import { VERSION } from './version.ts';
@@ -160,6 +161,23 @@ program
   .argument('[patch]', 'path to a patch file')
   .action(async (patch?: string) => {
     await runApply(process.cwd(), patch);
+  });
+
+program
+  .command('push')
+  .description('Copy a local file to the remote so the SSH claude session can read it')
+  .argument('[files...]', 'local file path(s) to push')
+  .option('--stage-only', 'stage into .patchwire-inbox/ but skip rsync (transfer handled externally, e.g. Mutagen)')
+  .option('--json', 'emit {"remotePath":…} as JSON')
+  .option('--clip', 'push the current clipboard image (screenshot)')
+  .option('--clean', 'clear the local (and remote) attachments inbox')
+  .action(async (files: string[], opts: { stageOnly?: boolean; json?: boolean; clip?: boolean; clean?: boolean }) => {
+    await runPush(process.cwd(), files ?? [], {
+      stageOnly: opts.stageOnly,
+      json: opts.json,
+      clip: opts.clip,
+      clean: opts.clean,
+    });
   });
 
 program
