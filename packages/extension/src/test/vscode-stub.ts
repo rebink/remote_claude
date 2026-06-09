@@ -79,8 +79,13 @@ export const window = {
   showErrorMessage: async (..._args: unknown[]) => undefined as unknown,
   showInformationMessage: async (..._args: unknown[]) => undefined as unknown,
   terminals: [] as unknown[],
+  activeTerminal: undefined as unknown,
   onDidCloseTerminal: (_cb: unknown) => ({ dispose: () => {} }),
   onDidOpenTerminal: (_cb: unknown) => ({ dispose: () => {} }),
+};
+
+export const env = {
+  clipboard: { writeText: async (_text: string) => {} },
 };
 
 export const commands = {

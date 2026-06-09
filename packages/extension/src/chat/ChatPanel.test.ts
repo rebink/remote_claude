@@ -83,4 +83,21 @@ describe('ChatPanel attachments', () => {
     expect(exec).not.toHaveBeenCalled();
     expect(existsSync(join(dir, INBOX_DIR, 'mockup.png'))).toBe(true);
   });
+
+  it('insertAttachmentPath types the remote path into the active terminal', async () => {
+    const sendText = vi.fn();
+    const show = vi.fn();
+    (vscode.window as { activeTerminal?: unknown }).activeTerminal = { sendText, show, name: 't', exitStatus: undefined };
+    await handler({ type: 'insertAttachmentPath', name: 'mockup.png' });
+    expect(show).toHaveBeenCalled();
+    expect(sendText).toHaveBeenCalledWith('/home/u/app/.patchwire-inbox/mockup.png', false);
+    (vscode.window as { activeTerminal?: unknown }).activeTerminal = undefined;
+  });
+
+  it('insertAttachmentPath copies the remote path when no terminal is open', async () => {
+    (vscode.window as { activeTerminal?: unknown }).activeTerminal = undefined;
+    const write = vi.spyOn(vscode.env.clipboard, 'writeText').mockResolvedValue(undefined as never);
+    await handler({ type: 'insertAttachmentPath', name: 'mockup.png' });
+    expect(write).toHaveBeenCalledWith('/home/u/app/.patchwire-inbox/mockup.png');
+  });
 });
