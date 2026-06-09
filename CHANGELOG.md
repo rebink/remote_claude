@@ -5,6 +5,15 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] — 2026-06-09
+
+### Added
+- **Manage staged attachments from the panel.** The Patchwire side panel now lists
+  every file staged in `.patchwire-inbox/`, with a per-file view (opens the local
+  copy; images preview in VS Code) and delete (removes it locally and, through
+  two-way sync, from the remote). The list refreshes automatically as you attach,
+  delete, or sync. Extension only; the CLI and the inbox format are unchanged.
+
 ## [0.3.6] — 2026-06-09
 
 ### Fixed
