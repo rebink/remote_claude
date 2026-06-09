@@ -91,10 +91,31 @@ Same as if you ran `claude` locally. Claude Code on the remote sends prompts and
 
 - **Audit log** of every `/ask` and `/chat` — JSONL with timestamps and a `prompt_sha256` (never the plaintext prompt). View it with `patchwire-agent log`. See [Multi-developer](/multi-developer/).
 
+## Default-deny egress
+
+Read-minimization (sync only what you share) stops the agent from *seeing*
+un-synced secrets. Egress lock-down is the other half: it stops the agent from
+*exfiltrating* the code you did sync (or being prompt-injected into phoning out).
+
+Set **`PW_EGRESS=deny`** on the agent and `claude` runs under a macOS seatbelt
+(`sandbox-exec`) profile that blocks **all** outbound network except localhost,
+DNS, and a resolved allowlist — the Anthropic API by default; add hosts with
+`PW_EGRESS_ALLOW`. It uses IP literals only (no hostname-suffix matching — the
+footgun behind a real-world sandbox bypass), and is **fail-closed**: if
+`sandbox-exec` is missing, the agent refuses to start rather than run open.
+
+- **Opt-in.** The default (`off`) leaves the agent unchanged.
+- **macOS only** today (the agent is macOS-only).
+- **Verify on your box:** run `patchwire-agent egress-check` — it confirms the
+  Anthropic API is reachable and that other hosts are blocked. Do this before you
+  rely on it; in-process tests can't prove kernel-level enforcement.
+
+See [Configuration](/configuration/#default-deny-egress-macos) for the env vars.
+
 ## What we'd like to add
 
 - **Optional TLS** for the agent (likely a flag on `install` that wires up a self-signed cert + cert pinning on the CLI).
 - **Per-project tokens** so each project has its own credential.
-- **Default-deny egress** on the remote, so even a compromised agent can't exfiltrate synced code (the read-minimization counterpart). See [Roadmap](/roadmap/).
+- **Egress on Linux** (network-namespace backend) + timer-based IP re-resolution.
 
 Open an issue if you'd find any of these load-bearing.
