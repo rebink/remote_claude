@@ -1,13 +1,13 @@
 {
   "name": "patchwire-vscode",
   "displayName": "Patchwire",
-  "description": "Chat with an AI coding agent on a machine you control; review every change as a diff before it touches your code.",
-  "version": "0.3.8",
+  "description": "Run a Claude Code session on a machine you own, kept in two-way sync with your editor. Your code stays on your own hardware.",
+  "version": "0.3.9",
   "publisher": "patchwire",
   "private": true,
   "icon": "media/icon.png",
   "galleryBanner": { "color": "#0E0E10", "theme": "dark" },
-  "keywords": ["ai", "claude", "flutter", "diff", "code review", "remote", "patchwire"],
+  "keywords": ["ai", "claude", "claude code", "remote", "ssh", "sync", "flutter", "patchwire"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rebink/patchwire.git",
