@@ -7,6 +7,8 @@ type SyncKind = 'not_installed' | 'connecting' | 'watching' | 'syncing' | 'confl
 
 interface SyncUiState { kind: SyncKind; conflicts?: string[]; message?: string }
 
+interface Attachment { name: string; relPath: string; size: number }
+
 interface State {
   configured: boolean;
   project?: string;
@@ -15,6 +17,7 @@ interface State {
   remotePath?: string;
   sessionRunning: boolean;
   sync: SyncUiState;
+  attachments?: Attachment[];
 }
 
 const root = document.getElementById('app')!;
@@ -47,7 +50,7 @@ function render(): void {
     return;
   }
 
-  root.append(renderHeader(), renderActions(), renderSync(), renderFooter());
+  root.append(renderHeader(), renderActions(), renderSync(), renderAttachments(), renderFooter());
 }
 
 function renderHeader(): HTMLElement {
@@ -171,6 +174,46 @@ function renderSync(): HTMLElement {
 
   if (detail) wrap.append(detail);
 
+  return wrap;
+}
+
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderAttachments(): HTMLElement {
+  const items = currentState.attachments ?? [];
+  const wrap = h('div', { className: 'attachments' });
+  wrap.append(
+    h('div', { className: 'attach-header' },
+      h('span', { className: 'attach-title' }, 'Attachments'),
+      h('span', { className: 'attach-count' }, String(items.length)),
+    ),
+  );
+  if (items.length === 0) {
+    wrap.append(h('p', { className: 'empty' }, 'No attachments staged.'));
+    return wrap;
+  }
+  for (const a of items) {
+    wrap.append(
+      h('div', { className: 'attach-row' },
+        h('span', { className: 'attach-name', title: a.name }, a.name),
+        h('span', { className: 'attach-size' }, humanSize(a.size)),
+        h('span', { className: 'attach-actions' },
+          h('button', {
+            className: 'attach-btn', title: 'Open',
+            events: { click: () => vscode.postMessage({ type: 'viewAttachment', name: a.name }) },
+          }, '👁'),
+          h('button', {
+            className: 'attach-btn', title: 'Delete',
+            events: { click: () => vscode.postMessage({ type: 'deleteAttachment', name: a.name }) },
+          }, '🗑'),
+        ),
+      ),
+    );
+  }
   return wrap;
 }
 
