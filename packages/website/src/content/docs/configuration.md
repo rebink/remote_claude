@@ -73,6 +73,9 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 | `PW_VERIFY_CMD` | no | — | Optional command run on the checkout after the diff is captured (e.g. `flutter analyze`, `npm test`). Its pass/fail is returned with `/ask` so you review a diff that already passed validation. Informs, never blocks. |
 | `PW_VERIFY_TIMEOUT_SEC` | no | `300` | Timeout for `PW_VERIFY_CMD`. |
 | `PW_PRICING_FILE` | no | `~/.patchwire/pricing.yml` | Optional operator price table, used **only** to estimate cost when the provider doesn't report one itself. |
+| `PW_EGRESS` | no | `off` | `deny` runs `claude` under a macOS seatbelt sandbox that blocks all outbound except localhost, DNS, and the allowlist. Fail-closed. See [Default-deny egress](#default-deny-egress-macos). |
+| `PW_EGRESS_ALLOW` | no | — | Extra hosts (comma/space separated) the sandbox may reach, in addition to the Anthropic API. |
+| `PW_EGRESS_ALLOW_DNS` | no | `1` | `0` blocks DNS too (tightest; only works if `claude` reaches pinned IPs). |
 | `PW_MAX_CONCURRENT_TOTAL` | no | `3` | Maximum simultaneous Claude runs across all users. Requests beyond this cap wait FIFO. |
 | `PW_MAX_CONCURRENT_PER_USER` | no | `1` | Maximum simultaneous Claude runs from any one user. Prevents single-user hogging when the global cap allows it. |
 | `PW_AUDIT_LOG` | no | `~/.patchwire/agent.log` | JSONL audit log path. One line per successful `/ask` or `/chat` turn. No plaintext prompts (only sha256). |
@@ -113,6 +116,45 @@ once the agent can see real usage. It's **opt-in** so the default stays unchange
 3. **What `$EQV` means.** Patchwire's premise is one shared subscription. If that's
    a flat-rate plan, `$EQV` is the **API-equivalent** cost — the right number for
    fair-share **attribution** across the team, *not* a second bill you pay.
+
+## Default-deny egress (macOS)
+
+Stops the remote `claude` from sending data anywhere except the model API — the
+exfiltration counterpart to syncing only what you share. **Opt-in, off by default.**
+
+```sh
+# on the agent (e.g. in ~/.patchwire/agent.env)
+PW_EGRESS=deny
+# optional: also allow a package registry the agent fetches from mid-task
+PW_EGRESS_ALLOW="registry.npmjs.org pub.dev"
+```
+
+With `deny`, `claude` runs under a seatbelt (`sandbox-exec`) profile that blocks
+all outbound except localhost, DNS, and the resolved allowlist (Anthropic API by
+default). It's **fail-closed** — if `sandbox-exec` is missing, the agent refuses
+to start. **Verify enforcement on the box** before relying on it:
+
+```sh
+patchwire-agent egress-check
+#   allowlisted (api.anthropic.com) reachable: YES ✅
+#   non-allowlisted (example.com) blocked:     YES ✅
+```
+
+See [Security → Default-deny egress](/security/#default-deny-egress).
+
+## Attachments
+
+To let the remote `claude` read a local file (a screenshot, a PDF, any file —
+including images for vision), get it onto the remote first. Both surfaces stage
+the file into a gitignored `.patchwire-inbox/` in the project (so it never lands
+in a returned diff):
+
+- **CLI** (for an SSH `claude` session): `patchwire push ~/Desktop/shot.png`
+  prints the remote path to paste; `patchwire push --clip` pushes the current
+  clipboard screenshot; `patchwire push --clean` clears the inbox.
+- **VS Code**: the **📎 Attach file** button (and the *Attach clipboard image*
+  command) stages the file, waits for sync, and types the remote path straight
+  into your active `claude` session terminal.
 
 ## Laptop environment variables
 

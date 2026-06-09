@@ -119,6 +119,23 @@ patchwire apply [<patch-file>]
 
 Apply a previously-saved patch. Defaults to `.patchwire/last.patch`. Same preview and confirmation flow as `ask`.
 
+### `push`
+
+```
+patchwire push <file>... [--clip] [--clean] [--stage-only] [--json]
+```
+
+Copy a local file to the remote so an interactive SSH `claude` session can read it (any type — text, PDF, images for vision). Stages into a gitignored `.patchwire-inbox/` and rsyncs it to the remote, then prints the remote path to paste into your prompt.
+
+| Flag | Effect |
+| --- | --- |
+| `--clip` | Push the current clipboard image (screenshot) instead of a file path. |
+| `--clean` | Clear the attachments inbox (local + remote). |
+| `--stage-only` | Stage locally and print the remote path, but skip rsync (for callers whose own sync carries the inbox — the VS Code extension uses this with Mutagen). |
+| `--json` | Emit `{"remotePath":"…"}` instead of human text. |
+
+In the VS Code extension this is wired to the **📎 Attach file** button, which also types the remote path into your session terminal. See [Configuration → Attachments](/configuration/#attachments).
+
 ### `doctor`
 
 ```
@@ -244,7 +261,7 @@ Tail the JSONL audit log in human-readable form.
 patchwire-agent usage [options]
 ```
 
-Per-user usage summary aggregated from the audit log. Columns: requests, accepted, ask, chat, lines added, lines removed, duration.
+Per-user usage summary aggregated from the audit log. Columns: requests, accepted, ask, chat, lines added/removed, tokens (`TOK`), dollar cost (`$EQV`), duration. See [Configuration → Cost tracking](/configuration/#cost-tracking) for how `$EQV` is computed.
 
 | Flag | Description |
 | --- | --- |
@@ -252,3 +269,11 @@ Per-user usage summary aggregated from the audit log. Columns: requests, accepte
 | `--project <name>` | Show only this project. |
 | `--since <duration>` | Only entries newer than this (e.g. `30m`, `6h`, `7d`). |
 | `--json` | Emit the structured report as JSON. |
+
+### `egress-check`
+
+```
+patchwire-agent egress-check
+```
+
+Verify [default-deny egress](/security/#default-deny-egress) on this box: builds the seatbelt profile from the current `PW_EGRESS_ALLOW`/DNS settings and probes it — the Anthropic API must be reachable and a non-allowlisted host must be blocked. Exits non-zero if either check fails. Run it before enabling `PW_EGRESS=deny` for real (in-process tests can't prove kernel-level enforcement). macOS only.
