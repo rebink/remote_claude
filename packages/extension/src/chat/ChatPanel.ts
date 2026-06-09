@@ -128,6 +128,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
       case 'viewOutput':      return this.deps.output.show();
       case 'attachFile':      return void vscode.commands.executeCommand('patchwire.attachFile');
       case 'viewAttachment':  return this.handleViewAttachment(String(msg.name ?? ''));
+      case 'insertAttachmentPath': return this.handleInsertAttachment(String(msg.name ?? ''));
       case 'deleteAttachment':return this.handleDeleteAttachment(String(msg.name ?? ''));
       default:
         this.deps.output.appendLine(`ChatPanel: unknown message type "${msg.type}"`);
@@ -139,6 +140,27 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     if (!name || name !== basename(name)) return;
     const uri = vscode.Uri.file(join(this.workspaceFolder, INBOX_DIR, name));
     await vscode.commands.executeCommand('vscode.open', uri);
+  }
+
+  /**
+   * Type a staged attachment's remote path into the active Claude session
+   * terminal (so the developer can reference an already-synced file again).
+   * Mirrors the attach-file flow: session terminal, else the active terminal,
+   * else copy the path to the clipboard.
+   */
+  private async handleInsertAttachment(name: string): Promise<void> {
+    if (!name || name !== basename(name)) return;
+    const cfg = this.loadConfig();
+    if (!cfg) return;
+    const remotePath = `${cfg.remotePath.replace(/\/+$/, '')}/${INBOX_DIR}/${name}`;
+    const term = findExistingSessionTerminal(cfg.project) ?? vscode.window.activeTerminal;
+    if (term) {
+      term.show();
+      term.sendText(remotePath, false); // insert without executing; the developer hits enter
+      return;
+    }
+    await vscode.env.clipboard.writeText(remotePath);
+    vscode.window.showInformationMessage(`No Claude session open. Remote path copied: ${remotePath}`);
   }
 
   private async handleDeleteAttachment(name: string): Promise<void> {
