@@ -99,36 +99,76 @@ const rev = 'b71dc5e';
         </p>
         <p class="hero-tagline reveal">Only diffs cross the wire.</p>
 
-        <!-- ── The animated terminal centerpiece ── -->
-        <div class="term reveal" id="term">
-          <header class="term-bar">
-            <span class="term-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </span>
-            <span class="term-path">~/projects/team-app</span>
-            <span class="term-host">you@laptop · zsh</span>
-          </header>
-          <div class="term-body" aria-live="polite">
-            <div class="term-line" data-typewrite='$ patchwire ask "refactor login_bloc to freezed"' data-after="800"></div>
-            <div class="term-line term-line-step" data-step="rsync"    data-step-detail="14 files · 84 ms"              data-after="650"></div>
-            <div class="term-line term-line-step" data-step="queued"   data-step-detail="position 2 · ahead: ana, ben" data-after="1100"></div>
-            <div class="term-line term-line-step" data-step="accepted" data-step-detail="slot granted · waited 3.4 s"  data-after="700"></div>
-            <div class="term-line term-line-step" data-step="spawn"    data-step-detail="claude --print · 4.7 s"       data-after="1400"></div>
-            <div class="term-line term-line-step" data-step="diff"     data-step-detail="31 lines · 6 files"           data-after="700"></div>
-            <div class="term-spacer"></div>
-            <div class="term-diff" id="termDiff">
-              <div class="diff-rail">@@ <span class="rail-path">lib/auth/login_bloc.dart</span></div>
-              <div class="diff-row diff-minus"><span class="num">142</span><span class="sign">−</span><span class="content">  return BlocBase.fromJson(json);</span></div>
-              <div class="diff-row diff-plus" ><span class="num">142</span><span class="sign">+</span><span class="content">  return Freezed.fromJson(json);</span></div>
-              <div class="diff-row diff-context"><span class="num">143</span><span class="sign">&nbsp;</span><span class="content">{`}`}</span></div>
-              <div class="diff-row diff-minus"><span class="num">147</span><span class="sign">−</span><span class="content">class LoginBloc extends BlocBase {`{`}</span></div>
-              <div class="diff-row diff-plus" ><span class="num">147</span><span class="sign">+</span><span class="content">@freezed</span></div>
-              <div class="diff-row diff-plus" ><span class="num">148</span><span class="sign">+</span><span class="content">class LoginState with _$LoginState {`{`}</span></div>
-            </div>
-            <div class="term-actions" id="termActions">
-              <button class="term-btn term-btn-primary" type="button">git apply <span class="term-btn-kbd">↵</span></button>
-              <button class="term-btn" type="button">preview <span class="term-btn-kbd">p</span></button>
-              <button class="term-btn term-btn-ghost" type="button">tweak <span class="term-btn-kbd">t</span></button>
+        <!-- ── The VS Code extension, the star ── -->
+        <div class="hero-mock reveal">
+          <div class="vscode" data-tilt>
+            <header class="vscode-bar">
+              <span class="term-dots" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+              <span class="vscode-title">Visual Studio Code · your-app</span>
+              <span class="vscode-host" aria-hidden="true">·</span>
+            </header>
+            <div class="vscode-body">
+              <aside class="vscode-activity" aria-hidden="true">
+                <span class="va">▤</span>
+                <span class="va">⌕</span>
+                <span class="va">⌥</span>
+                <span class="va va-active" title="Patchwire">
+                  <svg width="14" height="14" viewBox="0 0 22 22" aria-hidden="true">
+                    <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
+                    <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
+                    <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.4 2"/>
+                    <circle cx="11" cy="11" r="1.5" fill="#C9F564"/>
+                  </svg>
+                </span>
+                <span class="va">▦</span>
+              </aside>
+              <aside class="vscode-side">
+                <header class="vss-head">
+                  <span class="vss-title">PATCHWIRE</span>
+                  <span class="vss-conn">
+                    <span class="vss-conn-dot"></span>
+                    <span>remote</span>
+                  </span>
+                </header>
+                <div class="vss-thread" role="log">
+                  <div class="vss-msg vss-msg-user">
+                    <span class="vss-avatar">you</span>
+                    <p class="vss-bubble">refactor login_bloc to freezed</p>
+                  </div>
+                  <div class="vss-msg vss-msg-bot">
+                    <span class="vss-avatar vss-avatar-pw">pw</span>
+                    <div class="vss-content">
+                      <p class="vss-msg-head">
+                        Done.
+                        <span class="vss-stat-add">+12</span>
+                        <span class="vss-stat-sep">·</span>
+                        <span class="vss-stat-rm">−8</span>
+                        <span class="vss-stat-sep">·</span>
+                        <span class="vss-stat-files">3 files</span>
+                      </p>
+                      <div class="vss-diffinline">
+                        <header class="vss-diff-head">lib/auth/login_bloc.dart</header>
+                        <div class="vss-row vss-row-minus"><span class="vss-row-sign">−</span><span>return BlocBase.fromJson(json);</span></div>
+                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>return Freezed.fromJson(json);</span></div>
+                        <div class="vss-row vss-row-context"><span class="vss-row-sign">&nbsp;</span><span>{`}`}</span></div>
+                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>@freezed</span></div>
+                      </div>
+                      <div class="vss-actions">
+                        <button class="vss-btn vss-btn-primary" type="button">Apply <span class="vss-kbd">↵</span></button>
+                        <button class="vss-btn" type="button">Reject</button>
+                        <button class="vss-btn vss-btn-ghost" type="button">Tweak</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="vss-input" aria-hidden="true">
+                  <span class="vss-input-text">Ask Patchwire&hellip;</span>
+                  <span class="vss-input-cursor"></span>
+                  <span class="vss-input-send">↵</span>
+                </div>
+              </aside>
             </div>
           </div>
         </div>
@@ -200,79 +240,6 @@ const rev = 'b71dc5e';
             <a href="https://marketplace.visualstudio.com/items?itemName=patchwire.patchwire-vscode" target="_blank" rel="noopener">Marketplace</a>
             or <a href="https://open-vsx.org/extension/patchwire/patchwire-vscode" target="_blank" rel="noopener">Open VSX</a>.
           </p>
-        </div>
-
-        <div class="editor-mock reveal">
-          <div class="vscode" data-tilt>
-            <header class="vscode-bar">
-              <span class="term-dots" aria-hidden="true">
-                <span></span><span></span><span></span>
-              </span>
-              <span class="vscode-title">Visual Studio Code · your-app</span>
-              <span class="vscode-host" aria-hidden="true">·</span>
-            </header>
-            <div class="vscode-body">
-              <aside class="vscode-activity" aria-hidden="true">
-                <span class="va">▤</span>
-                <span class="va">⌕</span>
-                <span class="va">⌥</span>
-                <span class="va va-active" title="Patchwire">
-                  <svg width="14" height="14" viewBox="0 0 22 22" aria-hidden="true">
-                    <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
-                    <rect x="12.5" y="12.5" width="9" height="9" fill="currentColor"/>
-                    <line x1="6" y1="11" x2="16" y2="11" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1.4 2"/>
-                    <circle cx="11" cy="11" r="1.5" fill="#C9F564"/>
-                  </svg>
-                </span>
-                <span class="va">▦</span>
-              </aside>
-              <aside class="vscode-side">
-                <header class="vss-head">
-                  <span class="vss-title">PATCHWIRE</span>
-                  <span class="vss-conn">
-                    <span class="vss-conn-dot"></span>
-                    <span>remote</span>
-                  </span>
-                </header>
-                <div class="vss-thread" role="log">
-                  <div class="vss-msg vss-msg-user">
-                    <span class="vss-avatar">you</span>
-                    <p class="vss-bubble">refactor login_bloc to freezed</p>
-                  </div>
-                  <div class="vss-msg vss-msg-bot">
-                    <span class="vss-avatar vss-avatar-pw">pw</span>
-                    <div class="vss-content">
-                      <p class="vss-msg-head">
-                        Done.
-                        <span class="vss-stat-add">+12</span>
-                        <span class="vss-stat-sep">·</span>
-                        <span class="vss-stat-rm">−8</span>
-                        <span class="vss-stat-sep">·</span>
-                        <span class="vss-stat-files">3 files</span>
-                      </p>
-                      <div class="vss-diffinline">
-                        <header class="vss-diff-head">lib/auth/login_bloc.dart</header>
-                        <div class="vss-row vss-row-minus"><span class="vss-row-sign">−</span><span>return BlocBase.fromJson(json);</span></div>
-                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>return Freezed.fromJson(json);</span></div>
-                        <div class="vss-row vss-row-context"><span class="vss-row-sign">&nbsp;</span><span>{`}`}</span></div>
-                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>@freezed</span></div>
-                      </div>
-                      <div class="vss-actions">
-                        <button class="vss-btn vss-btn-primary" type="button">Apply <span class="vss-kbd">↵</span></button>
-                        <button class="vss-btn" type="button">Reject</button>
-                        <button class="vss-btn vss-btn-ghost" type="button">Tweak</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="vss-input" aria-hidden="true">
-                  <span class="vss-input-text">Ask Patchwire&hellip;</span>
-                  <span class="vss-input-cursor"></span>
-                  <span class="vss-input-send">↵</span>
-                </div>
-              </aside>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -792,6 +759,15 @@ const rev = 'b71dc5e';
       }
       .hero-sub strong { color: var(--rc-bone); font-weight: 600; }
 
+      /* ─── Hero VS Code mock (the star) ─── */
+      .hero-mock {
+        width: 100%;
+        max-width: 840px;
+        margin: 8px auto 0;
+        perspective: 1600px;
+      }
+      .hero-mock .vscode { width: 100%; }
+
       /* ─── Terminal ─── */
       .term {
         background: #131318;
@@ -1053,9 +1029,8 @@ const rev = 'b71dc5e';
         gap: clamp(40px, 5vw, 64px);
         align-items: center;
       }
-      @media (min-width: 1024px) {
-        .editor-grid { grid-template-columns: 0.95fr 1.05fr; }
-      }
+      /* extension section is now prose-only (the mock lives in the hero) */
+      .editor-prose { max-width: 640px; }
 
       .editor-h {
         font-family: var(--rc-font-display);
