@@ -5,6 +5,14 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.10] — 2026-06-09
+
+### Fixed
+- **Activity-bar icon reads at small sizes.** The 0.3.8 icon used thin strokes and a
+  dashed wire that disappeared at the ~16px activity-bar size (VS Code renders it as a
+  flat monochrome silhouette). Redrawn with bold solid shapes: outline square, solid
+  connector and signal dot, filled square.
+
 ## [0.3.9] — 2026-06-09
 
 ### Changed
