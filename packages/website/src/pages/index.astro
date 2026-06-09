@@ -5,6 +5,10 @@ import { ClientRouter } from 'astro:transitions';
 const repo = 'https://github.com/rebink/remote_claude';
 const version = '0.3.6';
 const rev = 'f7d6bb3';
+// Deep link: opens the VS Code app straight to the extension page (Install button there).
+const ext = 'vscode:extension/patchwire.patchwire-vscode';
+// Fallback hub for anyone without the app, or on another editor (Marketplace, Open VSX, .vsix).
+const installFallback = '/install-extension/';
 const ogDesc =
   'A VS Code extension that runs a Claude Code session on a machine you own, with two-way sync keeping your laptop and the remote byte-identical. Your code stays on your own network.';
 ---
@@ -54,7 +58,7 @@ const ogDesc =
       </nav>
       <div class="topbar-right">
         <span class="meta-pill"><span class="meta-dot"></span>v{version}</span>
-        <a href="/install-extension/" class="topbar-install magnet">Install for VS Code</a>
+        <a href={ext} class="topbar-install magnet">Install for VS Code</a>
       </div>
     </header>
 
@@ -81,13 +85,17 @@ const ogDesc =
             where you always have.
           </p>
           <div class="cta-row reveal">
-            <a href="/install-extension/" class="cta cta-primary magnet">
+            <a href={ext} class="cta cta-primary magnet">
               <span>Install for VS Code</span><span class="cta-arrow">→</span>
             </a>
             <a href="/quickstart/" class="cta cta-ghost magnet">
               <span>Read the docs</span><span class="cta-arrow">↗</span>
             </a>
           </div>
+          <p class="cta-fallback reveal">
+            Opens VS Code at the extension. No VS Code, or another editor?
+            <a href={installFallback}>Other ways to install ↗</a>
+          </p>
         </div>
 
         <!-- The patch cable: two machines, signal both ways = two-way sync -->
@@ -261,13 +269,17 @@ const ogDesc =
           your network.
         </p>
         <div class="cta-row cta-center reveal">
-          <a href="/install-extension/" class="cta cta-primary cta-lg magnet">
+          <a href={ext} class="cta cta-primary cta-lg magnet">
             <span>Install for VS Code</span><span class="cta-arrow">→</span>
           </a>
           <a href={repo} class="cta cta-ghost cta-lg magnet">
             <span>View on GitHub</span><span class="cta-arrow">↗</span>
           </a>
         </div>
+        <p class="cta-fallback reveal">
+          Opens VS Code at the extension. No VS Code, or another editor?
+          <a href={installFallback}>Other ways to install ↗</a>
+        </p>
       </div>
     </section>
 
@@ -469,6 +481,10 @@ const ogDesc =
       .cta-lg { padding: 15px 26px; font-size: 15px; }
       .cta-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 30px; }
       .cta-center { justify-content: center; }
+      .cta-fallback { font-family: var(--mono); font-size: 12px; color: var(--soft); margin: 14px 0 0; }
+      .cta-fallback a { color: var(--dim); border-bottom: 1px solid var(--line-2); transition: color 0.2s, border-color 0.2s; }
+      .cta-fallback a:hover { color: var(--signal); border-color: var(--signal); }
+      .cta-center + .cta-fallback { text-align: center; }
 
       /* ════════ REVEAL ════════ */
       .reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
