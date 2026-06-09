@@ -154,7 +154,10 @@ in a returned diff):
   clipboard screenshot; `patchwire push --clean` clears the inbox.
 - **VS Code**: the **📎 Attach file** button (and the *Attach clipboard image*
   command) stages the file, waits for sync, and types the remote path straight
-  into your active `claude` session terminal.
+  into your active `claude` session terminal. The panel's **Attachments** list
+  shows everything currently staged, where you can open any file (images preview
+  in VS Code) or delete one. Deleting clears it locally and, through two-way sync,
+  from the remote.
 
 ## Laptop environment variables
 
