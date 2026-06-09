@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-  <!-- Patchwire mark for the activity bar: monochrome so VS Code themes it
-       (uses currentColor). Outline square = your editor, filled square =
-       a machine you own, dashed wire + dot = the two-way signal. -->
-  <rect x="1.75" y="1.75" width="9.25" height="9.25" stroke="currentColor" stroke-width="1.8"/>
-  <rect x="13" y="13" width="9.25" height="9.25" fill="currentColor"/>
-  <line x1="7" y1="12" x2="17" y2="12" stroke="currentColor" stroke-width="1.5" stroke-dasharray="1.5 2.2"/>
-  <circle cx="12" cy="12" r="1.7" fill="currentColor"/>
+  <!-- Patchwire mark for the activity bar. VS Code renders this as a flat
+       monochrome silhouette (it masks the shape and applies the theme color),
+       so it uses bold solid shapes that stay legible at ~16px: outline square
+       (your editor), a solid connector + dot (the two-way signal), and a filled
+       square (a machine you own). No thin dashes — they vanish at this size. -->
+  <rect x="2.5" y="2.5" width="8.5" height="8.5" rx="1" stroke="currentColor" stroke-width="2.2"/>
+  <line x1="9.5" y1="9.5" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+  <rect x="13" y="13" width="8.5" height="8.5" rx="1" fill="currentColor"/>
+  <circle cx="12" cy="12" r="2.4" fill="currentColor"/>
 </svg>
