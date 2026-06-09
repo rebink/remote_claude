@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
+import { listInbox, removeAttachment, type InboxEntry, INBOX_DIR } from '../attach/inbox.ts';
 import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
@@ -21,6 +22,7 @@ interface SessionState {
   remotePath?: string;
   sessionRunning: boolean;
   sync: SyncUiState;
+  attachments?: InboxEntry[];
 }
 
 interface SyncUiState {
@@ -44,6 +46,7 @@ export interface ChatPanelDeps {
 export class ChatPanel implements vscode.WebviewViewProvider {
   static readonly viewId = 'patchwire.chatPanel';
   private view?: vscode.WebviewView;
+  private inboxWatcher?: vscode.FileSystemWatcher;
   private mutagen?: MutagenController;
   private syncStatus: MutagenStatus = { kind: 'no_session' };
 
@@ -85,6 +88,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
 
   /** Called on extension deactivation. */
   async dispose(): Promise<void> {
+    this.inboxWatcher?.dispose();
     if (this.mutagen) await this.mutagen.terminate();
   }
 
@@ -96,22 +100,62 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     };
     view.webview.html = this.renderHtml(view.webview);
 
-    view.webview.onDidReceiveMessage(async (msg: { type: string; [k: string]: unknown }) => {
-      switch (msg.type) {
-        case 'ready':           return this.postState();
-        case 'openSetup':       return vscode.commands.executeCommand('patchwire.openSetup');
-        case 'openSession':     return this.handleOpenSession();
-        case 'flushSync':       return this.mutagen?.flush();
-        case 'pauseSync':       this.mutagen?.pause(); return;
-        case 'resumeSync':      this.mutagen?.resume(); return;
-        case 'restartSync':     return this.startMutagen();
-        case 'viewOutput':      return this.deps.output.show();
-        case 'attachFile':      return vscode.commands.executeCommand('patchwire.attachFile');
-        default:
-          this.deps.output.appendLine(`ChatPanel: unknown message type "${(msg as { type?: string }).type}"`);
-          return;
-      }
-    });
+    view.webview.onDidReceiveMessage((msg: { type: string; [k: string]: unknown }) =>
+      this.handleMessage(msg).catch((err) =>
+        this.deps.output.appendLine(`ChatPanel: message handler error: ${(err as Error).message}`),
+      ),
+    );
+
+    this.inboxWatcher?.dispose();
+    this.inboxWatcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(this.workspaceFolder, `${INBOX_DIR}/*`),
+    );
+    const refresh = () => this.postState();
+    this.inboxWatcher.onDidCreate(refresh);
+    this.inboxWatcher.onDidDelete(refresh);
+    this.inboxWatcher.onDidChange(refresh);
+  }
+
+  private async handleMessage(msg: { type: string; [k: string]: unknown }): Promise<void> {
+    switch (msg.type) {
+      case 'ready':           return this.postState();
+      case 'openSetup':       return void vscode.commands.executeCommand('patchwire.openSetup');
+      case 'openSession':     return this.handleOpenSession();
+      case 'flushSync':       return this.mutagen?.flush();
+      case 'pauseSync':       this.mutagen?.pause(); return;
+      case 'resumeSync':      this.mutagen?.resume(); return;
+      case 'restartSync':     return this.startMutagen();
+      case 'viewOutput':      return this.deps.output.show();
+      case 'attachFile':      return void vscode.commands.executeCommand('patchwire.attachFile');
+      case 'viewAttachment':  return this.handleViewAttachment(String(msg.name ?? ''));
+      case 'deleteAttachment':return this.handleDeleteAttachment(String(msg.name ?? ''));
+      default:
+        this.deps.output.appendLine(`ChatPanel: unknown message type "${msg.type}"`);
+        return;
+    }
+  }
+
+  private async handleViewAttachment(name: string): Promise<void> {
+    if (!name || name !== basename(name)) return;
+    const uri = vscode.Uri.file(join(this.workspaceFolder, INBOX_DIR, name));
+    await vscode.commands.executeCommand('vscode.open', uri);
+  }
+
+  private async handleDeleteAttachment(name: string): Promise<void> {
+    if (!name || name !== basename(name)) return;
+    const pick = await vscode.window.showWarningMessage(
+      `Delete attachment "${name}"? This also removes it from the remote.`,
+      { modal: true },
+      'Delete',
+    );
+    if (pick !== 'Delete') return;
+    try {
+      removeAttachment(this.workspaceFolder, name);
+    } catch (err) {
+      this.deps.output.appendLine(`Delete attachment failed: ${(err as Error).message}`);
+    }
+    await this.flush();      // propagate the removal to the remote
+    this.postState();
   }
 
   refresh(): void {
@@ -168,6 +212,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
           remotePath: cfg.remotePath,
           sessionRunning: !!findExistingSessionTerminal(cfg.project),
           sync,
+          attachments: listInbox(this.workspaceFolder),
         }
       : { configured: false, sessionRunning: false, sync };
     this.view.webview.postMessage({ type: 'state', state });
