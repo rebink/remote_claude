@@ -203,6 +203,10 @@ function renderAttachments(): HTMLElement {
         h('span', { className: 'attach-size' }, humanSize(a.size)),
         h('span', { className: 'attach-actions' },
           h('button', {
+            className: 'attach-btn', title: 'Add path to Claude session',
+            events: { click: () => vscode.postMessage({ type: 'insertAttachmentPath', name: a.name }) },
+          }, '➕'),
+          h('button', {
             className: 'attach-btn', title: 'Open',
             events: { click: () => vscode.postMessage({ type: 'viewAttachment', name: a.name }) },
           }, '👁'),
