@@ -125,13 +125,13 @@ Apply a previously-saved patch. Defaults to `.patchwire/last.patch`. Same previe
 patchwire push <file>... [--clip] [--clean] [--stage-only] [--json]
 ```
 
-Copy a local file to the remote so an interactive SSH `claude` session can read it (any type — text, PDF, images for vision). Stages into a gitignored `.patchwire-inbox/` and rsyncs it to the remote, then prints the remote path to paste into your prompt.
+Copy a local file to the remote so an interactive SSH `claude` session can read it (any type: text, PDF, images for vision). Stages into a gitignored `.patchwire-inbox/` and rsyncs it to the remote, then prints the remote path to paste into your prompt.
 
 | Flag | Effect |
 | --- | --- |
 | `--clip` | Push the current clipboard image (screenshot) instead of a file path. |
 | `--clean` | Clear the attachments inbox (local + remote). |
-| `--stage-only` | Stage locally and print the remote path, but skip rsync (for callers whose own sync carries the inbox — the VS Code extension uses this with Mutagen). |
+| `--stage-only` | Stage locally and print the remote path, but skip rsync (for callers whose own sync carries the inbox; the VS Code extension uses this with Mutagen). |
 | `--json` | Emit `{"remotePath":"…"}` instead of human text. |
 
 In the VS Code extension this is wired to the **📎 Attach file** button, which also types the remote path into your session terminal. See [Configuration → Attachments](/configuration/#attachments).
@@ -276,4 +276,4 @@ Per-user usage summary aggregated from the audit log. Columns: requests, accepte
 patchwire-agent egress-check
 ```
 
-Verify [default-deny egress](/security/#default-deny-egress) on this box: builds the seatbelt profile from the current `PW_EGRESS_ALLOW`/DNS settings and probes it — the Anthropic API must be reachable and a non-allowlisted host must be blocked. Exits non-zero if either check fails. Run it before enabling `PW_EGRESS=deny` for real (in-process tests can't prove kernel-level enforcement). macOS only.
+Verify [default-deny egress](/security/#default-deny-egress) on this box: builds the seatbelt profile from the current `PW_EGRESS_ALLOW`/DNS settings and probes it: the Anthropic API must be reachable and a non-allowlisted host must be blocked. Exits non-zero if either check fails. Run it before enabling `PW_EGRESS=deny` for real (in-process tests can't prove kernel-level enforcement). macOS only.

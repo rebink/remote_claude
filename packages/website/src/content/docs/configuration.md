@@ -41,7 +41,7 @@ ai:
 | `remote.agentUrl` | URL | yes | (none) | Where the CLI will POST `/ask`. |
 | `remote.token` | string | yes | (none) | Bearer token. Use `${PW_TOKEN}` interpolation. Don't commit secrets. |
 | `sync.exclude` | string[] | no | `[]` | Passed to `rsync --exclude-from`. `.git/` and `.patchwire/` are always excluded. |
-| `sync.secretScan` | `off`\|`warn`\|`block` | no | `off` | Run a [gitleaks](https://github.com/gitleaks/gitleaks) scan over the files about to sync. `warn` reports findings and continues; `block` refuses the sync (override with `--force`). Closes the gap where a secret in a *tracked* file would otherwise cross. Best-effort — if gitleaks isn't installed it logs and continues. |
+| `sync.secretScan` | `off`\|`warn`\|`block` | no | `off` | Run a [gitleaks](https://github.com/gitleaks/gitleaks) scan over the files about to sync. `warn` reports findings and continues; `block` refuses the sync (override with `--force`). Closes the gap where a secret in a *tracked* file would otherwise cross. Best-effort: if gitleaks isn't installed it logs and continues. |
 | `ai.command` | string | no | `claude` | Path or name of the AI CLI to spawn on the remote. |
 | `ai.args` | string[] | no | `[--print]` | Args passed to `ai.command`. The prompt is sent on stdin. |
 | `ai.timeoutSec` | number | no | 600 | Hard kill after this many seconds. |
@@ -68,7 +68,7 @@ The agent reads its config exclusively from environment variables. `patchwire-ag
 | `PW_AGENT_HOST` | no | `127.0.0.1` | Bind interface. Use `0.0.0.0` to bind all, or your tailnet IP. |
 | `PW_AGENT_PORT` | no | `7878` | TCP port. |
 | `PW_AI_BIN` | no | `claude` | Path to the Claude CLI. |
-| `PW_AI_ARGS` | no | `--print` | Space-separated args. Add a JSON output format (e.g. `--print --output-format json`) to enable **cost tracking** — see below. |
+| `PW_AI_ARGS` | no | `--print` | Space-separated args. Add a JSON output format (e.g. `--print --output-format json`) to enable **cost tracking** (see below). |
 | `PW_TIMEOUT_SEC` | no | `600` | Hard kill timeout for `claude`. |
 | `PW_VERIFY_CMD` | no | — | Optional command run on the checkout after the diff is captured (e.g. `flutter analyze`, `npm test`). Its pass/fail is returned with `/ask` so you review a diff that already passed validation. Informs, never blocks. |
 | `PW_VERIFY_TIMEOUT_SEC` | no | `300` | Timeout for `PW_VERIFY_CMD`. |
@@ -97,12 +97,12 @@ once the agent can see real usage. It's **opt-in** so the default stays unchange
    PW_AI_ARGS="--print --output-format json"
    ```
 
-   The agent parses the usage out and still shows you clean assistant text — you
+   The agent parses the usage out and still shows you clean assistant text, so you
    never see raw JSON. With the default `--print`, no usage is captured and the
    columns read `—`.
 
 2. **Where the dollar figure comes from.** We prefer the provider's *own* reported
-   cost — Claude's `total_cost_usd`, Aider's `Cost:` line — so there's no price
+   cost (Claude's `total_cost_usd`, Aider's `Cost:` line), so there's no price
    list to keep in sync. For a provider that reports tokens but not dollars, add
    an optional `~/.patchwire/pricing.yml` (or `PW_PRICING_FILE`); those rows show
    as `~$…` (estimated):
@@ -114,12 +114,12 @@ once the agent can see real usage. It's **opt-in** so the default stays unchange
    ```
 
 3. **What `$EQV` means.** Patchwire's premise is one shared subscription. If that's
-   a flat-rate plan, `$EQV` is the **API-equivalent** cost — the right number for
+   a flat-rate plan, `$EQV` is the **API-equivalent** cost: the right number for
    fair-share **attribution** across the team, *not* a second bill you pay.
 
 ## Default-deny egress (macOS)
 
-Stops the remote `claude` from sending data anywhere except the model API — the
+Stops the remote `claude` from sending data anywhere except the model API. It's the
 exfiltration counterpart to syncing only what you share. **Opt-in, off by default.**
 
 ```sh
@@ -131,7 +131,7 @@ PW_EGRESS_ALLOW="registry.npmjs.org pub.dev"
 
 With `deny`, `claude` runs under a seatbelt (`sandbox-exec`) profile that blocks
 all outbound except localhost, DNS, and the resolved allowlist (Anthropic API by
-default). It's **fail-closed** — if `sandbox-exec` is missing, the agent refuses
+default). It's **fail-closed**: if `sandbox-exec` is missing, the agent refuses
 to start. **Verify enforcement on the box** before relying on it:
 
 ```sh
@@ -144,7 +144,7 @@ See [Security → Default-deny egress](/security/#default-deny-egress).
 
 ## Attachments
 
-To let the remote `claude` read a local file (a screenshot, a PDF, any file —
+To let the remote `claude` read a local file (a screenshot, a PDF, any file at all,
 including images for vision), get it onto the remote first. Both surfaces stage
 the file into a gitignored `.patchwire-inbox/` in the project (so it never lands
 in a returned diff):

@@ -1,6 +1,6 @@
 ---
 title: Networking
-description: "How your laptop reaches the remote: Tailscale, LAN, alternatives."
+description: How your laptop reaches the remote, with Tailscale or a plain LAN.
 ---
 
 Patchwire isn't opinionated. It just needs SSH and HTTP reachability from the laptop to whatever hostname you put in `patchwire.yml`. Pick the option that fits.
