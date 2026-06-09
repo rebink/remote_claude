@@ -113,3 +113,14 @@ button.primary:hover { background: var(--vscode-button-hoverBackground); }
   text-decoration: underline;
 }
 .footer-link:hover { background: transparent; opacity: 0.8; }
+
+.attachments { margin-bottom: 16px; }
+.attach-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.attach-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+.attach-count { font-size: 11px; opacity: 0.5; }
+.attach-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.attach-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.attach-size { font-size: 11px; opacity: 0.55; font-variant-numeric: tabular-nums; }
+.attach-actions { display: flex; gap: 2px; }
+.attach-btn { padding: 2px 6px; background: transparent; }
+.attach-btn:hover { background: var(--vscode-toolbar-hoverBackground, rgba(255,255,255,0.08)); }
