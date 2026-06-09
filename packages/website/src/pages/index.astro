@@ -1,10 +1,13 @@
 ---
 import '../styles/custom.css';
 import { ClientRouter } from 'astro:transitions';
+// Read the shipped version straight from the extension package at build time so the
+// version pill never drifts behind a release (the bump commit lands on main, which
+// rebuilds the site). See memory: website-version-pill-drift.
+import extPkg from '../../../extension/package.json';
 
 const repo = 'https://github.com/rebink/remote_claude';
-const version = '0.3.10';
-const rev = 'fb8e25e';
+const version = extPkg.version;
 // Deep link: opens the VS Code app straight to the extension page (Install button there).
 const ext = 'vscode:extension/patchwire.patchwire-vscode';
 // Fallback hub for anyone without the app, or on another editor (Marketplace, Open VSX, .vsix).
@@ -323,7 +326,7 @@ const ogDesc =
         </nav>
       </div>
       <div class="wrap foot-bottom">
-        <span>© {new Date().getFullYear()} Patchwire · v{version} · rev&nbsp;{rev}</span>
+        <span>© {new Date().getFullYear()} Patchwire · v{version}</span>
         <span class="foot-project-links">
           <a href={repo}>GitHub ↗</a>
           <span class="foot-sep" aria-hidden="true">·</span>
