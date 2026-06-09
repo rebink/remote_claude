@@ -91,26 +91,35 @@ Same as if you ran `claude` locally. Claude Code on the remote sends prompts and
 
 - **Audit log** of every `/ask` and `/chat` — JSONL with timestamps and a `prompt_sha256` (never the plaintext prompt). View it with `patchwire-agent log`. See [Multi-developer](/multi-developer/).
 
-## Default-deny egress
+## Default-deny egress (experimental — not recommended yet)
 
-Read-minimization (sync only what you share) stops the agent from *seeing*
-un-synced secrets. Egress lock-down is the other half: it stops the agent from
-*exfiltrating* the code you did sync (or being prompt-injected into phoning out).
+:::caution[Experimental; off by default; not recommended for trusted-network setups]
+Egress lock-down is **dormant capability, not a recommended control.** On a
+trusted network (your own machine on Tailscale, running your own repos), the
+practical security comes from **read-minimization, Tailscale, per-user tokens,
+and the audit log** — egress is marginal defense-in-depth against a low-probability
+prompt-injection-exfiltration threat. And there's a real limitation today (below).
+**Leave `PW_EGRESS=off`** unless you're hardening against untrusted code for a
+regulated/enterprise context, and even then, verify carefully.
+:::
 
-Set **`PW_EGRESS=deny`** on the agent and `claude` runs under a macOS seatbelt
-(`sandbox-exec`) profile that blocks **all** outbound network except localhost,
-DNS, and a resolved allowlist — the Anthropic API by default; add hosts with
-`PW_EGRESS_ALLOW`. It uses IP literals only (no hostname-suffix matching — the
-footgun behind a real-world sandbox bypass), and is **fail-closed**: if
-`sandbox-exec` is missing, the agent refuses to start rather than run open.
+The idea: read-minimization stops the agent from *seeing* un-synced secrets;
+egress lock-down would stop it from *exfiltrating* the code you did sync.
+Setting **`PW_EGRESS=deny`** runs `claude` under a macOS seatbelt (`sandbox-exec`)
+profile that blocks **all** outbound except localhost, DNS, and a resolved
+allowlist (the Anthropic API by default). It's **fail-closed** and uses IP
+literals only (no hostname-suffix matching).
 
-- **Opt-in.** The default (`off`) leaves the agent unchanged.
-- **macOS only** today (the agent is macOS-only).
-- **Verify on your box:** run `patchwire-agent egress-check` — it confirms the
-  Anthropic API is reachable and that other hosts are blocked. Do this before you
-  rely on it; in-process tests can't prove kernel-level enforcement.
+**Known limitation:** the allowlist pins the Anthropic API by *resolved IP*, but
+`api.anthropic.com` sits behind a CDN with rotating IPs (and IPv6), so `claude`'s
+connection often lands on an IP that isn't pinned — and gets blocked along with
+everything else. `patchwire-agent egress-check` surfaces this: it will show the
+deny working (`example.com` blocked) but the API unreachable. A robust fix
+(a hostname-allowlisting local proxy) is future work; until then egress is not
+production-usable.
 
-See [Configuration](/configuration/#default-deny-egress-macos) for the env vars.
+**Always verify before enabling:** `patchwire-agent egress-check` — and if the
+Anthropic API shows unreachable, keep it off.
 
 ## What we'd like to add
 
