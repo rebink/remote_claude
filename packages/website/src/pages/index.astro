@@ -91,11 +91,10 @@ const rev = 'b71dc5e';
         </h1>
 
         <p class="hero-sub reveal">
-          Install the VS Code extension and chat with Claude from a side panel. It runs
-          on a machine <strong>you</strong> control and only ever sees the project you
-          sync. Not your <code>.env</code>, not the rest of your laptop. Edits come back
-          as a diff you review and apply, so your hot reload and debugger keep working
-          like always.
+          Install the VS Code extension and it opens a Claude Code session on a machine
+          <strong>you</strong> control. Two-way sync keeps your laptop and the remote
+          byte-identical, so the edits Claude makes land on your machine as it makes
+          them, and you run, hot-reload, and debug locally exactly as before.
         </p>
         <p class="hero-tagline reveal">Only diffs cross the wire.</p>
 
@@ -106,14 +105,14 @@ const rev = 'b71dc5e';
               <span class="term-dots" aria-hidden="true">
                 <span></span><span></span><span></span>
               </span>
-              <span class="vscode-title">Visual Studio Code · your-app</span>
+              <span class="vscode-title">your-app — Visual Studio Code</span>
               <span class="vscode-host" aria-hidden="true">·</span>
             </header>
             <div class="vscode-body">
               <aside class="vscode-activity" aria-hidden="true">
                 <span class="va">▤</span>
                 <span class="va">⌕</span>
-                <span class="va">⌥</span>
+                <span class="va">⎇</span>
                 <span class="va va-active" title="Patchwire">
                   <svg width="14" height="14" viewBox="0 0 22 22" aria-hidden="true">
                     <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" stroke-width="1.8" fill="none"/>
@@ -124,51 +123,62 @@ const rev = 'b71dc5e';
                 </span>
                 <span class="va">▦</span>
               </aside>
+
               <aside class="vscode-side">
-                <header class="vss-head">
-                  <span class="vss-title">PATCHWIRE</span>
-                  <span class="vss-conn">
-                    <span class="vss-conn-dot"></span>
-                    <span>remote</span>
-                  </span>
-                </header>
-                <div class="vss-thread" role="log">
-                  <div class="vss-msg vss-msg-user">
-                    <span class="vss-avatar">you</span>
-                    <p class="vss-bubble">refactor login_bloc to freezed</p>
+                <span class="pw-head">PATCHWIRE: CHAT</span>
+                <div class="pw-project">
+                  <span class="pw-project-name">your-app</span>
+                  <span class="pw-meta">you@remote</span>
+                  <span class="pw-meta">~/workspace/your-app</span>
+                </div>
+                <button class="pw-session" type="button">
+                  <span class="pw-session-ico" aria-hidden="true">❄</span> Focus Claude session
+                </button>
+                <div class="pw-sync">
+                  <div class="pw-sync-top">
+                    <span class="pw-sync-label">TWO-WAY SYNC</span>
+                    <span class="pw-sync-pill">✓ In sync</span>
                   </div>
-                  <div class="vss-msg vss-msg-bot">
-                    <span class="vss-avatar vss-avatar-pw">pw</span>
-                    <div class="vss-content">
-                      <p class="vss-msg-head">
-                        Done.
-                        <span class="vss-stat-add">+12</span>
-                        <span class="vss-stat-sep">·</span>
-                        <span class="vss-stat-rm">−8</span>
-                        <span class="vss-stat-sep">·</span>
-                        <span class="vss-stat-files">3 files</span>
-                      </p>
-                      <div class="vss-diffinline">
-                        <header class="vss-diff-head">lib/auth/login_bloc.dart</header>
-                        <div class="vss-row vss-row-minus"><span class="vss-row-sign">−</span><span>return BlocBase.fromJson(json);</span></div>
-                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>return Freezed.fromJson(json);</span></div>
-                        <div class="vss-row vss-row-context"><span class="vss-row-sign">&nbsp;</span><span>{`}`}</span></div>
-                        <div class="vss-row vss-row-plus" ><span class="vss-row-sign">+</span><span>@freezed</span></div>
-                      </div>
-                      <div class="vss-actions">
-                        <button class="vss-btn vss-btn-primary" type="button">Apply <span class="vss-kbd">↵</span></button>
-                        <button class="vss-btn" type="button">Reject</button>
-                        <button class="vss-btn vss-btn-ghost" type="button">Tweak</button>
-                      </div>
+                  <div class="pw-sync-row">
+                    <span class="pw-sync-act">⇄ Flush now</span>
+                    <span class="pw-sync-act">❚❚ Pause</span>
+                  </div>
+                </div>
+                <div class="pw-links">
+                  <span>Show output</span>
+                  <span>Setup wizard</span>
+                </div>
+              </aside>
+
+              <div class="vscode-main" aria-hidden="true">
+                <div class="vscode-editor">
+                  <svg class="vscode-wm" width="150" height="150" viewBox="0 0 100 100" fill="none">
+                    <path d="M75 6 L40 40 L21 26 L12 31 L33 50 L12 69 L21 74 L40 60 L75 94 L90 86 V14 Z M75 27 L75 73 L49 50 Z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <div class="vscode-term">
+                  <header class="vt-tabs">
+                    <span class="vt-tab">PROBLEMS</span>
+                    <span class="vt-tab">OUTPUT</span>
+                    <span class="vt-tab vt-tab-active">TERMINAL</span>
+                    <span class="vt-tab">PORTS</span>
+                    <span class="vt-session">Claude → your-app</span>
+                  </header>
+                  <div class="vt-body">
+                    <div class="vt-line vt-pw">— Patchwire · your-mac-mini : ~/workspace/your-app</div>
+                    <div class="vt-banner">
+                      <span class="vt-pig" aria-hidden="true">◖ᵔᴥᵔ◗</span>
+                      <span><strong class="vt-strong">Claude Code</strong> <span class="vt-dim">v2.x · Opus · Max</span></span>
+                    </div>
+                    <div class="vt-line vt-dim">~/workspace/your-app</div>
+                    <div class="vt-prompt">
+                      <span class="vt-caret">❯</span>
+                      <span class="vt-ph">Try &ldquo;create a util logging.py that&hellip;&rdquo;</span>
+                      <span class="vt-cur"></span>
                     </div>
                   </div>
                 </div>
-                <div class="vss-input" aria-hidden="true">
-                  <span class="vss-input-text">Ask Patchwire&hellip;</span>
-                  <span class="vss-input-cursor"></span>
-                  <span class="vss-input-send">↵</span>
-                </div>
-              </aside>
+              </div>
             </div>
           </div>
         </div>
@@ -205,19 +215,19 @@ const rev = 'b71dc5e';
         <div class="editor-prose">
           <span class="kicker reveal"><span class="kicker-bar"></span>01 · the extension</span>
           <h2 class="editor-h reveal">
-            It lives in <em>your side panel.</em>
+            One panel. <em>Your remote, in sync.</em>
           </h2>
           <p class="editor-sub reveal">
-            Chat with Claude without leaving VS Code. Preview the diff inline and
-            <strong>apply with one keystroke.</strong> The setup wizard finds your
-            remote, and a live sync keeps your laptop and the remote in step. Prefer
-            the terminal? The same thing ships as a CLI.
+            A side panel in VS Code that drives one thing well: a Claude Code session
+            running on a machine you control. Hit <strong>Focus Claude session</strong>
+            to drop into the live REPL, and two-way sync keeps your laptop and the
+            remote byte-identical the whole time.
           </p>
           <ul class="editor-bullets reveal">
-            <li><span class="bullet-mark">▢</span> Native side panel that feels like part of VS Code</li>
-            <li><span class="bullet-mark">▢</span> Inline diff preview, hunk-by-hunk apply</li>
-            <li><span class="bullet-mark">▢</span> Setup wizard discovers your Tailscale peers</li>
-            <li><span class="bullet-mark">▢</span> Shares the same config as the CLI, so you can swap any time</li>
+            <li><span class="bullet-mark">▢</span> Focus Claude session: the real Claude Code REPL, in a terminal on your remote</li>
+            <li><span class="bullet-mark">▢</span> Two-way sync: laptop and remote stay byte-identical; flush or pause from the panel</li>
+            <li><span class="bullet-mark">▢</span> Setup wizard: connect a remote and install a per-project key in a few clicks</li>
+            <li><span class="bullet-mark">▢</span> Runs on hardware you own, never a vendor's cloud</li>
           </ul>
           <div class="editor-cta reveal">
             <a href="vscode:extension/patchwire.patchwire-vscode" class="cta cta-primary magnet">
@@ -1010,8 +1020,12 @@ const rev = 'b71dc5e';
 
       .vscode-body {
         display: grid;
-        grid-template-columns: 44px 1fr;
-        min-height: 460px;
+        grid-template-columns: 44px minmax(190px, 38%) 1fr;
+        min-height: 470px;
+      }
+      @media (max-width: 720px) {
+        .vscode-body { grid-template-columns: 40px 1fr; }
+        .vscode-main { display: none; }
       }
 
       /* Activity bar */
@@ -1046,200 +1060,112 @@ const rev = 'b71dc5e';
       .va-active:hover { opacity: 1; }
 
       /* Patchwire side panel */
+      /* Patchwire side panel (the real extension) */
       .vscode-side {
-        background: #131318;
-        display: grid;
-        grid-template-rows: auto 1fr auto;
-        min-height: 0;
+        background: #181818;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px 14px;
+        border-right: 1px solid var(--rc-hairline-ink);
+        min-width: 0;
+        font-family: var(--rc-font-body);
       }
-      .vss-head {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        background: #0F0F12;
-        border-bottom: 1px solid var(--rc-hairline-ink);
-      }
-      .vss-title {
+      .pw-head {
         font-family: var(--rc-font-mono);
         font-size: 10.5px;
         letter-spacing: 0.12em;
         color: var(--rc-bone-dim);
+        opacity: 0.75;
       }
-      .vss-conn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
+      .pw-project { display: grid; gap: 3px; min-width: 0; }
+      .pw-project-name { font-size: 15px; font-weight: 600; color: var(--rc-bone); }
+      .pw-meta {
         font-family: var(--rc-font-mono);
-        font-size: 10.5px;
+        font-size: 11px;
         color: var(--rc-bone-dim);
+        opacity: 0.7;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
-      .vss-conn-dot {
-        width: 6px; height: 6px;
-        border-radius: 50%;
-        background: var(--rc-phosphor);
-        box-shadow: 0 0 6px rgba(201, 245, 100, 0.55);
-        animation: pulse 2.2s ease-in-out infinite;
+      .pw-session {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 9px 14px;
+        background: #1f6feb;
+        color: #fff;
+        border: none; border-radius: 4px;
+        font-family: var(--rc-font-body); font-size: 13px; font-weight: 500;
+        cursor: pointer;
+        transition: background 0.18s ease;
       }
+      .pw-session:hover { background: #2b7cf0; }
+      .pw-session-ico { font-size: 13px; }
+      .pw-sync {
+        border: 1px solid var(--rc-hairline-ink);
+        border-radius: 6px;
+        padding: 12px;
+        display: grid; gap: 12px;
+        background: rgba(232, 226, 208, 0.02);
+      }
+      .pw-sync-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .pw-sync-label { font-family: var(--rc-font-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--rc-bone-dim); }
+      .pw-sync-pill {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 11px; font-weight: 600;
+        color: #0c1f12;
+        background: #9be6a8;
+        padding: 3px 9px; border-radius: 999px;
+        white-space: nowrap;
+      }
+      .pw-sync-row { display: flex; gap: 18px; font-size: 12px; color: var(--rc-bone-dim); }
+      .pw-sync-act { opacity: 0.85; }
+      .pw-links { display: flex; gap: 18px; font-size: 12px; }
+      .pw-links span { color: var(--rc-bone-dim); text-decoration: underline; text-underline-offset: 2px; opacity: 0.8; }
 
-      .vss-thread {
-        padding: 16px 14px;
+      /* Editor + Claude terminal column */
+      .vscode-main {
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        overflow: hidden;
+        background: #1e1e1e;
+        min-width: 0;
       }
-      .vss-msg {
-        display: grid;
-        grid-template-columns: 30px 1fr;
-        gap: 10px;
-        align-items: start;
+      .vscode-editor {
+        flex: 1;
+        display: flex; align-items: center; justify-content: center;
+        min-height: 150px;
       }
-      .vss-avatar {
-        width: 26px; height: 26px;
-        border-radius: 6px;
-        background: rgba(232, 226, 208, 0.06);
-        font-family: var(--rc-font-mono);
-        font-size: 10px;
-        letter-spacing: 0.04em;
-        color: var(--rc-bone-dim);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        text-transform: uppercase;
-        flex-shrink: 0;
-      }
-      .vss-avatar-pw {
-        background: var(--rc-phosphor);
-        color: var(--rc-ink);
-        font-weight: 600;
-      }
-      .vss-bubble {
-        margin: 2px 0 0;
-        font-family: var(--rc-font-body);
-        font-size: 13px;
-        line-height: 1.4;
-        color: var(--rc-bone);
-        background: rgba(232, 226, 208, 0.04);
-        border: 1px solid var(--rc-hairline-ink);
-        padding: 8px 12px;
-        border-radius: 6px;
-        max-width: max-content;
-      }
-      .vss-content { display: grid; gap: 10px; min-width: 0; }
-      .vss-msg-head {
-        margin: 4px 0 0;
-        font-family: var(--rc-font-mono);
-        font-size: 11.5px;
-        color: var(--rc-bone-dim);
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-      .vss-stat-add  { color: var(--rc-phosphor); font-weight: 600; }
-      .vss-stat-rm   { color: var(--rc-amber); font-weight: 600; }
-      .vss-stat-sep  { opacity: 0.4; }
-      .vss-stat-files { opacity: 0.7; }
-
-      .vss-diffinline {
-        background: rgba(14, 14, 16, 0.5);
-        border: 1px solid var(--rc-hairline-ink);
-        border-radius: 6px;
-        overflow: hidden;
-        font-family: var(--rc-font-mono);
-        font-size: 11.5px;
-      }
-      .vss-diff-head {
-        padding: 6px 10px;
-        background: rgba(232, 226, 208, 0.03);
-        color: var(--rc-amber);
-        font-size: 10.5px;
-        letter-spacing: 0.04em;
-        border-bottom: 1px solid var(--rc-hairline-ink);
-        opacity: 0.85;
-      }
-      .vss-row {
-        display: grid;
-        grid-template-columns: 18px 1fr;
-        gap: 6px;
-        padding: 1px 8px;
-        line-height: 1.6;
-      }
-      .vss-row-sign { text-align: center; font-weight: 600; }
-      .vss-row-context { color: var(--rc-bone); opacity: 0.65; }
-      .vss-row-plus    { background: rgba(201, 245, 100, 0.10); color: var(--rc-bone); }
-      .vss-row-plus  .vss-row-sign { color: var(--rc-phosphor); }
-      .vss-row-minus   { background: rgba(255, 140, 66, 0.10); color: var(--rc-bone-dim); }
-      .vss-row-minus .vss-row-sign { color: var(--rc-amber); }
-
-      .vss-actions {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-      .vss-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        font-family: var(--rc-font-mono);
-        font-size: 11.5px;
-        color: var(--rc-bone);
-        background: rgba(232, 226, 208, 0.04);
-        border: 1px solid var(--rc-hairline-ink);
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background 0.2s ease, border-color 0.2s ease;
-      }
-      .vss-btn:hover {
-        background: rgba(232, 226, 208, 0.08);
-        border-color: rgba(232, 226, 208, 0.3);
-      }
-      .vss-btn-primary {
-        background: var(--rc-phosphor);
-        color: var(--rc-ink);
-        border-color: var(--rc-phosphor);
-        font-weight: 600;
-      }
-      .vss-btn-primary:hover { background: #d4f878; color: var(--rc-ink); }
-      .vss-btn-ghost { color: var(--rc-bone-dim); }
-      .vss-kbd {
-        font-size: 10px;
-        padding: 1px 5px;
-        background: rgba(14, 14, 16, 0.4);
-        border-radius: 3px;
-        opacity: 0.7;
-      }
-      .vss-btn-primary .vss-kbd { background: rgba(14, 14, 16, 0.18); }
-
-      .vss-input {
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 14px;
-        background: #0F0F12;
+      .vscode-wm { color: #2b2b2f; }
+      .vscode-term {
         border-top: 1px solid var(--rc-hairline-ink);
-        font-family: var(--rc-font-mono);
-        font-size: 12px;
+        background: #181818;
       }
-      .vss-input-text { color: var(--rc-bone-dim); opacity: 0.55; }
-      .vss-input-cursor {
-        width: 7px; height: 14px;
-        background: var(--rc-phosphor);
-        opacity: 0.75;
-        animation: blink 1.1s steps(2) infinite;
-      }
-      .vss-input-send {
-        width: 22px; height: 22px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(232, 226, 208, 0.04);
-        border-radius: 4px;
+      .vt-tabs {
+        display: flex; align-items: center; gap: 16px;
+        padding: 7px 14px;
+        border-bottom: 1px solid var(--rc-hairline-ink);
+        font-family: var(--rc-font-mono); font-size: 10px; letter-spacing: 0.06em;
         color: var(--rc-bone-dim);
+      }
+      .vt-tab { opacity: 0.45; }
+      .vt-tab-active { opacity: 1; color: var(--rc-bone); border-bottom: 1.5px solid var(--rc-phosphor); padding-bottom: 6px; margin-bottom: -7px; }
+      .vt-session { margin-left: auto; opacity: 0.55; }
+      .vt-body {
+        padding: 12px 14px 16px;
+        font-family: var(--rc-font-mono);
+        font-size: 11.5px; line-height: 1.7;
+        color: var(--rc-bone-dim);
+        display: grid; gap: 1px;
+      }
+      .vt-pw { color: #57b6ff; }
+      .vt-banner { display: inline-flex; align-items: center; gap: 10px; margin: 2px 0; }
+      .vt-pig { color: #f0a0a8; font-size: 13px; letter-spacing: -1px; }
+      .vt-strong { color: var(--rc-bone); font-weight: 600; }
+      .vt-dim { opacity: 0.55; }
+      .vt-prompt { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; }
+      .vt-caret { color: var(--rc-phosphor); }
+      .vt-ph { color: var(--rc-bone-dim); opacity: 0.5; }
+      .vt-cur {
+        width: 7px; height: 14px; background: var(--rc-bone-dim);
+        opacity: 0.7; animation: blink 1.1s steps(2) infinite;
       }
 
       /* ═══════════════════════════════════════════════════════════
@@ -1396,10 +1322,7 @@ const rev = 'b71dc5e';
         .hero-h-line,
         .meta-dot,
         .eyebrow-pulse,
-        .flowparticle,
-        .caret,
-        .step-ok,
-        .vss-conn-dot {
+        .vt-cur {
           animation: none;
         }
         .hero-spotlight { transition: none; }
@@ -1428,35 +1351,11 @@ const rev = 'b71dc5e';
           font-size: clamp(32px, 9vw, 48px);
         }
 
-        /* Pricing section mobile */
-        .pricing { padding-block: 56px; }
-
-        /* Teams section mobile */
-        .teams { padding-block: 56px; }
-        .teampillar { grid-template-columns: 36px 1fr; gap: 12px; padding-block: 18px; }
-        .tp-body { font-size: 11.5px; }
-
-        /* Editor section mobile */
+        /* Extension section mobile */
         .editor { padding-block: 56px; }
         .editor-cta { flex-direction: column; align-items: stretch; }
         .editor-cta .cta { justify-content: center; }
         .vscode-body { min-height: 420px; }
-        .vss-thread { padding: 14px 12px; gap: 14px; }
-        .vss-bubble { font-size: 12.5px; }
-        .vss-row { font-size: 10.5px; }
-        .vss-diff-head { font-size: 10px; }
-        .vss-actions { gap: 4px; }
-        .vss-btn { padding: 5px 9px; font-size: 11px; }
-        .vss-msg-head { font-size: 11px; }
-
-        .flowdiagram { grid-template-columns: 1fr; gap: 14px; padding: 22px; }
-        .flowwire { height: 40px; }
-
-        .step { grid-template-columns: 44px 1fr; gap: 16px; padding-block: 20px; }
-        .step-body h3 { font-size: 18px; }
-
-        .featgrid { grid-template-columns: 1fr; }
-        .feat-card-tall, .feat-card-quote, .feat-card-strip { grid-column: auto; grid-row: auto; }
 
         .endcta-actions { flex-direction: column; align-items: stretch; }
         .endcta-actions .cta {
