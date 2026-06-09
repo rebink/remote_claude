@@ -2,7 +2,7 @@
   "name": "patchwire-vscode",
   "displayName": "Patchwire",
   "description": "Chat with an AI coding agent on a machine you control; review every change as a diff before it touches your code.",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "publisher": "patchwire",
   "private": true,
   "icon": "media/icon.png",
@@ -29,7 +29,7 @@
     ],
     "viewsContainers": {
       "activitybar": [
-        { "id": "patchwire", "title": "Patchwire", "icon": "$(comment-discussion)" }
+        { "id": "patchwire", "title": "Patchwire", "icon": "media/patchwire-activitybar.svg" }
       ]
     },
     "views": {
