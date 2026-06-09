@@ -5,12 +5,24 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.5] — 2026-06-08
+## [0.3.5] — 2026-06-09
 
-Default-deny egress on the remote (M3, macOS) — the exfiltration counterpart to
-read-minimization.
+Default-deny egress on the remote (M3) and local file attachments for the remote
+Claude.
 
-### Added
+### Added — Local file attachments
+- **`patchwire push <file>`** — copy a local file to the remote so an interactive
+  SSH `claude` session can read it. Stages into a gitignored `.patchwire-inbox/`
+  and rsyncs it to the remote; prints the remote path to paste. Flags:
+  `--clip` (push the clipboard image / screenshot), `--clean` (clear the inbox),
+  `--stage-only` (skip rsync; for callers whose sync carries it), `--json`.
+- **VS Code "📎 Attach file" / "Attach clipboard image"** — stages the file into
+  the synced project, flushes Mutagen, and types the remote path into the active
+  `claude` session terminal (clipboard fallback if no session is open). Works for
+  any file Claude reads by path, including images for vision. The inbox is
+  gitignored, so attachments never appear in a returned diff.
+
+### Added — Default-deny egress (macOS, opt-in)
 - **`PW_EGRESS=deny`** runs `claude` under a macOS seatbelt (`sandbox-exec`)
   profile that blocks all outbound network except localhost, DNS, and the
   resolved allowlist (Anthropic API by default; add hosts with
@@ -24,9 +36,10 @@ read-minimization.
   reachable and non-allowlisted hosts are blocked.
 
 ### Notes
-- macOS only (the agent is macOS-only). Enforcement is verified on the box via
-  `egress-check`; in-repo tests cover profile generation, allowlist merge, the
-  sandbox-exec wrapper, and fail-closed logic.
+- Egress is macOS only and **opt-in** (off by default). In-repo tests cover
+  profile generation, allowlist merge, the sandbox-exec wrapper, and fail-closed
+  logic; **kernel enforcement must be verified per-box with `egress-check`**
+  before enabling it.
 
 ## [0.3.4] — 2026-06-08
 
