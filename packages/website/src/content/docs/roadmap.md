@@ -3,7 +3,7 @@ title: Roadmap
 description: What's shipped, what's next, and what's intentionally deferred.
 ---
 
-## Shipped (through v0.3.3)
+## Shipped (through v0.3.5)
 
 - ✅ `patchwire` CLI with `setup`, `init`, `init-remote`, `sync`, `ask`, `apply`, `chat`, `doctor`, `whoami`
 - ✅ `patchwire-agent` HTTP server with `/health`, `/ask`, `/chat`
@@ -24,13 +24,15 @@ description: What's shipped, what's next, and what's intentionally deferred.
 - ✅ **Test-before-return** — optional `PW_VERIFY_CMD` runs on the checkout so you review a validated diff
 - ✅ **Pre-sync secret scan** (`sync.secretScan`) — gitleaks blocks/warns before a tracked-file secret can cross
 - ✅ **Cost & token visibility** — `usage` shows `TOK` and `$EQV`; provider-reported cost where available, operator price-table fallback (`~estimated`). See [Configuration → Cost tracking](/configuration/#cost-tracking).
+- ✅ **Local file attachments** — `patchwire push` and a VS Code **📎 Attach** button get local files (incl. screenshots/images for vision) to the remote `claude`, via a gitignored `.patchwire-inbox/`. See [Configuration → Attachments](/configuration/#attachments).
+- ✅ **Default-deny egress** (macOS, opt-in) — `PW_EGRESS=deny` runs `claude` under a seatbelt sandbox that blocks all outbound except the Anthropic API; `patchwire-agent egress-check` verifies enforcement on your box. The exfiltration counterpart to read-minimization. See [Security](/security/#default-deny-egress).
 - ✅ GitHub repo: [rebink/remote_claude](https://github.com/rebink/remote_claude)
 
 ## Near-term
 
-- 🔜 **Default-deny egress** on the remote — so even a compromised agent can't exfiltrate synced code (the security counterpart to read-minimization)
 - 🔜 Per-request **model selection** + an "allowed models" policy
 - 🔜 Dollar-cost **on the chat path** (chat already records real tokens; cost attribution is next)
+- 🔜 **Egress: timer-based IP re-resolution** + a Linux (netns) backend
 
 ## Exploring / not committed
 
