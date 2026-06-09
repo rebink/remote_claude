@@ -5,6 +5,15 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.11] — 2026-06-09
+
+### Added
+- **Re-insert a staged attachment into the session.** Each row in the panel's
+  Attachments list now has an add button (➕) that types that file's remote path
+  into the active Claude session terminal, so you can reference an already-synced
+  file again without re-attaching it. Falls back to copying the path if no session
+  is open.
+
 ## [0.3.10] — 2026-06-09
 
 ### Fixed
