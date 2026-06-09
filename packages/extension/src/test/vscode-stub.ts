@@ -43,6 +43,13 @@ export const Uri = {
   },
 };
 
+export class RelativePattern {
+  constructor(
+    public readonly base: string | { fsPath?: string; path?: string },
+    public readonly pattern: string,
+  ) {}
+}
+
 export enum ViewColumn {
   Active = -1,
   One = 1,
@@ -71,6 +78,9 @@ export const window = {
   showWarningMessage: async (..._args: unknown[]) => undefined as unknown,
   showErrorMessage: async (..._args: unknown[]) => undefined as unknown,
   showInformationMessage: async (..._args: unknown[]) => undefined as unknown,
+  terminals: [] as unknown[],
+  onDidCloseTerminal: (_cb: unknown) => ({ dispose: () => {} }),
+  onDidOpenTerminal: (_cb: unknown) => ({ dispose: () => {} }),
 };
 
 export const commands = {
