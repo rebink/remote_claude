@@ -3,6 +3,7 @@ import { existsSync, statSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import { isNotLoggedIn, NOT_LOGGED_IN_REMEDIATION, tryDisableKeychainAutoLock } from './keychain.ts';
 import { parseAiUsage } from './usage-parser.ts';
+import { wrapWithEgress } from './egress.ts';
 
 export interface AiResult {
   stdout: string;
@@ -35,6 +36,8 @@ export function runAi(opts: {
   prompt: string;
   cwd: string;
   timeoutMs: number;
+  /** When set, run the AI under a default-deny egress sandbox (seatbelt profile). */
+  egressProfilePath?: string;
 }): Promise<AiResult> {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -49,7 +52,10 @@ export function runAi(opts: {
       reject(e);
     };
 
-    const child = spawn(opts.command, opts.args, {
+    const run = opts.egressProfilePath
+      ? wrapWithEgress(opts.command, opts.args, opts.egressProfilePath)
+      : { command: opts.command, args: opts.args };
+    const child = spawn(run.command, run.args, {
       cwd: opts.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
@@ -98,6 +104,8 @@ export interface AiStreamingOptions {
   bin: string;
   /** Base args; `--resume <sessionId>` is appended per call. */
   args: string[];
+  /** When set, run the AI under a default-deny egress sandbox (seatbelt profile). */
+  egressProfilePath?: string;
 }
 
 export function makeAiRunner(opts: AiStreamingOptions) {
@@ -125,7 +133,10 @@ export function makeAiRunner(opts: AiStreamingOptions) {
         // fails for first-turn calls. Both flags require UUID format ids
         // (8-4-4-4-12 with dashes) — see lib/session-id.ts.
         const args = [...opts.args, '--session-id', sessionId];
-        const child = spawn(opts.bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+        const run = opts.egressProfilePath
+          ? wrapWithEgress(opts.bin, args, opts.egressProfilePath)
+          : { command: opts.bin, args };
+        const child = spawn(run.command, run.args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
         child.stdin.on('error', (err: Error) =>
           settleReject(new Error(`AI command stdin error: ${err.message}`)),

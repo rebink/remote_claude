@@ -5,6 +5,29 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] — 2026-06-08
+
+Default-deny egress on the remote (M3, macOS) — the exfiltration counterpart to
+read-minimization.
+
+### Added
+- **`PW_EGRESS=deny`** runs `claude` under a macOS seatbelt (`sandbox-exec`)
+  profile that blocks all outbound network except localhost, DNS, and the
+  resolved allowlist (Anthropic API by default; add hosts with
+  `PW_EGRESS_ALLOW`). Default `off` leaves the spawn unchanged.
+  - IP-literal allowlist only (no hostname-suffix matching — that's the footgun
+    behind Claude Code's SOCKS5 null-byte bypass). `PW_EGRESS_ALLOW_DNS=0` for
+    the tightest posture.
+  - **Fail-closed:** with `deny` set and `sandbox-exec` missing, the agent
+    refuses to start rather than run unconfined.
+- **`patchwire-agent egress-check`** — verifies on the box that the allowlist is
+  reachable and non-allowlisted hosts are blocked.
+
+### Notes
+- macOS only (the agent is macOS-only). Enforcement is verified on the box via
+  `egress-check`; in-repo tests cover profile generation, allowlist merge, the
+  sandbox-exec wrapper, and fail-closed logic.
+
 ## [0.3.4] — 2026-06-08
 
 Cost & token visibility in `patchwire-agent usage` (M6 steps 2–5).
