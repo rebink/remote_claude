@@ -1,6 +1,6 @@
 {
   "name": "@rebink/patchwire",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Local-first dev tool: push your project to a remote Mac Mini, run Claude Code there, and pull back a reviewable unified diff.",
   "type": "module",
   "license": "MIT",
@@ -54,7 +54,6 @@
     "postinstall": "bash scripts/fetch-sshpass.sh || true"
   },
   "dependencies": {
-    "@patchwire/protocol": "workspace:*",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "fastify": "^4.28.1",
@@ -64,6 +63,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@patchwire/protocol": "workspace:*",
     "@types/node": "^20.14.10",
     "@types/prompts": "^2.4.9",
     "tsup": "^8.2.4",
