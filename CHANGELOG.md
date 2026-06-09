@@ -5,6 +5,17 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] — 2026-06-09
+
+### Fixed
+- **The published CLI is now installable.** `@rebink/patchwire` declared a runtime
+  dependency on the private, unpublished `@patchwire/protocol@0.0.0`, so
+  `npm i -g @rebink/patchwire` failed with `E404` (every prior release was
+  uninstallable from npm; only the extension worked, because it re-bundles the
+  CLI). The protocol package is now bundled into the CLI build (`tsup`
+  `noExternal`) and dropped from runtime `dependencies`. Verified with a clean
+  tarball install. (No API changes — same 0.3.5 features.)
+
 ## [0.3.5] — 2026-06-09
 
 Default-deny egress on the remote (M3) and local file attachments for the remote
