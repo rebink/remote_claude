@@ -1,128 +1,68 @@
-# Patchwire — VS Code Extension
+# Patchwire for VS Code
 
-Chat with an AI coding agent that runs on a machine **you** control — your Mac Mini, a homelab, any box — and review every change as a diff before it touches your code.
+Run a Claude Code session on a machine you own, right from your editor. Patchwire opens the session on your own remote box over SSH and keeps your laptop and that machine in two-way sync, so the edits Claude makes land on your laptop as it makes them and you build, run, and debug on your own machine.
 
-Your workspace stays on your laptop. Only the code you sync crosses the wire — your `.env` and anything git ignores never leave your machine — and the agent's edits come back as diffs you **apply locally**. So a Flutter dev keeps the phone on USB and runs/hot-reloads locally as usual, while the heavy AI runs on the shared box.
+Your code stays on hardware you control. It is never handed to a vendor's agent cloud.
 
----
+## What it does
 
-## Prerequisites
+- **Focus Claude session.** One click opens the real Claude Code REPL running on your remote, inside a VS Code terminal.
+- **Two-way sync.** Your laptop and the remote stay byte-identical (powered by Mutagen). Flush or pause the sync from the panel.
+- **Setup wizard.** Connect a remote over Tailscale or plain SSH and install a per-project key in a few clicks.
+- **Attachments.** Send a local file or a clipboard screenshot to the session, images included for vision. Staged files show in the panel, where you can open or delete any of them.
 
-1. **`patchwire` CLI on this laptop** — install per the [root README](../README.md). The extension shells out to it for every operation.
-2. **Mac Mini reachable over Tailscale** with `patchwire` running as the agent. The setup wizard provisions this for you on first run.
-3. **VS Code 1.80+** and **Node 20+**.
+## Requirements
 
-The extension does not bundle the CLI. Run `patchwire --version` in a terminal to confirm it is on your `$PATH` before launching VS Code.
+- VS Code 1.80 or newer.
+- A Mac or Linux machine you can reach over SSH (a Tailscale tailnet is the easy path), with Claude Code installed on it. The setup wizard provisions the connection on first run.
 
----
+The `patchwire` CLI is bundled in the extension and runs on VS Code's own Node, so you do not need to install anything else on your laptop.
 
-## Install the extension
+## Install
 
-You have two paths. Pick (A) if you are using the extension, (B) if you are developing it.
+- **VS Code Marketplace:** search "Patchwire" in the Extensions panel, or open `vscode:extension/patchwire.patchwire-vscode`.
+- **Open VSX** (Cursor, VSCodium, Windsurf): search "Patchwire" in the Extensions panel.
+- **From a `.vsix`:** download it from the [GitHub releases](https://github.com/rebink/remote_claude/releases) and run *Install from VSIX…*.
 
-### A. Install a packaged `.vsix` (end users)
+## First-time setup
 
-```bash
-# from repo root
-pnpm install
-pnpm --filter patchwire-vscode build
-pnpm --filter patchwire-vscode package
-```
+1. Open a project folder in VS Code.
+2. Run **Patchwire: Setup…** from the command palette.
+3. The wizard connects a remote (pick a Tailscale peer or type a host), installs a per-project SSH key, clones the project locally and on the remote, and writes `patchwire.yml`.
 
-This produces `patchwire-vscode-0.3.0.vsix`. Install it in VS Code:
+When it finishes, the Patchwire panel shows your project and the live sync status.
 
-- **GUI:** Extensions sidebar → `…` menu (top right) → **Install from VSIX…** → pick the file.
-- **CLI:** `code --install-extension patchwire-vscode-0.3.0.vsix`
+## Using it
 
-Reload VS Code when prompted. A **Patchwire** icon (speech bubble) appears in the activity bar.
+Open the **Patchwire** view from the activity bar:
 
-### B. Run from source (developers)
-
-```bash
-pnpm install
-pnpm --filter patchwire-vscode build
-```
-
-Open the `extension/` folder in VS Code and press **F5**. A new "Extension Development Host" window launches with the extension loaded. Edit code in the original window; reload the dev host with `Ctrl/Cmd+R` to pick up changes. For watch-mode builds use `pnpm --filter patchwire-vscode dev`.
-
----
-
-## First-time setup (≤ 3 minutes)
-
-1. Open any folder in VS Code — empty repo or existing.
-2. Open the command palette (`Ctrl/Cmd+Shift+P`) and run **Patchwire: Setup…**.
-3. The wizard walks four steps:
-   - **Pick a peer.** Lists your Tailscale peers; choose the Mac Mini, or type an `IP/hostname` if Tailscale isn't running.
-   - **Authenticate once.** Enter your SSH username and system password. A per-project SSH key is installed via vendored `sshpass` + `ssh-copy-id`; the password is held in memory and zeroed afterward.
-   - **Bootstrap the project.** Provide a Git URL. The extension `git clone`s locally; the agent `git clone`s into `~/workspace/<project>` on the remote and writes `patchwire.yml`.
-   - **Doctor.** Health checks the agent, then offers to reload the window so the extension picks up the new config.
-
-You are done. The status bar should now show **Patchwire: in sync**.
-
----
-
-## Daily use
-
-### Start a chat
-
-- Click the **Patchwire** activity-bar icon, or run **Patchwire: New Chat** from the palette.
-- Type a prompt. Claude streams its reply into the chat panel.
-- File changes appear as **diff cards** at the end of the turn.
-
-### Review and apply diffs
-
-Each diff card has three actions:
-
-- **Open diff** — VS Code's native diff editor opens with the proposed change on the right.
-- **Apply** — runs `git apply --3way` for that file (or the whole turn).
-- **Reject** — discards the proposed change for that file.
-
-You stay in control: nothing is written to your working tree until you click **Apply**. Per-file selective apply is supported.
-
-### Multi-turn chat
-
-- The remote process is `claude --resume <session-id>` per chat, so each chat keeps full conversational context across turns.
-- **`+ New chat`** to start fresh; **chat list** to switch; **Delete chat** to remove it locally and tear down the remote session.
-
-### Sync state
-
-- **Sync-on-ask** is the default: before sending a turn, the extension rsyncs your tree to the remote.
-- **Live sync toggle** (status bar) — turn it ON during focused pairing. A file watcher + debounced rsync keeps the remote up-to-date as you type. Turn it OFF when you're hacking locally and don't want every save shipped.
-- **Out-of-sync indicators** — file decorations in the Explorer mark dirty paths; the status bar shows `in sync / syncing… / out of sync`.
-- **Ask-time guard** — if live sync is OFF and your tree is dirty when you hit Send, a modal warns before proceeding.
-
----
+- **Focus Claude session** opens the Claude Code terminal on your remote. Type as you would in any `claude` session; edits it makes sync back to your laptop.
+- The **Two-way sync** card shows the live status (`In sync`, `Syncing`, `Paused`) with **Flush now** and **Pause** controls. If both ends change the same file in the same window, your laptop's version wins and the remote's copy is preserved alongside it.
+- The **Attachments** list shows files staged for the session. Open one (images preview in VS Code) or delete it; deleting clears the remote copy too.
+- **Show output** opens the Patchwire log.
 
 ## Commands
 
 | Palette title | Command id |
 |---|---|
 | Patchwire: Setup… | `patchwire.openSetup` |
-| Patchwire: New Chat | `patchwire.newChat` |
-| Patchwire: Toggle Live Sync | `patchwire.toggleLiveSync` |
 | Patchwire: Show Output | `patchwire.viewOutput` |
+| Attach file to claude session | `patchwire.attachFile` |
+| Attach clipboard image to claude session | `patchwire.attachClipboardImage` |
 
----
+## Privacy
 
-## Troubleshooting
+Patchwire runs on machines you control. Your code lives on your own remote, not a third-party agent service. What Claude itself sees is the same as running `claude` directly. See the [security model](https://patchwire.vercel.app/security/).
 
-| Symptom | Try |
-|---|---|
-| Extension never activates | Check the **Patchwire** output channel (`Patchwire: Show Output`). Most failures log the underlying CLI error there. |
-| `patchwire: command not found` | The extension can't find the CLI. Reinstall it on your `$PATH`, then reload VS Code. |
-| Setup wizard hangs on Step 2 | Tailscale or SSH connectivity issue. Confirm `ssh <user>@<peer>` works in a terminal. |
-| Chat replies arrive in fragments / interleaved | A previous version had a streaming throttle bug; pull latest and rebuild (`pnpm -r build`). |
-| Reload mid-turn shows "session was in flight" | Expected — v1 surfaces a system message and resets. Stream reattach is a v1.1 item. |
-| Apply fails with conflict | The remote tree drifted from the local tree. Re-sync (status bar) and try again, or open the diff and resolve manually. |
+## Docs
 
-For agent-side problems, also run `patchwire doctor` in a terminal.
+Full documentation: [patchwire.vercel.app](https://patchwire.vercel.app/), including the [quickstart](https://patchwire.vercel.app/quickstart/), [configuration](https://patchwire.vercel.app/configuration/), and [security model](https://patchwire.vercel.app/security/).
 
----
+## Develop
 
-## Known v1 limitations
+```bash
+pnpm install
+pnpm --filter patchwire-vscode build
+```
 
-- Reload reconciliation does **not** reattach to an in-flight stream — it surfaces a system message and resets.
-- Tool-use frames from Claude are summarized as plain text, not rendered specially.
-- One in-flight turn per chat. Concurrent turns are deferred.
-- Single-root workspaces only; one `patchwire.yml` per project.
-- Multi-dev isolation relies on per-user SSH accounts on the remote.
+Open the repo in VS Code and press **F5** for an Extension Development Host. For watch-mode builds: `pnpm --filter patchwire-vscode dev`.

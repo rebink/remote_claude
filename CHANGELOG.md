@@ -5,6 +5,14 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] — 2026-06-09
+
+### Changed
+- **Accurate extension listing.** The Marketplace description and README described the
+  old chat-and-diff model and claimed the CLI was not bundled. They now describe the
+  real product: a Claude Code session on a machine you own, kept in two-way sync with
+  your editor, with the CLI bundled in the extension. Keywords updated to match.
+
 ## [0.3.8] — 2026-06-09
 
 ### Fixed
