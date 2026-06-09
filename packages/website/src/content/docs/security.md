@@ -1,6 +1,6 @@
 ---
 title: Security model
-description: What's protected, by what, and where the trust boundaries live.
+description: What's protected, and where the trust boundaries actually are.
 ---
 
 ## Threat model
@@ -89,16 +89,16 @@ Same as if you ran `claude` locally. Claude Code on the remote sends prompts and
 
 ## Already shipped
 
-- **Audit log** of every `/ask` and `/chat` — JSONL with timestamps and a `prompt_sha256` (never the plaintext prompt). View it with `patchwire-agent log`. See [Multi-developer](/multi-developer/).
+- **Audit log** of every `/ask` and `/chat`: JSONL with timestamps and a `prompt_sha256` (never the plaintext prompt). View it with `patchwire-agent log`. See [Multi-developer](/multi-developer/).
 
-## Default-deny egress (experimental — not recommended yet)
+## Default-deny egress (experimental, not recommended yet)
 
 :::caution[Experimental; off by default; not recommended for trusted-network setups]
 Egress lock-down is **dormant capability, not a recommended control.** On a
 trusted network (your own machine on Tailscale, running your own repos), the
 practical security comes from **read-minimization, Tailscale, per-user tokens,
-and the audit log** — egress is marginal defense-in-depth against a low-probability
-prompt-injection-exfiltration threat. And there's a real limitation today (below).
+and the audit log**. Egress is marginal defense-in-depth against a low-probability
+prompt-injection-exfiltration threat, and there's a real limitation today (below).
 **Leave `PW_EGRESS=off`** unless you're hardening against untrusted code for a
 regulated/enterprise context, and even then, verify carefully.
 :::
@@ -112,13 +112,13 @@ literals only (no hostname-suffix matching).
 
 **Known limitation:** the allowlist pins the Anthropic API by *resolved IP*, but
 `api.anthropic.com` sits behind a CDN with rotating IPs (and IPv6), so `claude`'s
-connection often lands on an IP that isn't pinned — and gets blocked along with
+connection often lands on an IP that isn't pinned, and gets blocked along with
 everything else. `patchwire-agent egress-check` surfaces this: it will show the
 deny working (`example.com` blocked) but the API unreachable. A robust fix
 (a hostname-allowlisting local proxy) is future work; until then egress is not
 production-usable.
 
-**Always verify before enabling:** `patchwire-agent egress-check` — and if the
+**Always verify before enabling:** run `patchwire-agent egress-check`, and if the
 Anthropic API shows unreachable, keep it off.
 
 ## What we'd like to add

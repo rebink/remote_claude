@@ -11,21 +11,21 @@ description: What's shipped, what's next, and what's intentionally deferred.
 - ✅ Selective per-file apply
 - ✅ `patchwire-agent install/uninstall` (macOS launchd; Linux systemd)
 - ✅ Tailscale peer auto-discovery in `setup`
-- ✅ Multi-developer isolation — per-user bearer tokens, isolated project directories, fair request queue
-- ✅ `patchwire-agent user` — add / list / disable / enable / rm / rotate
-- ✅ Per-user policy enforcement — project allowlist + rate limit on `/ask` and `/chat`
+- ✅ Multi-developer isolation: per-user bearer tokens, isolated project directories, fair request queue
+- ✅ `patchwire-agent user`: add / list / disable / enable / rm / rotate
+- ✅ Per-user policy enforcement: project allowlist + rate limit on `/ask` and `/chat`
 - ✅ JSONL audit log (every `/ask` and `/chat`; stores `prompt_sha256`, never plaintext)
-- ✅ `patchwire-agent log` — filtered audit log viewer
-- ✅ `patchwire-agent usage` — per-user requests / accepted / ask / chat / lines added-removed / duration / **tokens + dollar cost** (`TOK` / `$EQV`)
+- ✅ `patchwire-agent log`: filtered audit log viewer
+- ✅ `patchwire-agent usage`: per-user requests / accepted / ask / chat / lines added-removed / duration / **tokens + dollar cost** (`TOK` / `$EQV`)
 - ✅ Streamed `/ask` (NDJSON live queue visibility while Claude runs)
 - ✅ VS Code extension (bundled; surfaced diff preview and multi-turn chat in the editor); published to the **Marketplace + Open VSX**
 - ✅ Secret-safe sync (rsync respects `.gitignore` and `sync.exclude`)
-- ✅ **Reliable 3-way apply** — detects local drift since sync and merges instead of failing
-- ✅ **Test-before-return** — optional `PW_VERIFY_CMD` runs on the checkout so you review a validated diff
-- ✅ **Pre-sync secret scan** (`sync.secretScan`) — gitleaks blocks/warns before a tracked-file secret can cross
-- ✅ **Cost & token visibility** — `usage` shows `TOK` and `$EQV`; provider-reported cost where available, operator price-table fallback (`~estimated`). See [Configuration → Cost tracking](/configuration/#cost-tracking).
-- ✅ **Local file attachments** — `patchwire push` and a VS Code **📎 Attach** button get local files (incl. screenshots/images for vision) to the remote `claude`, via a gitignored `.patchwire-inbox/`. See [Configuration → Attachments](/configuration/#attachments).
-- 🧪 **Default-deny egress** (macOS, **experimental, off by default**) — the seatbelt deny works, but the Anthropic allowlist is brittle against the API's CDN IPs, so it's **not production-usable yet** and not recommended for trusted-network setups. See [Security → Default-deny egress](/security/#default-deny-egress-experimental--not-recommended-yet).
+- ✅ **Reliable 3-way apply**: detects local drift since sync and merges instead of failing
+- ✅ **Test-before-return**: optional `PW_VERIFY_CMD` runs on the checkout so you review a validated diff
+- ✅ **Pre-sync secret scan** (`sync.secretScan`): gitleaks blocks/warns before a tracked-file secret can cross
+- ✅ **Cost & token visibility**: `usage` shows `TOK` and `$EQV`; provider-reported cost where available, operator price-table fallback (`~estimated`). See [Configuration → Cost tracking](/configuration/#cost-tracking).
+- ✅ **Local file attachments**: `patchwire push` and a VS Code **📎 Attach** button get local files (incl. screenshots/images for vision) to the remote `claude`, via a gitignored `.patchwire-inbox/`. See [Configuration → Attachments](/configuration/#attachments).
+- 🧪 **Default-deny egress** (macOS, **experimental, off by default**): the seatbelt deny works, but the Anthropic allowlist is brittle against the API's CDN IPs, so it's **not production-usable yet** and not recommended for trusted-network setups. See [Security → Default-deny egress](/security/#default-deny-egress-experimental--not-recommended-yet).
 - ✅ GitHub repo: [rebink/remote_claude](https://github.com/rebink/remote_claude)
 
 ## Near-term
@@ -37,7 +37,7 @@ description: What's shipped, what's next, and what's intentionally deferred.
 ## Exploring / not committed
 
 - 💭 Build-cache sharing across developers on the same agent (Dart/Flutter `pub` cache, `node_modules` snapshots)
-- 💭 Hosted agent option — run the agent on a cloud VM without needing a dedicated machine
+- 💭 Hosted agent option: run the agent on a cloud VM without needing a dedicated machine
 
 ## Decided against
 

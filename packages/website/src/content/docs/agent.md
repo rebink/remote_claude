@@ -1,6 +1,6 @@
 ---
 title: Running the agent
-description: launchd, systemd, foreground, logs, and lifecycle.
+description: Keeping the agent running, with launchd or systemd, and where to find the logs.
 ---
 
 The agent is a small Fastify HTTP server. It has no required state between requests, so you can restart it any time.
@@ -74,7 +74,7 @@ PROJECTS_ROOT/
 │   ├── flutter-app/        # rsync target for Alice's `patchwire ask`
 │   └── backend/
 └── bob/
-    └── flutter-app/        # Bob's copy — distinct from Alice's
+    └── flutter-app/        # Bob's copy, separate from Alice's
 ```
 
 The agent resolves `<projectsRoot>/<username>/<project>` per request, where
@@ -90,8 +90,8 @@ file moves.
 
 The agent caps simultaneous Claude runs to avoid melting the box under team load:
 
-- `PW_MAX_CONCURRENT_TOTAL` (default `3`) — global ceiling.
-- `PW_MAX_CONCURRENT_PER_USER` (default `1`) — per-user ceiling so no single
+- `PW_MAX_CONCURRENT_TOTAL` (default `3`): global ceiling.
+- `PW_MAX_CONCURRENT_PER_USER` (default `1`): per-user ceiling so no single
   developer hogs all slots while teammates wait.
 
 Requests that exceed either cap wait in arrival order (FIFO). Because `/ask` is a
@@ -118,12 +118,12 @@ A read-only `GET /queue` endpoint returns the current snapshot:
 `POST /ask` responds with an NDJSON stream (`application/x-ndjson`), one JSON
 event per line:
 
-- `{"type":"queued","position":N}` — emitted once, only when the request waits
+- `{"type":"queued","position":N}`: emitted once, only when the request waits
   behind others on the global concurrency cap.
-- `{"type":"accepted","queueWaitMs":N}` — a slot was granted; the run is starting.
-- `{"type":"result","diff":…,"files":[…],"durationMs":N,"stdout":…,"stderr":…,"exitCode":N}`
-  — terminal success.
-- `{"type":"error","code":…,"message":…}` — terminal failure mid-run
+- `{"type":"accepted","queueWaitMs":N}`: a slot was granted; the run is starting.
+- `{"type":"result","diff":…,"files":[…],"durationMs":N,"stdout":…,"stderr":…,"exitCode":N}`:
+  terminal success.
+- `{"type":"error","code":…,"message":…}`: terminal failure mid-run
   (`run_failed`, `diff_failed`, or `internal`).
 
 Pre-flight rejections (bad body, missing project, not a git repo, dirty tree) are
@@ -137,7 +137,7 @@ Every successful `/ask` and `/chat` turn appends one JSONL line to
 `~/.patchwire/agent.log` (override via `PW_AUDIT_LOG`). The line records:
 
 - `ts`, `user`, `project`, `route`
-- `prompt_sha256` — SHA-256 of the prompt text. Plaintext is never persisted.
+- `prompt_sha256`: SHA-256 of the prompt text. Plaintext is never persisted.
 - For `/ask`: `files`, `lines_added`, `lines_removed`, `exit_code`
 - For `/chat`: `uuid`, `tokens_in`, `tokens_out`
 - `duration_ms`, `queue_wait_ms`

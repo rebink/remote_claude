@@ -13,10 +13,10 @@ const rev = 'b71dc5e';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0E0E10" />
-    <title>Patchwire — shared AI infrastructure for engineering teams</title>
+    <title>Patchwire: shared AI infrastructure for engineering teams</title>
     <meta
       name="description"
-      content="Run Claude, Codex, or Aider on machines you control. Every change comes back as a reviewable git diff. Shared, governed AI for your whole team — not individual seats."
+      content="Run Claude, Codex, or Aider on machines you control. Every change comes back as a reviewable git diff. Shared, governed AI for your whole team, not individual seats."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:type" content="website" />
@@ -24,7 +24,7 @@ const rev = 'b71dc5e';
     <meta property="og:title" content="Patchwire" />
     <meta
       property="og:description"
-      content="Run Claude, Codex, or Aider on machines you control. Every change comes back as a reviewable git diff. Shared, governed AI for your whole team — not individual seats."
+      content="Run Claude, Codex, or Aider on machines you control. Every change comes back as a reviewable git diff. Shared, governed AI for your whole team, not individual seats."
     />
     <meta property="og:image" content="https://patchwire.dev/og.png" />
     <meta property="og:image:width" content="1200" />
@@ -77,379 +77,30 @@ const rev = 'b71dc5e';
 
       <div class="hero-inner">
         <div class="hero-eyebrow reveal">
-          <span class="eyebrow-tag">0.3.0 / 2026</span>
+          <span class="eyebrow-tag">VS Code extension</span>
           <span class="eyebrow-sep">·</span>
-          <span class="eyebrow-rev">rev {rev}</span>
+          <span class="eyebrow-rev">0.3.6</span>
           <span class="eyebrow-sep">·</span>
           <span class="eyebrow-status"><span class="eyebrow-pulse"></span>shipping</span>
         </div>
 
         <h1 class="hero-h reveal">
-          <span class="hero-h-line">Shared AI</span>
-          <span class="hero-h-line">infrastructure for</span>
-          <span class="hero-h-line"><em>engineering teams.</em></span>
+          <span class="hero-h-line">Your AI, in</span>
+          <span class="hero-h-line">your editor.</span>
+          <span class="hero-h-line"><em>On hardware you own.</em></span>
         </h1>
 
         <p class="hero-sub reveal">
-          Your coding agent runs on a machine <strong>you</strong> control and only
-          ever sees the project you sync &mdash; never your <code>.env</code>, never
-          the rest of your laptop. Its edits come back as a git diff applied locally,
-          so your Flutter hot reload and debugger keep working exactly as before.
+          Install the VS Code extension and chat with Claude from a side panel. It runs
+          on a machine <strong>you</strong> control and only ever sees the project you
+          sync. Not your <code>.env</code>, not the rest of your laptop. Edits come back
+          as a diff you review and apply, so your hot reload and debugger keep working
+          like always.
         </p>
         <p class="hero-tagline reveal">Only diffs cross the wire.</p>
 
-        <!-- ── The animated terminal centerpiece ── -->
-        <div class="term reveal" id="term">
-          <header class="term-bar">
-            <span class="term-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </span>
-            <span class="term-path">~/projects/team-app</span>
-            <span class="term-host">you@laptop · zsh</span>
-          </header>
-          <div class="term-body" aria-live="polite">
-            <div class="term-line" data-typewrite='$ patchwire ask "refactor login_bloc to freezed"' data-after="800"></div>
-            <div class="term-line term-line-step" data-step="rsync"    data-step-detail="14 files · 84 ms"              data-after="650"></div>
-            <div class="term-line term-line-step" data-step="queued"   data-step-detail="position 2 · ahead: ana, ben" data-after="1100"></div>
-            <div class="term-line term-line-step" data-step="accepted" data-step-detail="slot granted · waited 3.4 s"  data-after="700"></div>
-            <div class="term-line term-line-step" data-step="spawn"    data-step-detail="claude --print · 4.7 s"       data-after="1400"></div>
-            <div class="term-line term-line-step" data-step="diff"     data-step-detail="31 lines · 6 files"           data-after="700"></div>
-            <div class="term-spacer"></div>
-            <div class="term-diff" id="termDiff">
-              <div class="diff-rail">@@ <span class="rail-path">lib/auth/login_bloc.dart</span></div>
-              <div class="diff-row diff-minus"><span class="num">142</span><span class="sign">−</span><span class="content">  return BlocBase.fromJson(json);</span></div>
-              <div class="diff-row diff-plus" ><span class="num">142</span><span class="sign">+</span><span class="content">  return Freezed.fromJson(json);</span></div>
-              <div class="diff-row diff-context"><span class="num">143</span><span class="sign">&nbsp;</span><span class="content">{`}`}</span></div>
-              <div class="diff-row diff-minus"><span class="num">147</span><span class="sign">−</span><span class="content">class LoginBloc extends BlocBase {`{`}</span></div>
-              <div class="diff-row diff-plus" ><span class="num">147</span><span class="sign">+</span><span class="content">@freezed</span></div>
-              <div class="diff-row diff-plus" ><span class="num">148</span><span class="sign">+</span><span class="content">class LoginState with _$LoginState {`{`}</span></div>
-            </div>
-            <div class="term-actions" id="termActions">
-              <button class="term-btn term-btn-primary" type="button">git apply <span class="term-btn-kbd">↵</span></button>
-              <button class="term-btn" type="button">preview <span class="term-btn-kbd">p</span></button>
-              <button class="term-btn term-btn-ghost" type="button">tweak <span class="term-btn-kbd">t</span></button>
-            </div>
-          </div>
-        </div>
-
-        <div class="hero-cta reveal">
-          <a href="/quickstart/" class="cta cta-primary magnet">
-            <span class="cta-icon" aria-hidden="true">$_</span>
-            <span>Get started</span>
-            <span class="cta-arrow">→</span>
-          </a>
-          <a href="/architecture/" class="cta cta-ghost magnet">
-            <span>Read the docs</span>
-            <span class="cta-arrow">→</span>
-          </a>
-        </div>
-
-        <div class="hero-byline reveal">
-          <span aria-hidden="true">↓ scroll</span>
-          <span class="byline-line" aria-hidden="true"></span>
-          <a href={repo} class="byline-link">github.com/rebink/remote_claude ↗</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- ───────── SECTION: THE MODEL ───────── -->
-    <section class="flow">
-      <span class="kicker reveal"><span class="kicker-bar"></span>01 · the model</span>
-      <h2 class="flow-h reveal">
-        One machine runs the AI. <em>Your whole team shares it.</em>
-      </h2>
-
-      <div class="flowdiagram reveal" aria-hidden="true">
-        <div class="flowbox flowbox-laptop">
-          <span class="flowbox-icon">⌘</span>
-          <span class="flowbox-title">Laptop</span>
-          <span class="flowbox-sub">patchwire CLI</span>
-        </div>
-        <div class="flowwire">
-          <svg viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
-            <line x1="0" y1="30" x2="400" y2="30" stroke="rgba(232,226,208,0.18)" stroke-width="1" stroke-dasharray="2 4"/>
-          </svg>
-          <span class="flowparticle"></span>
-          <span class="flowlabel">rsync · queue · streamed diff</span>
-        </div>
-        <div class="flowbox flowbox-mac">
-          <span class="flowbox-icon">▣</span>
-          <span class="flowbox-title">Remote</span>
-          <span class="flowbox-sub">patchwire-agent</span>
-        </div>
-      </div>
-
-      <ol class="steps">
-        <li class="step reveal">
-          <span class="step-no">01</span>
-          <div class="step-body">
-            <h3>Push code over rsync.</h3>
-            <p>One-way, into your <em>own</em> per-user directory on the remote. Your laptop is the source of truth; the remote mirrors it. Never the other direction, never another developer's tree.</p>
-          </div>
-        </li>
-        <li class="step reveal">
-          <span class="step-no">02</span>
-          <div class="step-body">
-            <h3>Streamed <code>/ask</code> with your per-user token.</h3>
-            <p>The agent resolves your token to your identity, drops you into the fair queue &mdash; you watch your live position stream back &mdash; then spawns the AI on your own clean checkout.</p>
-          </div>
-        </li>
-        <li class="step reveal">
-          <span class="step-no">03</span>
-          <div class="step-body">
-            <h3>AI edits files. Agent captures <code>git diff</code>.</h3>
-            <p>The AI edits a clean checkout natively. The agent derives the diff from git, then resets the tree. Robust, no prompt fragility.</p>
-          </div>
-        </li>
-        <li class="step reveal">
-          <span class="step-no">04</span>
-          <div class="step-body">
-            <h3>Diff returns. <em>You</em> decide.</h3>
-            <p>Colorized preview. <code>git apply</code> selectively. Nothing lands without your hand on it.</p>
-          </div>
-        </li>
-      </ol>
-    </section>
-
-    <!-- ───────── SECTION: BUILT FOR TEAMS ───────── -->
-    <section class="teams">
-      <span class="kicker reveal"><span class="kicker-bar"></span>02 · for teams</span>
-      <h2 class="teams-h reveal">
-        No one steps on <em>anyone.</em>
-      </h2>
-      <p class="teams-sub reveal">
-        One agent, many developers. Identity, isolation, fairness, and a paper
-        trail &mdash; built into the protocol, not bolted on after.
-      </p>
-
-      <div class="teams-grid">
-        <div class="teams-prose">
-          <article class="teampillar reveal">
-            <span class="teampillar-no">01</span>
-            <div>
-              <h3>Isolated checkouts</h3>
-              <p>Each developer rsyncs into <code>&lt;user&gt;/&lt;project&gt;</code> on the remote. Two people can hammer the same project name and never touch each other's tree.</p>
-            </div>
-          </article>
-          <article class="teampillar reveal">
-            <span class="teampillar-no">02</span>
-            <div>
-              <h3>Fair queue</h3>
-              <p>Per-user <em>and</em> global concurrency caps. Requests over the cap wait FIFO and stream their live position back, so one box never thunders.</p>
-            </div>
-          </article>
-          <article class="teampillar reveal">
-            <span class="teampillar-no">03</span>
-            <div>
-              <h3>Audit log</h3>
-              <p>Every successful turn appends one JSONL line: who, which project, prompt <em>hash</em>, lines changed, duration. Plaintext prompts never touch disk.</p>
-            </div>
-          </article>
-        </div>
-
-        <!-- on-brand agent dashboard: live /queue snapshot + audit tail -->
-        <aside class="teams-panel reveal" data-tilt aria-hidden="true">
-          <header class="tp-bar">
-            <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="tp-bar-title">patchwire-agent</span>
-            <span class="tp-bar-ep">GET /queue</span>
-          </header>
-          <div class="tp-body">
-            <div class="tp-label">in flight · 1 / 3</div>
-            <div class="tp-row tp-row-run">
-              <span class="tp-user">ana</span>
-              <span class="tp-meta">claude --print · 4.7s</span>
-              <span class="tp-badge tp-badge-run">running</span>
-            </div>
-
-            <div class="tp-label">queued · 2</div>
-            <div class="tp-row">
-              <span class="tp-pos">1</span>
-              <span class="tp-user">ben</span>
-              <span class="tp-meta">waiting</span>
-            </div>
-            <div class="tp-row tp-row-you">
-              <span class="tp-pos">2</span>
-              <span class="tp-user">you</span>
-              <span class="tp-meta">waiting</span>
-            </div>
-
-            <div class="tp-divider"></div>
-
-            <div class="tp-label">~/.patchwire/agent.log</div>
-            <pre class="tp-audit"><span class="tp-aline"><span class="tp-k">cleo</span> team-app · +12 −3 · 5.2s</span>
-<span class="tp-aline"><span class="tp-k">ana</span> api · +4 −0 · 3.4s</span>
-<span class="tp-aline tp-aline-live"><span class="tp-k">ana</span> team-app · streaming…</span></pre>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-
-    <!-- ───────── SECTION: GOVERNANCE ───────── -->
-    <section class="teams">
-      <span class="kicker reveal"><span class="kicker-bar"></span>03 · governance</span>
-      <h2 class="teams-h reveal">
-        Your manager finally has a <em>view.</em>
-      </h2>
-      <p class="teams-sub reveal">
-        Run every request through one controlled box and visibility comes for
-        free &mdash; usage, cost, and a paper trail, without a dashboard to babysit.
-      </p>
-
-      <div class="teams-grid">
-        <article class="termcard reveal" data-tilt>
-          <header class="termcard-bar">
-            <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="termcard-host">$ patchwire-agent usage</span>
-          </header>
-          <pre class="termcard-body"><span class="t-com">USER           REQ   OK   ASK  CHAT     +LN     -LN  DUR</span>
-ana            412  388   400    12    1240     320  1h 2m
-ben            301  274   289    12     880     140  41m 18s
-rebin          189  160   180     9     460      70  22m 3s
-<span class="t-com">───────────────────────────────────────────────────────</span>
-total          902  822   869    33    2580     530  <span class="t-str">2h 5m</span></pre>
-        </article>
-
-        <div class="teams-prose">
-          <article class="teampillar reveal">
-            <span class="teampillar-no">01</span>
-            <div>
-              <h3>Usage at a glance</h3>
-              <p>Per-developer requests, accepted runs, lines changed, and time spent &mdash; straight from the audit log, no setup.</p>
-            </div>
-          </article>
-          <article class="teampillar reveal">
-            <span class="teampillar-no">02</span>
-            <div>
-              <h3>Audit trail</h3>
-              <p>Every turn appends one JSONL line: who, which project, prompt <em>hash</em>, lines changed, duration. Prompts are hashed, never stored.</p>
-            </div>
-          </article>
-          <article class="teampillar reveal">
-            <span class="teampillar-no">03</span>
-            <div>
-              <h3>Policy</h3>
-              <p>Per-user project allowlists and rate limits, enforced on every request through the one box you control.</p>
-            </div>
-          </article>
-          <p class="teams-sub reveal">
-            Usage, the audit log, and policy enforcement ship today. Per-developer
-            <span class="roadmap-pill">roadmap</span> dollar-cost reporting is the
-            near-term addition, once the agent records model + token usage.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ───────── SECTION: THE STANCE ───────── -->
-    <section class="claim">
-      <span class="kicker reveal"><span class="kicker-bar"></span>04 · the stance</span>
-      <h2 class="claim-h reveal">
-        Only the code you share <em>crosses the wire.</em>
-      </h2>
-      <p class="claim-sub reveal">
-        The agent runs on a machine <strong>you</strong> control and only ever sees
-        the project you sync. Your <code>.env</code>, your secrets, and everything
-        git ignores never leave your laptop &mdash; and the rest of your machine is
-        never touched. It&rsquo;s AI-agnostic (pick any model, local included), and
-        only the resulting diff comes back.
-      </p>
-
-      <div class="parallel reveal">
-        <article class="par-card par-old">
-          <header class="par-head">
-            <span class="par-dot par-dot-amber"></span>
-            <span class="par-label">MOST REMOTE AI TOOLS</span>
-          </header>
-          <ul>
-            <li>Your repo is cloned to a vendor's cloud</li>
-            <li>Execution on infra you don't control</li>
-            <li>Locked to one vendor's model</li>
-            <li>You trust their data-retention policy</li>
-          </ul>
-        </article>
-        <article class="par-card par-new">
-          <header class="par-head">
-            <span class="par-dot par-dot-phos"></span>
-            <span class="par-label">PATCHWIRE</span>
-          </header>
-          <ul>
-            <li>Agent runs on infrastructure you control</li>
-            <li>Only the diff crosses the wire</li>
-            <li>Any CLI: Claude, Codex, Aider, local</li>
-            <li>Every run in a JSONL audit log</li>
-          </ul>
-        </article>
-      </div>
-    </section>
-
-
-    <!-- ───────── SECTION: PROVING GROUND ───────── -->
-    <section class="claim">
-      <span class="kicker reveal"><span class="kicker-bar"></span>05 · proving ground</span>
-      <h2 class="claim-h reveal">
-        It cut its teeth in a <em>Flutter</em> shop.
-      </h2>
-      <p class="claim-sub reveal">
-        Patchwire started solving a brutal version of this &mdash; a Flutter team
-        sharing one powerful machine for AI and heavy builds, where hot laptops and
-        per-developer tooling were daily friction. That&rsquo;s why the demo speaks
-        Dart. The model isn&rsquo;t Flutter-specific &mdash; any repo, any agent
-        &mdash; but mobile teams feel the pain first.
-      </p>
-      <p class="claim-sub reveal">
-        The agent runs on the remote; its edits land on <em>your</em> laptop. You
-        <code>flutter run</code> locally &mdash; full hot reload, full debugger, a real
-        device over USB &mdash; exactly as before. The remote does the AI; your machine
-        does the running.
-      </p>
-    </section>
-
-    <!-- ───────── SECTION: SURFACES (VS CODE + CLI) ───────── -->
-    <section class="editor">
-      <div class="editor-grid">
-        <div class="editor-prose">
-          <span class="kicker reveal"><span class="kicker-bar"></span>06 · surfaces</span>
-          <h2 class="editor-h reveal">
-            Use it from the terminal <em>or your editor.</em>
-          </h2>
-          <p class="editor-sub reveal">
-            Patchwire ships a VS Code extension. Chat in a side panel.
-            Preview the diff inline. <strong>Apply with one keystroke.</strong>
-            Same engine, same diff-return guarantee, just without the
-            terminal context switch.
-          </p>
-          <ul class="editor-bullets reveal">
-            <li><span class="bullet-mark">▢</span> Native side panel that feels like part of VS Code</li>
-            <li><span class="bullet-mark">▢</span> Inline diff preview, hunk-by-hunk apply</li>
-            <li><span class="bullet-mark">▢</span> Setup wizard discovers your Tailscale peers</li>
-            <li><span class="bullet-mark">▢</span> Shares the same config as the CLI, so you can swap any time</li>
-          </ul>
-          <div class="editor-cta reveal">
-            <a href="vscode:extension/patchwire.patchwire-vscode" class="cta cta-primary magnet">
-              <span class="cta-icon" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M22 4.5l-9.5 7.5L22 19.5V4.5z" fill="currentColor"/>
-                  <path d="M3 8l5 5v6l9.5-7.5L8 4v6l-5-2z" fill="currentColor" opacity="0.85"/>
-                </svg>
-              </span>
-              <span>Install for VS Code</span>
-              <span class="cta-arrow">→</span>
-            </a>
-            <a href="/install-extension/" class="cta cta-link magnet">
-              <span>other editors / .vsix</span>
-              <span class="cta-arrow">→</span>
-            </a>
-          </div>
-          <p class="editor-cta-fallback reveal">
-            Button not opening VS Code? Install from the
-            <a href="https://marketplace.visualstudio.com/items?itemName=patchwire.patchwire-vscode" target="_blank" rel="noopener">Marketplace</a>
-            or <a href="https://open-vsx.org/extension/patchwire/patchwire-vscode" target="_blank" rel="noopener">Open VSX</a>.
-          </p>
-        </div>
-
-        <div class="editor-mock reveal">
+        <!-- ── The VS Code extension, the star ── -->
+        <div class="hero-mock reveal">
           <div class="vscode" data-tilt>
             <header class="vscode-bar">
               <span class="term-dots" aria-hidden="true">
@@ -521,122 +172,94 @@ total          902  822   869    33    2580     530  <span class="t-str">2h 5m</
             </div>
           </div>
         </div>
+
+        <div class="hero-cta reveal">
+          <a href="vscode:extension/patchwire.patchwire-vscode" class="cta cta-primary magnet">
+            <span class="cta-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M22 4.5l-9.5 7.5L22 19.5V4.5z" fill="currentColor"/>
+                <path d="M3 8l5 5v6l9.5-7.5L8 4v6l-5-2z" fill="currentColor" opacity="0.85"/>
+              </svg>
+            </span>
+            <span>Install for VS Code</span>
+            <span class="cta-arrow">→</span>
+          </a>
+          <a href="/install-extension/" class="cta cta-ghost magnet">
+            <span>other editors / .vsix</span>
+            <span class="cta-arrow">→</span>
+          </a>
+        </div>
+
+        <div class="hero-byline reveal">
+          <span aria-hidden="true">↓ scroll</span>
+          <span class="byline-line" aria-hidden="true"></span>
+          <a href={repo} class="byline-link">github.com/rebink/remote_claude ↗</a>
+        </div>
       </div>
     </section>
 
-    <!-- ───────── SECTION: FEATURES ───────── -->
-    <section class="feats">
-      <span class="kicker reveal"><span class="kicker-bar"></span>07 · the gains</span>
-      <h2 class="feats-h reveal">
-        Everything in&nbsp;<em>the box.</em>
-      </h2>
 
-      <div class="featgrid">
-        <article class="feat-card reveal feat-card-tall">
-          <span class="feat-no">+</span>
-          <h3>Full-repo context.</h3>
-          <p>Claude (or Codex, or aider, or your shell script) runs on a clean checkout with the entire tree visible. No 8&#8209;k-token truncation, no "missing import" loops.</p>
-          <div class="feat-glow" aria-hidden="true"></div>
-        </article>
-        <article class="feat-card reveal">
-          <span class="feat-no">+</span>
-          <h3>Reviewable diffs.</h3>
-          <p><code>git diff</code> derived, never AI-imagined. Apply selectively.</p>
-        </article>
-        <article class="feat-card reveal">
-          <span class="feat-no">+</span>
-          <h3>AI-agnostic.</h3>
-          <p>Any CLI that reads stdin and edits files. Swap providers in one line of YAML.</p>
-        </article>
-        <article class="feat-card reveal">
-          <span class="feat-no">+</span>
-          <h3>One-way sync.</h3>
-          <p>rsync push. Your laptop's filesystem is the source of truth. The remote can't surprise you.</p>
-        </article>
-        <article class="feat-card reveal">
-          <span class="feat-no">+</span>
-          <h3>Isolated checkouts.</h3>
-          <p>Per-user directories on the remote. Same project name, different developers, zero collisions.</p>
-        </article>
-        <article class="feat-card reveal">
-          <span class="feat-no">+</span>
-          <h3>Fair queue.</h3>
-          <p>Per-user and global caps. Over the cap, requests wait FIFO and stream their live <code>position</code> back.</p>
-        </article>
-        <article class="feat-card reveal">
-          <span class="feat-no">+</span>
-          <h3>Audit trail.</h3>
-          <p>One JSONL line per turn: who, what, how many lines. Prompt <em>hashes</em> only, never plaintext.</p>
-        </article>
-        <article class="feat-card reveal feat-card-quote">
-          <p class="feat-q">
-            "One box should serve the whole team. <em>Quietly,</em> and without taking turns by hand."
+    <!-- ───────── SECTION: SURFACES (VS CODE + CLI) ───────── -->
+    <section class="editor">
+      <div class="editor-grid">
+        <div class="editor-prose">
+          <span class="kicker reveal"><span class="kicker-bar"></span>01 · the extension</span>
+          <h2 class="editor-h reveal">
+            It lives in <em>your side panel.</em>
+          </h2>
+          <p class="editor-sub reveal">
+            Chat with Claude without leaving VS Code. Preview the diff inline and
+            <strong>apply with one keystroke.</strong> The setup wizard finds your
+            remote, and a live sync keeps your laptop and the remote in step. Prefer
+            the terminal? The same thing ships as a CLI.
           </p>
-          <p class="feat-q-meta">patchwire@0.3.0</p>
-        </article>
-        <article class="feat-card reveal feat-card-strip">
-          <ul class="strip">
-            <li><strong>MIT</strong><span>open source</span></li>
-            <li><strong>Tailscale</strong><span>recommended transport</span></li>
-            <li><strong>Per-user</strong><span>tokens · queue · audit</span></li>
-            <li><strong>Any CLI</strong><span>claude, codex, aider…</span></li>
+          <ul class="editor-bullets reveal">
+            <li><span class="bullet-mark">▢</span> Native side panel that feels like part of VS Code</li>
+            <li><span class="bullet-mark">▢</span> Inline diff preview, hunk-by-hunk apply</li>
+            <li><span class="bullet-mark">▢</span> Setup wizard discovers your Tailscale peers</li>
+            <li><span class="bullet-mark">▢</span> Shares the same config as the CLI, so you can swap any time</li>
           </ul>
-        </article>
+          <div class="editor-cta reveal">
+            <a href="vscode:extension/patchwire.patchwire-vscode" class="cta cta-primary magnet">
+              <span class="cta-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 4.5l-9.5 7.5L22 19.5V4.5z" fill="currentColor"/>
+                  <path d="M3 8l5 5v6l9.5-7.5L8 4v6l-5-2z" fill="currentColor" opacity="0.85"/>
+                </svg>
+              </span>
+              <span>Install for VS Code</span>
+              <span class="cta-arrow">→</span>
+            </a>
+            <a href="/install-extension/" class="cta cta-link magnet">
+              <span>other editors / .vsix</span>
+              <span class="cta-arrow">→</span>
+            </a>
+          </div>
+          <p class="editor-cta-fallback reveal">
+            Button not opening VS Code? Install from the
+            <a href="https://marketplace.visualstudio.com/items?itemName=patchwire.patchwire-vscode" target="_blank" rel="noopener">Marketplace</a>
+            or <a href="https://open-vsx.org/extension/patchwire/patchwire-vscode" target="_blank" rel="noopener">Open VSX</a>.
+          </p>
+        </div>
       </div>
     </section>
 
-    <!-- ───────── SECTION: SETUP ───────── -->
-    <section class="setup">
-      <span class="kicker reveal"><span class="kicker-bar"></span>08 · setup</span>
-      <h2 class="setup-h reveal">
-        Install once. <em>Add developers</em> forever.
-      </h2>
-
-      <div class="setup-grid">
-        <article class="termcard reveal" data-tilt>
-          <header class="termcard-bar">
-            <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="termcard-host">on the remote · admin</span>
-          </header>
-          <pre class="termcard-body"><span class="t-com"># once</span>
-$ npm i -g <span class="t-str">@rebink/patchwire</span>
-$ patchwire-agent install
-  <span class="t-ok">→ launchd: com.patchwire.agent</span>
-
-<span class="t-com"># per developer</span>
-$ patchwire-agent user add <span class="t-str">ana</span>
-  <span class="t-ok">→ Token: pw_b9f...  (hand to ana)</span></pre>
-        </article>
-        <article class="termcard termcard-laptop reveal" data-tilt>
-          <header class="termcard-bar">
-            <span class="term-dots"><span></span><span></span><span></span></span>
-            <span class="termcard-host">on each laptop · ana</span>
-          </header>
-          <pre class="termcard-body"><span class="t-com"># once</span>
-$ npm i -g <span class="t-str">@rebink/patchwire</span>
-$ patchwire setup --token <span class="t-str">pw_b9f...</span>
-  <span class="t-ok">→ identity: ana · remote: <your-remote-host></span>
-
-<span class="t-com"># forever</span>
-$ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre>
-        </article>
-      </div>
-    </section>
 
     <!-- ───────── SECTION: CTA ───────── -->
     <section class="endcta">
       <div class="endcta-inner">
         <span class="kicker reveal">↓ get started</span>
         <h2 class="endcta-h reveal">
-          Give your team<br/>
-          one AI <em>environment.</em>
+          Bring Claude into<br/>
+          <em>your editor.</em>
         </h2>
         <p class="endcta-sub reveal">
-          Self-host in an afternoon. Your code never leaves your network.
+          Install the extension. It runs on your machine, and your code never leaves
+          your network.
         </p>
         <div class="endcta-actions reveal">
-          <a href="/quickstart/" class="cta cta-primary magnet cta-lg">
-            <span>Read the Quickstart</span>
+          <a href="vscode:extension/patchwire.patchwire-vscode" class="cta cta-primary magnet cta-lg">
+            <span>Install for VS Code</span>
             <span class="cta-arrow">→</span>
           </a>
           <a href={repo} class="cta cta-ghost magnet cta-lg">
@@ -1136,6 +759,15 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
       }
       .hero-sub strong { color: var(--rc-bone); font-weight: 600; }
 
+      /* ─── Hero VS Code mock (the star) ─── */
+      .hero-mock {
+        width: 100%;
+        max-width: 840px;
+        margin: 8px auto 0;
+        perspective: 1600px;
+      }
+      .hero-mock .vscode { width: 100%; }
+
       /* ─── Terminal ─── */
       .term {
         background: #131318;
@@ -1397,9 +1029,8 @@ $ patchwire ask <span class="t-str">"refactor login_bloc to freezed"</span></pre
         gap: clamp(40px, 5vw, 64px);
         align-items: center;
       }
-      @media (min-width: 1024px) {
-        .editor-grid { grid-template-columns: 0.95fr 1.05fr; }
-      }
+      /* extension section is now prose-only (the mock lives in the hero) */
+      .editor-prose { max-width: 640px; }
 
       .editor-h {
         font-family: var(--rc-font-display);

@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: What Patchwire is, what it isn't, and who it's for.
+description: What Patchwire does, and who should (and shouldn't) use it.
 ---
 
 ## What it is
