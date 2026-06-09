@@ -13,7 +13,7 @@ import { Badge, LinkButton } from '@astrojs/starlight/components';
   Install in VS Code
 </LinkButton>
 
-This opens VS Code on the Patchwire extension page — just click **Install**. It works once the extension is published to the Marketplace; until then, grab the `.vsix` below (it works today).
+This opens VS Code on the Patchwire extension page, where you click **Install**. The extension is on the Marketplace and Open VSX, so if the button doesn't open VS Code, use one of the links below.
 
 - **Marketplace page:** <https://marketplace.visualstudio.com/items?itemName=patchwire.patchwire-vscode>
 - **Cursor / VSCodium / Windsurf (Open VSX):** <https://open-vsx.org/extension/patchwire/patchwire-vscode>

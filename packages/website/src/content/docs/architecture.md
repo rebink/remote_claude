@@ -1,6 +1,6 @@
 ---
 title: Architecture
-description: The request lifecycle, the diff strategy, and the failure model.
+description: How a request becomes a diff, and what happens when something breaks.
 ---
 
 ## Components

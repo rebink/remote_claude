@@ -1,6 +1,6 @@
 ---
 title: Multi-developer
-description: One agent, many developers. Per-user tokens, isolated checkouts, a fair queue, and an audit log; how Patchwire shares one remote across a team without collisions.
+description: How a whole team shares one remote agent without stepping on each other.
 ---
 
 One remote box can serve a whole team. Every developer gets their own token,
