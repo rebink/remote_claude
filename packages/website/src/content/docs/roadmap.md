@@ -25,7 +25,7 @@ description: What's shipped, what's next, and what's intentionally deferred.
 - ✅ **Pre-sync secret scan** (`sync.secretScan`) — gitleaks blocks/warns before a tracked-file secret can cross
 - ✅ **Cost & token visibility** — `usage` shows `TOK` and `$EQV`; provider-reported cost where available, operator price-table fallback (`~estimated`). See [Configuration → Cost tracking](/configuration/#cost-tracking).
 - ✅ **Local file attachments** — `patchwire push` and a VS Code **📎 Attach** button get local files (incl. screenshots/images for vision) to the remote `claude`, via a gitignored `.patchwire-inbox/`. See [Configuration → Attachments](/configuration/#attachments).
-- ✅ **Default-deny egress** (macOS, opt-in) — `PW_EGRESS=deny` runs `claude` under a seatbelt sandbox that blocks all outbound except the Anthropic API; `patchwire-agent egress-check` verifies enforcement on your box. The exfiltration counterpart to read-minimization. See [Security](/security/#default-deny-egress).
+- 🧪 **Default-deny egress** (macOS, **experimental, off by default**) — the seatbelt deny works, but the Anthropic allowlist is brittle against the API's CDN IPs, so it's **not production-usable yet** and not recommended for trusted-network setups. See [Security → Default-deny egress](/security/#default-deny-egress-experimental--not-recommended-yet).
 - ✅ GitHub repo: [rebink/remote_claude](https://github.com/rebink/remote_claude)
 
 ## Near-term
