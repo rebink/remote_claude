@@ -52,17 +52,30 @@ export class ChatPanel implements vscode.WebviewViewProvider {
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly workspaceFolder: string,
+    private workspaceFolder: string | undefined,
     private readonly deps: ChatPanelDeps,
   ) {
     vscode.window.onDidCloseTerminal(() => this.postState());
     vscode.window.onDidOpenTerminal(() => this.postState());
   }
 
-  /** Called from extension.activate after the panel is constructed. */
+  /** Update the active workspace folder, e.g. when one is opened after startup. */
+  setWorkspaceFolder(ws: string | undefined): void {
+    if (ws === this.workspaceFolder) return;
+    this.workspaceFolder = ws;
+    this.setupInboxWatcher();
+    this.postState();
+  }
+
+  /** Called from extension.activate, and again whenever a folder is opened. */
   async startMutagen(): Promise<void> {
+    if (this.mutagen) {
+      await this.mutagen.terminate();
+      this.mutagen = undefined;
+    }
+    const ws = this.workspaceFolder;
     const cfg = this.loadConfig();
-    if (!cfg) return;
+    if (!cfg || !ws) return;
     if (!MutagenController.isInstalled()) {
       this.syncStatus = { kind: 'not_installed' };
       this.postState();
@@ -74,7 +87,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         host: cfg.host,
         user: cfg.user,
         sshPort: cfg.sshPort,
-        localPath: this.workspaceFolder,
+        localPath: ws,
         remotePath: cfg.remotePath,
       },
       this.deps.output,
@@ -106,14 +119,22 @@ export class ChatPanel implements vscode.WebviewViewProvider {
       ),
     );
 
+    this.setupInboxWatcher();
+  }
+
+  /** Watch the inbox for live refresh. No-op until both the view and a folder exist. */
+  private setupInboxWatcher(): void {
     this.inboxWatcher?.dispose();
-    this.inboxWatcher = vscode.workspace.createFileSystemWatcher(
+    this.inboxWatcher = undefined;
+    if (!this.view || !this.workspaceFolder) return;
+    const watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(this.workspaceFolder, `${INBOX_DIR}/*`),
     );
     const refresh = () => this.postState();
-    this.inboxWatcher.onDidCreate(refresh);
-    this.inboxWatcher.onDidDelete(refresh);
-    this.inboxWatcher.onDidChange(refresh);
+    watcher.onDidCreate(refresh);
+    watcher.onDidDelete(refresh);
+    watcher.onDidChange(refresh);
+    this.inboxWatcher = watcher;
   }
 
   private async handleMessage(msg: { type: string; [k: string]: unknown }): Promise<void> {
@@ -137,7 +158,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   }
 
   private async handleViewAttachment(name: string): Promise<void> {
-    if (!name || name !== basename(name)) return;
+    if (!this.workspaceFolder || !name || name !== basename(name)) return;
     const uri = vscode.Uri.file(join(this.workspaceFolder, INBOX_DIR, name));
     await vscode.commands.executeCommand('vscode.open', uri);
   }
@@ -164,7 +185,8 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   }
 
   private async handleDeleteAttachment(name: string): Promise<void> {
-    if (!name || name !== basename(name)) return;
+    const ws = this.workspaceFolder;
+    if (!ws || !name || name !== basename(name)) return;
     const pick = await vscode.window.showWarningMessage(
       `Delete attachment "${name}"? This also removes it from the remote.`,
       { modal: true },
@@ -172,7 +194,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     );
     if (pick !== 'Delete') return;
     try {
-      removeAttachment(this.workspaceFolder, name);
+      removeAttachment(ws, name);
     } catch (err) {
       this.deps.output.appendLine(`Delete attachment failed: ${(err as Error).message}`);
     }
@@ -199,6 +221,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
   }
 
   private loadConfig(): SessionTarget | null {
+    if (!this.workspaceFolder) return null;
     const yamlPath = join(this.workspaceFolder, 'patchwire.yml');
     if (!existsSync(yamlPath)) return null;
     try {
@@ -234,7 +257,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
           remotePath: cfg.remotePath,
           sessionRunning: !!findExistingSessionTerminal(cfg.project),
           sync,
-          attachments: listInbox(this.workspaceFolder),
+          attachments: this.workspaceFolder ? listInbox(this.workspaceFolder) : [],
         }
       : { configured: false, sessionRunning: false, sync };
     this.view.webview.postMessage({ type: 'state', state });

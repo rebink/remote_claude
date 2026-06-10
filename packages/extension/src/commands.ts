@@ -69,7 +69,13 @@ function makeAttachDeps(
 export function registerCommands(context: vscode.ExtensionContext, deps: ExtensionDeps): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('patchwire.viewOutput', () => deps.output.show()),
-    vscode.commands.registerCommand('patchwire.openSetup', () => deps.setupWizard.show()),
+    vscode.commands.registerCommand('patchwire.openSetup', () => {
+      if (!vscode.workspace.workspaceFolders?.[0]) {
+        vscode.window.showErrorMessage('Patchwire: open a workspace folder first, then run Setup.');
+        return;
+      }
+      deps.setupWizard.show();
+    }),
     // Kept for any user keybindings that still reference these — both now
     // just refresh the panel since live-sync is automatic via Mutagen.
     vscode.commands.registerCommand('patchwire.toggleLiveSync', () => deps.panel.refresh()),
