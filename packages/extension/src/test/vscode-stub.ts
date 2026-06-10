@@ -78,6 +78,12 @@ export const window = {
   showWarningMessage: async (..._args: unknown[]) => undefined as unknown,
   showErrorMessage: async (..._args: unknown[]) => undefined as unknown,
   showInformationMessage: async (..._args: unknown[]) => undefined as unknown,
+  createTerminal: (_opts?: unknown) => ({
+    name: 'stub',
+    sendText: (_t: string) => {},
+    show: () => {},
+    dispose: () => {},
+  }),
   terminals: [] as unknown[],
   activeTerminal: undefined as unknown,
   onDidCloseTerminal: (_cb: unknown) => ({ dispose: () => {} }),
