@@ -13,6 +13,8 @@ import {
 import { resolveCli } from '../cli/resolveCli.ts';
 import { MutagenController, type MutagenStatus } from '../sync/MutagenController.ts';
 
+interface ProjectConfig extends SessionTarget { syncExclude: string[]; }
+
 interface SessionState {
   configured: boolean;
   project?: string;
@@ -89,6 +91,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         sshPort: cfg.sshPort,
         localPath: ws,
         remotePath: cfg.remotePath,
+        ignore: cfg.syncExclude,
       },
       this.deps.output,
     );
@@ -220,7 +223,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     return this.loadConfig()?.project;
   }
 
-  private loadConfig(): SessionTarget | null {
+  private loadConfig(): ProjectConfig | null {
     if (!this.workspaceFolder) return null;
     const yamlPath = join(this.workspaceFolder, 'patchwire.yml');
     if (!existsSync(yamlPath)) return null;
@@ -230,12 +233,17 @@ export class ChatPanel implements vscode.WebviewViewProvider {
       const project = parsed.project as string | undefined;
       const remote = parsed.remote as Record<string, unknown> | undefined;
       if (!project || !remote || !remote.host || !remote.user || !remote.path) return null;
+      const syncRaw = parsed.sync as { exclude?: unknown } | undefined;
+      const syncExclude = Array.isArray(syncRaw?.exclude)
+        ? (syncRaw!.exclude as unknown[]).filter((x): x is string => typeof x === 'string')
+        : [];
       return {
         project,
         host: remote.host as string,
         user: remote.user as string,
         sshPort: remote.sshPort as number | undefined,
         remotePath: remote.path as string,
+        syncExclude,
       };
     } catch (err) {
       this.deps.output.appendLine(`Failed to read patchwire.yml: ${(err as Error).message}`);
