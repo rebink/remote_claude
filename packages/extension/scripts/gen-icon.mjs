@@ -1,7 +1,10 @@
 // Generates the Patchwire VS Code extension icon (128×128 PNG) from the brand
-// logo geometry — two squares joined by a dashed wire + a phosphor dot — on the
-// brand ink background. Dependency-free: supersamples 4× and box-downsamples for
-// clean edges, then PNG-encodes via node:zlib. Run: `node scripts/gen-icon.mjs`.
+// logo geometry — an open outline square + a phosphor connector dot + a filled
+// square with a notch where the dot nestles — on the brand ink background.
+// Dependency-free: evaluates the mark as signed-distance fields at 4× supersample
+// and box-downsamples for clean anti-aliased edges, then PNG-encodes via node:zlib.
+// Geometry is the canonical 24-unit mark (matches favicon.svg / the inline marks).
+// Run: `node scripts/gen-icon.mjs`.
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +13,7 @@ import { dirname, join } from 'node:path';
 const OUT = 128;
 const SS = 4;            // supersample factor
 const W = OUT * SS;      // 512
-const LOGO = 22;         // logo viewBox units
+const LOGO = 24;         // logo viewBox units
 const BOX = Math.round(W * 0.66); // logo occupies ~66% of the canvas
 const SCALE = BOX / LOGO;
 const OFF = (W - BOX) / 2;
@@ -19,40 +22,44 @@ const INK = [0x0e, 0x0e, 0x10];   // background
 const PAPER = [0xec, 0xe7, 0xd6]; // marks
 const PHOS = [0xc9, 0xf5, 0x64];  // accent dot
 
+// ── signed-distance helpers, evaluated in LOGO units ──
+const sdRoundBox = (px, py, cx, cy, hx, hy, r) => {
+  const dx = Math.abs(px - cx) - hx + r;
+  const dy = Math.abs(py - cy) - hy + r;
+  const ax = Math.max(dx, 0), ay = Math.max(dy, 0);
+  return Math.hypot(ax, ay) + Math.min(Math.max(dx, dy), 0) - r;
+};
+const sdCircle = (px, py, cx, cy, r) => Math.hypot(px - cx, py - cy) - r;
+
+// outline: ring of a rounded square (center 7.5,7.5 half 4.5 r 2.5, stroke 2),
+// opened at the bottom-right by subtracting the dot's disc so the right + bottom
+// edges end near the connector dot.
+const inOutline = (x, y) => {
+  const ring = Math.abs(sdRoundBox(x, y, 7.5, 7.5, 4.5, 4.5, 2.5)) - 1.0;
+  const cut = sdCircle(x, y, 12.5, 12.5, 3.0);
+  return Math.max(ring, -cut) < 0;
+};
+// filled rounded square (center 17,17 half 4 r 2.5) with a concave notch
+// carved out of its top-left corner for the dot.
+const inFilled = (x, y) => {
+  const box = sdRoundBox(x, y, 17, 17, 4, 4, 2.5);
+  const notch = sdCircle(x, y, 13, 13, 3.0);
+  return Math.max(box, -notch) < 0;
+};
+const inDot = (x, y) => sdCircle(x, y, 12.5, 12.5, 2.4) < 0;
+
+// ── render at SS resolution: ink bg, then paper marks, then phosphor dot ──
 const buf = new Uint8Array(W * W * 3);
-for (let i = 0; i < W * W; i++) { buf[i * 3] = INK[0]; buf[i * 3 + 1] = INK[1]; buf[i * 3 + 2] = INK[2]; }
-
-const px = (u) => u * SCALE + OFF;
-const set = (x, y, c) => {
-  if (x < 0 || y < 0 || x >= W || y >= W) return;
-  const i = (y * W + x) * 3; buf[i] = c[0]; buf[i + 1] = c[1]; buf[i + 2] = c[2];
-};
-// fill a rect given in LOGO units
-const rect = (x0, y0, x1, y1, c) => {
-  const ax = Math.round(px(x0)), ay = Math.round(px(y0));
-  const bx = Math.round(px(x1)), by = Math.round(px(y1));
-  for (let y = ay; y < by; y++) for (let x = ax; x < bx; x++) set(x, y, c);
-};
-
-// outline square at 0.5..9.5, stroke 1.8 centered on the path
-const sw = 1.8 / 2;
-rect(0.5 - sw, 0.5 - sw, 9.5 + sw, 0.5 + sw, PAPER); // top
-rect(0.5 - sw, 9.5 - sw, 9.5 + sw, 9.5 + sw, PAPER); // bottom
-rect(0.5 - sw, 0.5 - sw, 0.5 + sw, 9.5 + sw, PAPER); // left
-rect(9.5 - sw, 0.5 - sw, 9.5 + sw, 9.5 + sw, PAPER); // right
-
-// filled square at 12.5..21.5
-rect(12.5, 12.5, 21.5, 21.5, PAPER);
-
-// dashed wire from (6,11) to (16,11), stroke 1.4, dash 1.4 / gap 2
-const ly = 11, lh = 1.4 / 2;
-for (let x = 6; x < 16; x += 3.4) rect(x, ly - lh, Math.min(x + 1.4, 16), ly + lh, PAPER);
-
-// phosphor dot at (11,11) r 1.6
-const cx = px(11), cy = px(11), r = 1.6 * SCALE;
-for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
-  for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++)
-    if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) set(x, y, PHOS);
+for (let py = 0; py < W; py++) {
+  for (let px = 0; px < W; px++) {
+    const u = (px - OFF) / SCALE, v = (py - OFF) / SCALE; // pixel → logo units
+    let c = INK;
+    if (inOutline(u, v) || inFilled(u, v)) c = PAPER;
+    if (inDot(u, v)) c = PHOS;
+    const i = (py * W + px) * 3;
+    buf[i] = c[0]; buf[i + 1] = c[1]; buf[i + 2] = c[2];
+  }
+}
 
 // box-downsample SS× → OUT×OUT (RGBA)
 const out = Buffer.alloc(OUT * OUT * 4);
