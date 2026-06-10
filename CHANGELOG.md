@@ -5,6 +5,15 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.16] — 2026-06-10
+
+### Fixed
+- **Mutagen two-way sync failing with "Too many authentication failures."** The
+  managed `~/.ssh/config` stanza is now prepended to the file and pins
+  `IdentityAgent none`, so the per-project key is offered first and stray ssh-agent
+  keys or extra `IdentityFile` lines from a broad `Host *` block can no longer be
+  tried ahead of it and trip the remote's `MaxAuthTries`.
+
 ## [0.3.15] — 2026-06-10
 
 ### Added

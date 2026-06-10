@@ -112,6 +112,10 @@ export class MutagenController {
       `  User ${this.target.user}`,
       `  IdentityFile ${keyPath}`,
       `  IdentitiesOnly yes`,
+      // Offer ONLY our per-project key: keep ssh-agent keys out so they can't be
+      // tried first and trip the remote's MaxAuthTries ("Too many authentication
+      // failures") before our key is reached.
+      `  IdentityAgent none`,
       `  StrictHostKeyChecking accept-new`,
       ...(this.target.sshPort && this.target.sshPort !== 22 ? [`  Port ${this.target.sshPort}`] : []),
       endMarker,
@@ -126,7 +130,11 @@ export class MutagenController {
       'g',
     );
     const cleaned = existing.replace(stanzaRe, '');
-    const next = (cleaned.endsWith('\n') || cleaned === '' ? cleaned : cleaned + '\n') + '\n' + block;
+    // PREPEND the managed block. ssh applies the first matching value for each
+    // option and offers IdentityFile keys in file order, so putting our stanza
+    // first guarantees our key is tried before any keys a broad `Host *` block
+    // would otherwise offer.
+    const next = `${block}\n${cleaned.replace(/^\n+/, '')}`;
     writeFileSync(cfgPath, next, 'utf8');
     chmodSync(cfgPath, 0o600);
   }
