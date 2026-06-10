@@ -5,6 +5,17 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.12] — 2026-06-10
+
+### Fixed
+- **"command 'patchwire.openSetup' not found" on a fresh install.** When VS Code
+  started with no folder open, `activate()` returned before registering any
+  commands, and never recovered when a folder was opened later, so every Patchwire
+  command was missing. Commands and the panel are now registered unconditionally,
+  the panel tolerates having no workspace yet, and opening a folder (re)initializes
+  the session. Running Setup with no folder now shows a clear "open a folder first"
+  message instead of an error.
+
 ## [0.3.11] — 2026-06-09
 
 ### Added
