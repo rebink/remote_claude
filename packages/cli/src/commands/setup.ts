@@ -326,8 +326,15 @@ export async function runSetupPasswordStdin(input: PasswordStdinInput): Promise<
       keyPath: input.keyPath,
       password,
     });
-  } finally {
-    // Best-effort: drop the reference. The Buffer inside sshpass.ts is already zeroed.
+  } catch (err) {
+    // Never crash here: the wizard parses our stdout JSON, so an uncaught throw
+    // (most commonly sshpass not installed) leaves it with empty stdout and a
+    // generic "unknown" error pointing at an empty output channel. Emit a
+    // structured, actionable result instead.
+    const message = err instanceof Error ? err.message : String(err);
+    const code = /sshpass not found/i.test(message) ? 'sshpass_missing' : 'copy_id_failed';
+    process.stdout.write(JSON.stringify({ ok: false, code, stderr: message }));
+    return;
   }
 
   process.stdout.write(JSON.stringify(result));

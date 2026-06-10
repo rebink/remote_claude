@@ -5,6 +5,17 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.14] — 2026-06-10
+
+### Fixed
+- **Setup "Install key" failed silently on a fresh machine.** When `sshpass` was not
+  available (it is neither bundled in the extension nor installed by default on macOS),
+  the CLI `setup --password-stdin` threw an uncaught error and produced no output, so
+  the wizard showed "check the output channel for details" while nothing was logged
+  there. The CLI now catches that case and emits a structured `sshpass_missing` result
+  with install instructions, and the wizard logs the CLI's stdout / stderr / exit code
+  and surfaces the real message instead of a detail-less "unknown".
+
 ## [0.3.13] — 2026-06-10
 
 ### Fixed
