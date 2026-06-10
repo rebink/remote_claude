@@ -100,4 +100,25 @@ describe('ChatPanel attachments', () => {
     await handler({ type: 'insertAttachmentPath', name: 'mockup.png' });
     expect(write).toHaveBeenCalledWith('/home/u/app/.patchwire-inbox/mockup.png');
   });
+
+  it('tolerates no workspace folder, then recovers when one is opened', async () => {
+    const captured: Array<{ type: string; state?: { configured: boolean } }> = [];
+    let h: (m: { type: string; [k: string]: unknown }) => unknown = () => undefined;
+    const view = {
+      webview: {
+        options: {}, html: '', cspSource: 'self',
+        asWebviewUri: (u: unknown) => u,
+        postMessage: (m: { type: string; state?: { configured: boolean } }) => { captured.push(m); return Promise.resolve(true); },
+        onDidReceiveMessage: (cb: typeof h) => { h = cb; return { dispose() {} }; },
+      },
+    } as unknown as vscode.WebviewView;
+    const output = { appendLine: () => {}, show: () => {} } as unknown as vscode.OutputChannel;
+    const p = new ChatPanel(vscode.Uri.file(dir), undefined, { output });
+    p.resolveWebviewView(view);
+    await h({ type: 'ready' });
+    expect(captured.at(-1)!.state!.configured).toBe(false);
+    // Opening the folder (which has a patchwire.yml from beforeEach) flips it configured.
+    p.setWorkspaceFolder(dir);
+    expect(captured.at(-1)!.state!.configured).toBe(true);
+  });
 });
