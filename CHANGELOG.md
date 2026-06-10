@@ -5,6 +5,17 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.13] — 2026-06-10
+
+### Fixed
+- **Extension failed to activate on a clean install ("Cannot find module 'yaml'").**
+  The host bundle externalized the `yaml` dependency, but the `.vsix` ships no
+  `node_modules`, so `require('yaml')` threw at load time and every command became
+  "not found". This was the real cause behind the activation failures (it happened
+  to work only where `yaml` was resolvable up the `node_modules` chain). tsup now
+  inlines `yaml`, and a new build guard (`scripts/check-bundle.mjs`) fails the build
+  if any dependency is left externalized, so this class of bug can't ship again.
+
 ## [0.3.12] — 2026-06-10
 
 ### Fixed
