@@ -12,7 +12,12 @@ export default defineConfig([
   {
     entry: ['src/extension.ts'],
     format: ['cjs'],
+    // Only `vscode` is provided by the host. Everything else (e.g. `yaml`) MUST be
+    // bundled: the .vsix ships dist/ only (no node_modules), so an externalized
+    // dependency throws "Cannot find module" at activation. tsup externalizes
+    // package.json dependencies by default, so force-inline all non-vscode imports.
     external: ['vscode'],
+    noExternal: ['yaml'],
     outDir: 'dist',
     outExtension: () => ({ js: '.cjs' }),
     banner: {},
