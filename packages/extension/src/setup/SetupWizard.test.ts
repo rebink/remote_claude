@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
+import type { WizardState } from './SetupWizard.ts';
 
 // Stub vscode module before importing the wizard.
 vi.mock('vscode', () => import('../test/vscode-stub.ts'));
@@ -69,6 +70,59 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+describe('SetupWizard step2 — terminal key install', () => {
+  it('openKeyInstallTerminal opens a terminal running ssh-copy-id', async () => {
+    const sent: string[] = [];
+    const vscode = await import('../test/vscode-stub.ts');
+    vi.spyOn(vscode.window, 'createTerminal').mockReturnValue({
+      name: 't', show: () => {}, dispose: () => {},
+      sendText: (t: string) => { sent.push(t); },
+    } as never);
+
+    const { SetupWizard } = await import('./SetupWizard.ts');
+    const output = { appendLine: vi.fn() } as unknown as import('vscode').OutputChannel;
+    const wizard = new SetupWizard({} as never, output);
+    (wizard as unknown as { state: Record<string, unknown> }).state = {
+      step: 2, host: 'mini', user: 'admin', sshPort: 22,
+    };
+
+    await (wizard as unknown as { handleMessage: (m: Record<string, unknown>) => Promise<void> }).handleMessage({
+      type: 'openKeyInstallTerminal',
+      user: 'ana',
+    });
+
+    const joined = sent.join('\n');
+    expect(joined).toMatch(/ssh-copy-id .* ana@/);
+    expect(joined).toMatch(/ssh-keygen -t ed25519/);
+  });
+
+  it('verifyKey advances to step 3 when the CLI reports ok', async () => {
+    stubChild = makeChild(['{"ok":true}'], 0);
+
+    const { SetupWizard } = await import('./SetupWizard.ts');
+    const output = { appendLine: vi.fn() } as unknown as import('vscode').OutputChannel;
+    const wizard = new SetupWizard({} as never, output);
+    (wizard as unknown as { state: Record<string, unknown> }).state = {
+      step: 2, host: 'mini', user: 'admin', sshPort: 22, keyPath: '/home/admin/.patchwire/keys/mini-admin',
+    };
+
+    const posted: unknown[] = [];
+    (wizard as unknown as { panel?: { webview: { postMessage: (m: unknown) => void } } }).panel = {
+      webview: { postMessage: (m: unknown) => posted.push(m) },
+    };
+
+    await (wizard as unknown as { handleMessage: (m: Record<string, unknown>) => Promise<void> }).handleMessage({
+      type: 'verifyKey',
+      user: 'ana',
+    });
+
+    const last = spawnCalls.at(-1)!;
+    expect(last.args).toEqual(expect.arrayContaining(['setup', '--verify-key', '--key-path']));
+    const stateAfter = (wizard as unknown as { state: WizardState }).state;
+    expect(stateAfter.step).toBe(3);
+  });
 });
 
 describe('SetupWizard step3Submit', () => {
