@@ -5,6 +5,12 @@ description: Get a working laptop ↔ remote setup in under five minutes.
 
 > Three commands per machine. The whole flow assumes Tailscale is running for connectivity. See [Networking](/networking/) for alternatives.
 
+## Two ways in
+
+Most people use the **VS Code extension**. It wraps everything below in a setup wizard and a side panel: install it, run **Patchwire: Setup**, and it walks you through picking your remote, installing your SSH key (a one-time `ssh-copy-id` in a terminal, then **Verify**), choosing a **sync profile** for your project type, and pushing your project. Then click **Focus Claude session** to drop into a live Claude Code REPL on your remote, with two-way sync keeping your laptop in step. See [Install the extension](/install-extension/).
+
+The rest of this page is the **CLI** path: the same engine driven from the terminal, where each change comes back as a reviewable diff. Use it if you prefer the command line or want to script setup.
+
 ## Prerequisites
 
 - Node.js **≥ 20** on both machines
