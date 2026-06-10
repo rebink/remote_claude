@@ -30,23 +30,21 @@ program
   .option('--username <name>', "the agent's name for you (default: os.userInfo().username)")
   .option('--list-peers', 'print Tailscale peers and exit')
   .option('--json', 'machine-readable output (for --list-peers)')
-  .option('--password-stdin', 'read SSH password from stdin and run ssh-copy-id (used by the wizard)')
   .option('--key-path <path>', 'private key path for the per-project key', '')
-  .option('--trust-new-key', 'rewrite known_hosts before attempting (used after a fingerprint mismatch confirmation)')
+  .option('--verify-key', 'check that key-based SSH works (used by the wizard)')
   .action(async (opts) => {
     if (opts.listPeers) {
       const { runSetupListPeers } = await import('./commands/setup.ts');
       await runSetupListPeers({ json: !!opts.json });
       return;
     }
-    if (opts.passwordStdin) {
-      const { runSetupPasswordStdin } = await import('./commands/setup.ts');
-      await runSetupPasswordStdin({
+    if (opts.verifyKey) {
+      const { runVerifyKey } = await import('./commands/setup.ts');
+      runVerifyKey({
         host: opts.host,
         user: opts.user,
         port: opts.sshPort ?? 22,
         keyPath: opts.keyPath,
-        trustNewKey: !!opts.trustNewKey,
       });
       return;
     }

@@ -94,68 +94,59 @@ export class SetupWizard {
         this.state = { ...this.state, host, user, sshPort: port, step: 2, error: undefined };
         return this.postState();
       }
-      case 'step2Submit': {
-        const { host, sshPort = 22 } = this.state;
+      case 'openKeyInstallTerminal': {
+        const host = this.state.host;
         const user = (msg.user as string) || this.state.user;
-        const password = msg.password as string;
-        const trustNewKey = !!msg.trustNewKey;
-
-        if (!host || !user || !password) {
-          this.state = { ...this.state, error: 'Username and password are required' };
+        const sshPort = this.state.sshPort ?? 22;
+        if (!host || !user) {
+          this.state = { ...this.state, error: 'Host and username are required (go back to Step 1).' };
           return this.postState();
         }
-
-        // Derive a per-project SSH key path: ~/.patchwire/keys/<host>-<user>
         const os = await import('node:os');
         const path = await import('node:path');
-        const keyPath = path.join(os.homedir(), '.patchwire', 'keys', `${host}-${user}`);
-
-        this.state = { ...this.state, busy: true, error: undefined, user, keyPath };
+        const keysDir = path.join(os.homedir(), '.patchwire', 'keys');
+        const keyPath = path.join(keysDir, `${host}-${user}`);
+        this.state = { ...this.state, user, keyPath, error: undefined };
         this.postState();
 
-        // Spawn `patchwire setup --password-stdin --host ... --user ... --ssh-port ... --key-path ... [--trust-new-key]`
+        const cmd =
+          `mkdir -p '${keysDir}' && ` +
+          `([ -f '${keyPath}' ] || ssh-keygen -t ed25519 -N '' -C patchwire -f '${keyPath}') && ` +
+          `ssh-copy-id -i '${keyPath}.pub' -p ${sshPort} ${user}@${host}`;
+        const terminal = vscode.window.createTerminal({ name: 'Patchwire: install key' });
+        terminal.show();
+        terminal.sendText(cmd);
+        return;
+      }
+      case 'verifyKey': {
+        const host = this.state.host;
+        const user = (msg.user as string) || this.state.user;
+        const sshPort = this.state.sshPort ?? 22;
+        const keyPath = this.state.keyPath;
+        if (!host || !user || !keyPath) {
+          this.state = { ...this.state, error: 'Open the terminal and install the key first.' };
+          return this.postState();
+        }
+        this.state = { ...this.state, busy: true, error: undefined };
+        this.postState();
+
         const cp = await import('node:child_process');
-        const args = [
-          'setup', '--password-stdin',
-          '--host', host,
-          '--user', user,
-          '--ssh-port', String(sshPort),
-          '--key-path', keyPath,
-        ];
-        if (trustNewKey) args.push('--trust-new-key');
-
         const inv = resolveCli(this.extensionUri.fsPath);
-        const child = cp.spawn(inv.command, [...inv.baseArgs, ...args], { stdio: ['pipe', 'pipe', 'pipe'], env: inv.env });
-
-        const pwBuf = Buffer.from(password + '\n');
-        child.stdin.write(pwBuf);
-        child.stdin.end();
-        pwBuf.fill(0);
-
+        const args = ['setup', '--verify-key', '--host', host, '--user', user, '--ssh-port', String(sshPort), '--key-path', keyPath];
+        const child = cp.spawn(inv.command, [...inv.baseArgs, ...args], { stdio: ['ignore', 'pipe', 'pipe'], env: inv.env });
         let stdout = '';
         let stderr = '';
         child.stdout.on('data', (c: Buffer) => { stdout += c.toString(); });
         child.stderr.on('data', (c: Buffer) => { stderr += c.toString(); });
-
         const outcome = await new Promise<{ error: Error | null; code: number | null }>((resolve) => {
           let settled = false;
-          child.on('error', (err: Error) => {
-            if (settled) return;
-            settled = true;
-            resolve({ error: err, code: null });
-          });
-          child.on('close', (code) => {
-            if (settled) return;
-            settled = true;
-            resolve({ error: null, code });
-          });
+          child.on('error', (err: Error) => { if (!settled) { settled = true; resolve({ error: err, code: null }); } });
+          child.on('close', (code) => { if (!settled) { settled = true; resolve({ error: null, code }); } });
         });
 
-        // Log the CLI's output so a failed key install isn't silent. The webview
-        // tells the user to "check the output channel" — make sure it's there.
-        if (stdout.trim()) this.output.appendLine(`[setup] ${stdout.trim()}`);
-        if (stderr.trim()) this.output.appendLine(`[setup stderr] ${stderr.trim()}`);
-        this.output.appendLine(`[setup] exit code ${outcome.code ?? 'null'}`);
+        if (stdout.trim()) this.output.appendLine(`[verify-key] ${stdout.trim()}`);
+        if (stderr.trim()) this.output.appendLine(`[verify-key stderr] ${stderr.trim()}`);
+        this.output.appendLine(`[verify-key] exit ${outcome.code ?? 'null'}`);
 
         let result: { ok: boolean; code?: string; stderr?: string };
         if (outcome.error) {
@@ -166,22 +157,12 @@ export class SetupWizard {
             if (typeof parsed.ok !== 'boolean') throw new Error('no usable result');
             result = parsed as { ok: boolean; code?: string; stderr?: string };
           } catch {
-            // No usable JSON (CLI crashed / printed nothing) — surface the real
-            // stderr instead of a detail-less "unknown" pointing at an empty log.
-            result = {
-              ok: false,
-              code: 'unknown',
-              stderr: stderr.trim() || stdout.trim() || `patchwire setup exited ${outcome.code ?? 'null'} with no output.`,
-            };
+            result = { ok: false, code: 'unknown', stderr: stderr.trim() || `verify exited ${outcome.code ?? 'null'} with no output.` };
           }
         }
 
         this.state = { ...this.state, busy: false };
-        if (result.ok) {
-          this.state = { ...this.state, step: 3, error: undefined };
-        } else {
-          this.state = { ...this.state, error: undefined };  // clear; webview will show structured error
-        }
+        if (result.ok) this.state = { ...this.state, step: 3, error: undefined };
         this.panel?.webview.postMessage({ type: 'step2Result', result });
         this.postState();
         return;
