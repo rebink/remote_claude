@@ -32,6 +32,7 @@ program
   .option('--json', 'machine-readable output (for --list-peers)')
   .option('--key-path <path>', 'private key path for the per-project key', '')
   .option('--verify-key', 'check that key-based SSH works (used by the wizard)')
+  .option('--provision-agent', 'install + start the remote agent and set the token (used by the wizard)')
   .action(async (opts) => {
     if (opts.listPeers) {
       const { runSetupListPeers } = await import('./commands/setup.ts');
@@ -45,6 +46,18 @@ program
         user: opts.user,
         port: opts.sshPort ?? 22,
         keyPath: opts.keyPath,
+      });
+      return;
+    }
+    if (opts.provisionAgent) {
+      const { runProvisionAgent } = await import('./commands/setup.ts');
+      await runProvisionAgent({
+        host: opts.host,
+        user: opts.user,
+        port: opts.sshPort ?? 22,
+        keyPath: opts.keyPath,
+        agentPort: opts.agentPort ?? 7878,
+        token: opts.token,
       });
       return;
     }
