@@ -11,7 +11,7 @@ describe('VERSION', () => {
   it('is the single source of truth, matching package.json', () => {
     expect(VERSION).toBe(pkg.version);
   });
-  it('is 0.3.13', () => {
-    expect(VERSION).toBe('0.3.13');
+  it('is 0.3.14', () => {
+    expect(VERSION).toBe('0.3.14');
   });
 });
