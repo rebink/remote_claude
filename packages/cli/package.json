@@ -50,8 +50,7 @@
     "verify": "pnpm typecheck && pnpm test && pnpm build && pnpm smoke",
     "lint": "tsc --noEmit",
     "prepare": "[ -f tsup.config.ts ] && tsup || echo 'no source — skipping build'",
-    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build",
-    "postinstall": "bash scripts/fetch-sshpass.sh || true"
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
     "chalk": "^5.3.0",
