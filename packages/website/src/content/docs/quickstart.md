@@ -7,7 +7,7 @@ description: Get a working laptop ↔ remote setup in under five minutes.
 
 ## Two ways in
 
-Most people use the **VS Code extension**. It wraps everything below in a setup wizard and a side panel: install it, run **Patchwire: Setup**, and it walks you through picking your remote, installing your SSH key (a one-time `ssh-copy-id` in a terminal, then **Verify**), choosing a **sync profile** for your project type, and pushing your project. Then click **Focus Claude session** to drop into a live Claude Code REPL on your remote, with two-way sync keeping your laptop in step. See [Install the extension](/install-extension/).
+Most people use the **VS Code extension**. It wraps everything below in a setup wizard and a side panel: install it, run **Patchwire: Setup**, and it walks you through picking your remote, installing your SSH key (a one-time `ssh-copy-id` in a terminal, then **Verify**), choosing a **sync profile** for your project type, and pushing your project. Then click **Focus Claude session** to drop into a live Claude Code REPL on your remote, with two-way sync keeping your laptop in step. It also installs and starts the remote `patchwire-agent` for you, so the "On the remote" steps below are only needed if you drive Patchwire from the CLI by itself. See [Install the extension](/install-extension/).
 
 The rest of this page is the **CLI** path: the same engine driven from the terminal, where each change comes back as a reviewable diff. Use it if you prefer the command line or want to script setup.
 
