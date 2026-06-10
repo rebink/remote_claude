@@ -135,28 +135,42 @@ export class SetupWizard {
         child.stdout.on('data', (c: Buffer) => { stdout += c.toString(); });
         child.stderr.on('data', (c: Buffer) => { stderr += c.toString(); });
 
-        const spawnError = await new Promise<Error | null>((resolve) => {
+        const outcome = await new Promise<{ error: Error | null; code: number | null }>((resolve) => {
           let settled = false;
           child.on('error', (err: Error) => {
             if (settled) return;
             settled = true;
-            resolve(err);
+            resolve({ error: err, code: null });
           });
-          child.on('close', () => {
+          child.on('close', (code) => {
             if (settled) return;
             settled = true;
-            resolve(null);
+            resolve({ error: null, code });
           });
         });
 
+        // Log the CLI's output so a failed key install isn't silent. The webview
+        // tells the user to "check the output channel" — make sure it's there.
+        if (stdout.trim()) this.output.appendLine(`[setup] ${stdout.trim()}`);
+        if (stderr.trim()) this.output.appendLine(`[setup stderr] ${stderr.trim()}`);
+        this.output.appendLine(`[setup] exit code ${outcome.code ?? 'null'}`);
+
         let result: { ok: boolean; code?: string; stderr?: string };
-        if (spawnError) {
-          result = { ok: false, code: 'spawn_failed', stderr: `Failed to spawn patchwire: ${spawnError.message}. Is it on PATH?` };
+        if (outcome.error) {
+          result = { ok: false, code: 'spawn_failed', stderr: `Failed to spawn patchwire: ${outcome.error.message}. Is it on PATH?` };
         } else {
           try {
-            result = JSON.parse(stdout || '{"ok":false,"code":"unknown"}');
+            const parsed = JSON.parse(stdout.trim() || '{}') as { ok?: unknown; code?: string; stderr?: string };
+            if (typeof parsed.ok !== 'boolean') throw new Error('no usable result');
+            result = parsed as { ok: boolean; code?: string; stderr?: string };
           } catch {
-            result = { ok: false, code: 'unknown', stderr: stderr || stdout };
+            // No usable JSON (CLI crashed / printed nothing) — surface the real
+            // stderr instead of a detail-less "unknown" pointing at an empty log.
+            result = {
+              ok: false,
+              code: 'unknown',
+              stderr: stderr.trim() || stdout.trim() || `patchwire setup exited ${outcome.code ?? 'null'} with no output.`,
+            };
           }
         }
 
