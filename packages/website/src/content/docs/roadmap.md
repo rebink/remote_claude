@@ -3,7 +3,7 @@ title: Roadmap
 description: What's shipped, what's next, and what's intentionally deferred.
 ---
 
-## Shipped (through v0.3.5)
+## Shipped (through v0.3.15)
 
 - ✅ `patchwire` CLI with `setup`, `init`, `init-remote`, `sync`, `ask`, `apply`, `chat`, `doctor`, `whoami`
 - ✅ `patchwire-agent` HTTP server with `/health`, `/ask`, `/chat`
@@ -18,13 +18,16 @@ description: What's shipped, what's next, and what's intentionally deferred.
 - ✅ `patchwire-agent log`: filtered audit log viewer
 - ✅ `patchwire-agent usage`: per-user requests / accepted / ask / chat / lines added-removed / duration / **tokens + dollar cost** (`TOK` / `$EQV`)
 - ✅ Streamed `/ask` (NDJSON live queue visibility while Claude runs)
-- ✅ VS Code extension (bundled; surfaced diff preview and multi-turn chat in the editor); published to the **Marketplace + Open VSX**
+- ✅ **VS Code extension**: opens a Claude Code session on your remote and keeps your laptop in two-way sync (Mutagen); published to the **Marketplace + Open VSX**
 - ✅ Secret-safe sync (rsync respects `.gitignore` and `sync.exclude`)
 - ✅ **Reliable 3-way apply**: detects local drift since sync and merges instead of failing
 - ✅ **Test-before-return**: optional `PW_VERIFY_CMD` runs on the checkout so you review a validated diff
 - ✅ **Pre-sync secret scan** (`sync.secretScan`): gitleaks blocks/warns before a tracked-file secret can cross
 - ✅ **Cost & token visibility**: `usage` shows `TOK` and `$EQV`; provider-reported cost where available, operator price-table fallback (`~estimated`). See [Configuration → Cost tracking](/configuration/#cost-tracking).
-- ✅ **Local file attachments**: `patchwire push` and a VS Code **📎 Attach** button get local files (incl. screenshots/images for vision) to the remote `claude`, via a gitignored `.patchwire-inbox/`. The panel lists staged attachments and lets you open or delete any of them (delete clears the remote copy too). See [Configuration → Attachments](/configuration/#attachments).
+- ✅ **Local file attachments**: `patchwire push` and a VS Code **📎 Attach** button get local files (incl. screenshots/images for vision) to the remote `claude`, via a gitignored `.patchwire-inbox/`. The panel lists staged attachments: open one, delete it (clears the remote copy too), or re-insert its path into the active session. See [Configuration → Attachments](/configuration/#attachments).
+- ✅ **Sync profiles by project type**: setup auto-detects Flutter / Node frontend / Node backend / Python / Common and seeds `sync.exclude`; the extension's two-way sync now honors it, so build caches and dependencies stay off the wire. See [Configuration](/configuration/).
+- ✅ **Terminal-based key install** (no `sshpass`): the setup wizard installs your SSH key via an interactive `ssh-copy-id` plus a Verify step. No GPL binary, no brew tap; macOS and Linux out of the box.
+- ✅ **Reliable onboarding**: installable from npm (`@rebink/patchwire`), the extension activates on fresh machines (even with no folder open at launch), and the activity bar shows the Patchwire mark.
 - 🧪 **Default-deny egress** (macOS, **experimental, off by default**): the seatbelt deny works, but the Anthropic allowlist is brittle against the API's CDN IPs, so it's **not production-usable yet** and not recommended for trusted-network setups. See [Security → Default-deny egress](/security/#default-deny-egress-experimental--not-recommended-yet).
 - ✅ GitHub repo: [rebink/remote_claude](https://github.com/rebink/remote_claude)
 
