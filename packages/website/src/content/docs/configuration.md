@@ -40,7 +40,7 @@ ai:
 | `remote.sshPort` | number | no | 22 | Override if SSH listens elsewhere. |
 | `remote.agentUrl` | URL | yes | (none) | Where the CLI will POST `/ask`. |
 | `remote.token` | string | yes | (none) | Bearer token. Use `${PW_TOKEN}` interpolation. Don't commit secrets. |
-| `sync.exclude` | string[] | no | `[]` | Passed to `rsync --exclude-from`. `.git/` and `.patchwire/` are always excluded. |
+| `sync.exclude` | string[] | no | `[]` | Paths to skip when syncing. Honored by **both** the CLI's rsync (`--exclude-from`) and the extension's two-way Mutagen sync (merged with a safety baseline). The setup wizard seeds this from a per-project-type **sync profile** (Flutter / Node frontend / Node backend / Python / Common), auto-detected and confirmable; edit it freely afterward. `.git/` and `.patchwire/` are always excluded. |
 | `sync.secretScan` | `off`\|`warn`\|`block` | no | `off` | Run a [gitleaks](https://github.com/gitleaks/gitleaks) scan over the files about to sync. `warn` reports findings and continues; `block` refuses the sync (override with `--force`). Closes the gap where a secret in a *tracked* file would otherwise cross. Best-effort: if gitleaks isn't installed it logs and continues. |
 | `ai.command` | string | no | `claude` | Path or name of the AI CLI to spawn on the remote. |
 | `ai.args` | string[] | no | `[--print]` | Args passed to `ai.command`. The prompt is sent on stdin. |
