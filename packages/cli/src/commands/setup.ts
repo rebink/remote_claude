@@ -1,8 +1,9 @@
 import { existsSync } from 'node:fs';
+import * as fs from 'node:fs';
 import { writeFile, mkdir, readFile, chmod } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { homedir, userInfo } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import chalk from 'chalk';
 import prompts from 'prompts';
@@ -269,6 +270,101 @@ export interface VerifyKeyInput {
   user: string;
   port: number;
   keyPath: string;
+}
+
+export interface ProvisionAgentInput {
+  host: string;
+  user: string;
+  port: number;       // ssh port
+  keyPath: string;
+  agentPort: number;  // agent HTTP port
+  token: string;
+}
+
+function writeLocalToken(token: string): void {
+  const envPath = join(homedir(), '.patchwire', 'env');
+  fs.mkdirSync(dirname(envPath), { recursive: true });
+  let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+  if (/^PW_TOKEN=.*$/m.test(content)) content = content.replace(/^PW_TOKEN=.*$/m, `PW_TOKEN=${token}`);
+  else content = (content && !content.endsWith('\n') ? content + '\n' : content) + `PW_TOKEN=${token}\n`;
+  fs.writeFileSync(envPath, content, { mode: 0o600 });
+  fs.chmodSync(envPath, 0o600);
+}
+
+async function pollAgentHealth(host: string, port: number): Promise<boolean> {
+  const { fetch } = await import('undici');
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://${host}:${port}/health`, { method: 'GET' });
+      if (res.ok) return true;
+    } catch { /* not up yet */ }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return false;
+}
+
+/**
+ * Install + start the remote agent over the per-project key, set the token on the
+ * laptop, and wait for /health. Prints a single JSON result to stdout.
+ */
+/**
+ * Reject inputs that contain shell metacharacters before they are ever spliced
+ * into the remote `bash -lc` script. token/host/port are interpolated into the
+ * script text, so a value with `;`/`&`/`$()`/backticks would be command injection.
+ * The wizard's values (hex token, IP/hostname, integer port) always pass.
+ */
+function unsafeProvisionField(input: ProvisionAgentInput): string | null {
+  if (!/^[A-Za-z0-9_-]{16,}$/.test(input.token)) return 'token';
+  if (!/^[A-Za-z0-9._:-]+$/.test(input.host)) return 'host';
+  if (!/^[A-Za-z0-9._-]+$/.test(input.user)) return 'user';
+  if (!Number.isInteger(input.agentPort) || input.agentPort < 1 || input.agentPort > 65535) return 'agentPort';
+  return null;
+}
+
+export async function runProvisionAgent(input: ProvisionAgentInput): Promise<void> {
+  const bad = unsafeProvisionField(input);
+  if (bad) {
+    process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: `Refusing to provision: unsafe ${bad}.` }));
+    return;
+  }
+  const remoteScript = [
+    'set -e',
+    'command -v node >/dev/null || { echo PW_NO_NODE; exit 3; }',
+    'command -v patchwire-agent >/dev/null || npm i -g @rebink/patchwire >/dev/null 2>&1',
+    `patchwire-agent install --token ${input.token} --host ${input.host} --port ${input.agentPort}`,
+  ].join('; ');
+  const remoteCmd = `bash -lc '${remoteScript.replace(/'/g, `'\\''`)}'`;
+
+  const ssh = spawnSync('ssh', [
+    '-i', input.keyPath,
+    '-o', 'IdentitiesOnly=yes',
+    '-o', 'IdentityAgent=none',
+    '-o', 'BatchMode=yes',
+    '-o', 'StrictHostKeyChecking=accept-new',
+    '-o', 'ConnectTimeout=10',
+    '-p', String(input.port),
+    `${input.user}@${input.host}`,
+    remoteCmd,
+  ], { encoding: 'utf8' });
+
+  const stdout = ssh.stdout ?? '';
+  const stderr = (ssh.stderr ?? '').trim();
+
+  if (stdout.includes('PW_NO_NODE')) {
+    process.stdout.write(JSON.stringify({ ok: false, code: 'no_node', stderr: 'Node 20+ was not found on the remote. Install Node there, then re-run setup.' }));
+    return;
+  }
+  if (ssh.status !== 0) {
+    const code = /launchctl|bootstrap|could not start/i.test(stderr) ? 'launchd_unstarted' : 'install_failed';
+    writeLocalToken(input.token); // so a manual start still authenticates
+    process.stdout.write(JSON.stringify({ ok: false, code, stderr: stderr || `provision exited ${ssh.status ?? 'null'}` }));
+    return;
+  }
+
+  writeLocalToken(input.token);
+  const healthy = await pollAgentHealth(input.host, input.agentPort);
+  process.stdout.write(JSON.stringify(healthy ? { ok: true, healthy: true } : { ok: false, code: 'unhealthy', healthy: false }));
 }
 
 /**
