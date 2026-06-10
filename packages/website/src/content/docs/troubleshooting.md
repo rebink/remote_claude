@@ -86,7 +86,7 @@ You probably edited the same files locally between sync and apply. Two options:
 
 `rsync --delete` mirrors the local tree to the remote. If a file exists only on the remote (e.g. you SSH'd in and created it), it'll be removed on the next sync. **The remote is not a place to store work.** Treat it as a staging area for AI runs.
 
-If you genuinely need a file to live only on the remote, add it to `sync.exclude` so rsync ignores it.
+If you genuinely need a file to live only on the remote, add it to `sync.exclude` (honored by both the CLI's rsync and the extension's two-way sync).
 
 ## Agent crashes on Claude error
 
