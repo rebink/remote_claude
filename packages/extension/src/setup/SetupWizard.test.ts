@@ -265,4 +265,58 @@ describe('SetupWizard step3Submit', () => {
     expect(spawnCalls.length).toBeGreaterThanOrEqual(2);
     expect(spawnCalls[1].args).toContain('--overwrite');
   });
+
+  it('provisions the agent after a successful push, non-blocking on failure', async () => {
+    // Push (init-remote) succeeds, then provision returns a failure JSON.
+    // Queue two children: first for the push, second for the provision.
+    const pushChild = makeChild(
+      [
+        JSON.stringify({ type: 'step', name: 'rsync', status: 'ok' }),
+        JSON.stringify({ type: 'done', ok: true, projectName: 'demo', remotePath: '~/workspace/demo' }),
+      ],
+      0,
+    );
+    const provisionChild = makeChild(
+      [JSON.stringify({ ok: false, code: 'install_failed', stderr: 'test error' })],
+      1,
+    );
+
+    let callIndex = 0;
+    const children = [pushChild, provisionChild];
+    const cp = await import('node:child_process');
+    (cp.spawn as unknown as { mockImplementation: (fn: (cmd: string, args: string[], opts: unknown) => unknown) => void }).mockImplementation(
+      (cmd: string, args: string[], opts: unknown) => {
+        spawnCalls.push({ cmd, args, opts });
+        return children[callIndex++] ?? provisionChild;
+      },
+    );
+
+    const { SetupWizard } = await import('./SetupWizard.ts');
+    const output = { appendLine: vi.fn() } as unknown as import('vscode').OutputChannel;
+    const wizard = new SetupWizard({ fsPath: '/ext' } as never, output);
+    (wizard as unknown as { state: Record<string, unknown> }).state = {
+      step: 3, host: 'mini', user: 'admin', sshPort: 22,
+      keyPath: '/home/admin/.patchwire/keys/mini-admin', busy: false,
+    };
+
+    const posted: unknown[] = [];
+    (wizard as unknown as { panel?: { webview: { postMessage: (m: unknown) => void } } }).panel = {
+      webview: { postMessage: (m: unknown) => posted.push(m) },
+    };
+
+    await (wizard as unknown as { handleMessage: (m: Record<string, unknown>) => Promise<void> }).handleMessage({
+      type: 'step3Submit',
+      localPath: '/tmp/proj',
+      projectName: 'demo',
+    });
+
+    // A second spawn with --provision-agent should have been made.
+    const provision = spawnCalls.find((c) => c.args.includes('--provision-agent'));
+    expect(provision).toBeTruthy();
+    expect(provision!.args.join(' ')).toMatch(/--token [0-9a-f]+/);
+
+    // Wizard still advanced to step 4 despite provision failure.
+    const stateAfter = (wizard as unknown as { state: WizardState }).state;
+    expect(stateAfter.step).toBe(4);
+  });
 });
