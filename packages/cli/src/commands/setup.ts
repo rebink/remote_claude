@@ -1,17 +1,14 @@
 import { existsSync } from 'node:fs';
-import * as fs from 'node:fs';
 import { writeFile, mkdir, readFile, chmod } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { homedir, userInfo } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import chalk from 'chalk';
 import prompts from 'prompts';
 import { log } from '../lib/log.ts';
 import * as tailscale from '../lib/tailscale.ts';
 import { tailscaleStatus, type TailscalePeer } from '../lib/tailscale.ts';
-import * as sshpass from '../lib/sshpass.ts';
-import type { CopyIdResult } from '../lib/sshpass.ts';
 
 interface SetupAnswers {
   project: string;
@@ -267,86 +264,36 @@ export async function runSetupListPeers(opts: { json: boolean }): Promise<void> 
   }
 }
 
-export interface PasswordStdinInput {
+export interface VerifyKeyInput {
   host: string;
   user: string;
   port: number;
-  keyPath: string; // private key path; .pub appended for the public key
-  trustNewKey?: boolean;
+  keyPath: string;
 }
 
 /**
- * One-shot, non-interactive: read a single-line password from stdin and run
- * `ssh-copy-id` via `sshpass` to install the per-project key on the remote.
- * Writes the typed result `{ ok, code?, stderr? }` as JSON to stdout.
- *
- * Imports `fs` and `sshpass` via namespace so tests can spy on
- * `fs.existsSync` and `sshpass.copyIdWithPassword`.
+ * Non-interactive key check used by the wizard's "Verify & continue". With
+ * BatchMode the ssh can only succeed when the key is actually installed (no
+ * password fallback). Writes `{ ok }` or a structured failure as JSON to stdout.
  */
-export async function runSetupPasswordStdin(input: PasswordStdinInput): Promise<void> {
-  if (!input.keyPath) {
-    process.stdout.write(JSON.stringify({ ok: false, code: 'unknown', stderr: '--key-path is required' }));
+export function runVerifyKey(input: VerifyKeyInput): void {
+  const r = spawnSync(
+    'ssh',
+    [
+      '-i', input.keyPath,
+      '-o', 'BatchMode=yes',
+      '-o', 'StrictHostKeyChecking=accept-new',
+      '-o', 'ConnectTimeout=6',
+      '-p', String(input.port),
+      `${input.user}@${input.host}`,
+      'true',
+    ],
+    { encoding: 'utf8' },
+  );
+  if (r.status === 0) {
+    process.stdout.write(JSON.stringify({ ok: true }));
     return;
   }
-
-  if (input.trustNewKey) {
-    spawnSync('ssh-keygen', ['-R', input.host]);
-    spawnSync('ssh-keygen', ['-R', `[${input.host}]:${input.port}`]);
-  }
-
-  // Ensure key dir + key exist
-  if (!fs.existsSync(input.keyPath)) {
-    fs.mkdirSync(dirname(input.keyPath), { recursive: true, mode: 0o700 });
-    const r = spawnSync('ssh-keygen', [
-      '-t',
-      'ed25519',
-      '-N',
-      '',
-      '-f',
-      input.keyPath,
-      '-C',
-      `patchwire@${input.host}`,
-    ]);
-    if (r.status !== 0) {
-      process.stdout.write(JSON.stringify({ ok: false, code: 'unknown', stderr: 'ssh-keygen failed' }));
-      return;
-    }
-    fs.chmodSync(input.keyPath, 0o600);
-  }
-
-  // Read password from stdin (single line)
-  const password = await readPasswordFromStdin();
-
-  let result: CopyIdResult;
-  try {
-    result = await sshpass.copyIdWithPassword({
-      host: input.host,
-      user: input.user,
-      port: input.port,
-      keyPath: input.keyPath,
-      password,
-    });
-  } catch (err) {
-    // Never crash here: the wizard parses our stdout JSON, so an uncaught throw
-    // (most commonly sshpass not installed) leaves it with empty stdout and a
-    // generic "unknown" error pointing at an empty output channel. Emit a
-    // structured, actionable result instead.
-    const message = err instanceof Error ? err.message : String(err);
-    const code = /sshpass not found/i.test(message) ? 'sshpass_missing' : 'copy_id_failed';
-    process.stdout.write(JSON.stringify({ ok: false, code, stderr: message }));
-    return;
-  }
-
-  process.stdout.write(JSON.stringify(result));
-}
-
-function readPasswordFromStdin(): Promise<string> {
-  return new Promise((resolve) => {
-    let buf = '';
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (c: string) => {
-      buf += c;
-    });
-    process.stdin.on('end', () => resolve(buf.replace(/\r?\n$/, '')));
-  });
+  const stderr = (r.stderr || r.stdout || `ssh exited ${r.status ?? 'null'}`).trim();
+  process.stdout.write(JSON.stringify({ ok: false, code: 'verify_failed', stderr }));
 }

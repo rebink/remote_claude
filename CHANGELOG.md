@@ -5,6 +5,23 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.15] — 2026-06-10
+
+### Added
+- **Sync profiles by project type.** Setup auto-detects your project type (Flutter,
+  Node frontend, Node backend, Python, or Common), shows it pre-selected, and writes
+  the matching `sync.exclude` into `patchwire.yml`. The extension's two-way sync
+  (Mutagen) now honors `sync.exclude` (merged with its safety baseline), so build
+  caches, `node_modules/`, `Pods/`, `.dart_tool/`, `__pycache__/`, etc. are skipped.
+  Profiles are per-project and hand-editable.
+
+### Changed
+- **Key install no longer needs `sshpass`.** Setup Step 2 installs your SSH key
+  through an interactive terminal (`ssh-keygen` + `ssh-copy-id`) plus a
+  "Verify & continue" check, instead of piping your password through `sshpass`.
+  `sshpass` (and its GPL binary) is removed from the project entirely: no brew tap,
+  works on macOS and Linux out of the box.
+
 ## [0.3.14] — 2026-06-10
 
 ### Fixed
