@@ -90,4 +90,35 @@ describe('setup --password-stdin', () => {
 
     expect(copySpy).toHaveBeenCalledWith(expect.objectContaining({ password: 'hunter2' }));
   });
+
+  it('emits a structured sshpass_missing result instead of crashing when sshpass is absent', async () => {
+    vi.spyOn(sshpass, 'copyIdWithPassword').mockRejectedValue(
+      new Error('sshpass not found. Install with: brew install hudochenkov/sshpass/sshpass (macOS) or apt-get install sshpass (Linux).'),
+    );
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+
+    const stdin = new (await import('node:stream')).PassThrough();
+    const origStdin = process.stdin;
+    Object.defineProperty(process, 'stdin', { value: stdin, configurable: true });
+
+    const writes: string[] = [];
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((c: unknown) => { writes.push(String(c)); return true; }) as typeof process.stdout.write;
+
+    const run = runSetupPasswordStdin({ host: 'h', user: 'u', port: 22, keyPath: '/tmp/id_test' });
+    stdin.write('hunter2\n');
+    stdin.end();
+
+    try {
+      await run;
+    } finally {
+      process.stdout.write = origWrite;
+      Object.defineProperty(process, 'stdin', { value: origStdin, configurable: true });
+    }
+
+    const out = JSON.parse(writes.join(''));
+    expect(out.ok).toBe(false);
+    expect(out.code).toBe('sshpass_missing');
+    expect(out.stderr).toMatch(/sshpass not found/);
+  });
 });
