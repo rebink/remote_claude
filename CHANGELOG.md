@@ -5,6 +5,18 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.17] — 2026-06-10
+
+### Added
+- **Automatic agent provisioning.** After the setup wizard installs your key and pushes
+  the project, it now installs and starts the `patchwire-agent` on the remote over SSH,
+  sets the token on both ends (no copy-paste), and waits for `/health` — so the CLI
+  `patchwire ask` flow and `patchwire doctor` work with **no manual remote steps**. The
+  agent start uses `launchctl bootstrap` (reliable over SSH when the Mac is logged in)
+  and binds to the reachable host. Provisioning is **non-blocking**: if it can't finish
+  (headless / no Node / firewall) the wizard says what to do and still completes. The
+  new `setup --provision-agent` mode validates its inputs to prevent shell injection.
+
 ## [0.3.16] — 2026-06-10
 
 ### Fixed
