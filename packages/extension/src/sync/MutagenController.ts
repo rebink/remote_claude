@@ -25,6 +25,7 @@ export interface MutagenTarget {
   sshPort?: number;
   localPath: string;
   remotePath: string;
+  ignore?: string[]; // project sync.exclude, merged with IGNORE_PATTERNS baseline
 }
 
 const IGNORE_PATTERNS = [
@@ -41,6 +42,11 @@ const IGNORE_PATTERNS = [
   '.patchwire',
   '.devbridge',
 ];
+
+/** Merge the safety baseline with the project's excludes, deduped, order-stable. */
+export function mergeIgnores(baseline: string[], exclude: string[]): string[] {
+  return Array.from(new Set([...baseline, ...exclude]));
+}
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -180,7 +186,7 @@ export class MutagenController {
       '--mode', 'two-way-resolved',          // alpha (laptop) wins conflicts
       '--symlink-mode', 'posix-raw',         // preserve symlinks as-is
       '--ignore-vcs',                        // skip .git/, .hg/, etc.
-      ...IGNORE_PATTERNS.flatMap((p) => ['--ignore', p]),
+      ...mergeIgnores(IGNORE_PATTERNS, this.target.ignore ?? []).flatMap((p) => ['--ignore', p]),
       '--default-file-mode', '0644',
       '--default-directory-mode', '0755',
       this.target.localPath,

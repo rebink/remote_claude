@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { resolveCli } from '../cli/resolveCli.ts';
+import { detectProjectType } from './detectProjectType.ts';
+import { EXCLUDE_TEMPLATES, PROJECT_TYPES, type ProjectType } from './syncTemplates.ts';
 
 export interface WizardState {
   step: 1 | 2 | 3 | 4;
@@ -184,12 +186,24 @@ export class SetupWizard {
         this.postState();
         return;
       }
+      case 'detectProjectType': {
+        const lp = (msg.localPath as string) ?? '';
+        const os = await import('node:os');
+        const path = await import('node:path');
+        const expanded = lp.startsWith('~') ? path.join(os.homedir(), lp.slice(1)) : lp;
+        const projectType: ProjectType = expanded ? detectProjectType(expanded) : 'common';
+        this.panel?.webview.postMessage({ type: 'detectedProjectType', projectType });
+        return;
+      }
       case 'step3Submit': {
         const localPath = msg.localPath as string;
         const projectName = msg.projectName as string;
         const overwrite = !!msg.overwrite;
         const useExisting = !!msg.useExisting;
         const { host, user, sshPort = 22 } = this.state;
+        const projectType: ProjectType = PROJECT_TYPES.includes(msg.projectType as ProjectType)
+          ? (msg.projectType as ProjectType)
+          : 'common';
 
         if (!localPath || !projectName || !host || !user) {
           this.state = { ...this.state, error: 'Local folder and project name are required' };
@@ -263,7 +277,7 @@ export class SetupWizard {
                 agentUrl: `http://${host}:7878`,
                 token: '${PW_TOKEN}',
               },
-              sync: { exclude: ['build/', '.dart_tool/', 'ios/Pods/', 'node_modules/', '.git/'] },
+              sync: { exclude: EXCLUDE_TEMPLATES[projectType] },
               ai: { command: 'claude', args: ['--print'], timeoutSec: 600 },
             }),
           );
