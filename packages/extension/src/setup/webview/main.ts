@@ -1,4 +1,5 @@
 import { h, clear } from './h.ts';
+import { PROJECT_TYPES, PROJECT_TYPE_LABELS, type ProjectType } from '../syncTemplates.ts';
 
 declare const acquireVsCodeApi: () => { postMessage: (m: unknown) => void };
 const vscode = acquireVsCodeApi();
@@ -25,9 +26,11 @@ let selectedHost = '';
 let userValue = '';
 let portValue = 22;
 
+let selectedType: ProjectType = 'common';
+let typeUserEdited = false;
+
 interface Step2Result { ok: boolean; code?: string; stderr?: string }
 let step2Result: Step2Result | undefined;
-let pwValue = '';
 
 interface Step3Result { ok: boolean; where?: 'local' | 'remote'; stderr?: string }
 let step3Result: Step3Result | undefined;
@@ -41,6 +44,7 @@ window.addEventListener('message', (event: MessageEvent) => {
     type: string;
     state?: Partial<WizardState>;
     result?: Step2Result | Step3Result | Step4Result;
+    projectType?: string;
   };
   if (msg.type === 'state' && msg.state) {
     state = { ...state, ...msg.state };
@@ -71,6 +75,14 @@ window.addEventListener('message', (event: MessageEvent) => {
   } else if (msg.type === 'step4Result' && msg.result) {
     step4Result = msg.result as Step4Result;
     render();
+  } else if (msg.type === 'detectedProjectType' && msg.projectType) {
+    // Only re-render when the detected type actually changes. render() calls
+    // requestDetect() again, so without this guard the reply→render→detect loop
+    // would round-trip (and re-read project files on the host) forever.
+    if (!typeUserEdited && msg.projectType !== selectedType) {
+      selectedType = msg.projectType as ProjectType;
+      render();
+    }
   }
 });
 
@@ -145,11 +157,10 @@ function renderStep1(): HTMLElement {
 
 function renderStep2(): HTMLElement {
   const container = h('div', {},
-    h('h1', {}, 'Step 2 — Sign in to the Mac Mini'),
-    h('p', { className: 'note' }, "We use your password once to install an SSH key, then discard it. You won't be asked again."),
+    h('h1', {}, 'Step 2 — Install your SSH key'),
+    h('p', { className: 'note' }, 'We add a per-project SSH key to the remote so future connections need no password. You type your password once, in the terminal.'),
   );
 
-  // Username (pre-filled from step 1; allow editing for typos)
   const userInput = h('input', { type: 'text', placeholder: 'rebin', value: state.user ?? '' }) as HTMLInputElement;
   userInput.addEventListener('input', () => { state.user = userInput.value; });
   container.append(h('div', { className: 'form-row' },
@@ -157,51 +168,40 @@ function renderStep2(): HTMLElement {
     userInput,
   ));
 
-  // Password (single-shot)
-  const pwInput = h('input', { type: 'password', placeholder: '••••••••••', value: pwValue }) as HTMLInputElement;
-  pwInput.addEventListener('input', () => { pwValue = pwInput.value; });
-  container.append(h('div', { className: 'form-row' },
-    h('label', {}, 'Password (one-time)'),
-    pwInput,
+  container.append(h('ol', { className: 'note' },
+    h('li', {}, 'Click "Open terminal & install key".'),
+    h('li', {}, 'In the terminal, enter your remote password when prompted (and type "yes" if asked to trust the host).'),
+    h('li', {}, 'When it finishes, click "Verify & continue".'),
   ));
 
-  // Render result-driven error / host-key-mismatch dialog
   if (step2Result && !step2Result.ok) {
-    const code = step2Result.code ?? 'unknown';
-    if (code === 'auth_failed') {
-      container.append(h('p', { className: 'error' }, 'Authentication failed. Check the password and try again.'));
-    } else if (code === 'unreachable') {
-      container.append(h('p', { className: 'error' }, 'Host unreachable. Check Tailscale and try again.'));
-    } else if (code === 'host_key_mismatch') {
-      container.append(h('div', { className: 'error' },
-        h('p', {}, "REMOTE HOST IDENTIFICATION HAS CHANGED. The Mac Mini's SSH key is different from what we have stored."),
-        h('p', { className: 'note' }, "This is sometimes legitimate (key rotated) and sometimes a sign of a man-in-the-middle. Trust the new key only if you're sure."),
-        step2Result.stderr ? h('pre', { className: 'note' }, step2Result.stderr) : null,
-        h('div', { className: 'actions' },
-          h('button', { className: 'secondary',
-            events: { click: () => {
-              vscode.postMessage({ type: 'step2Submit', user: state.user, password: pwValue, trustNewKey: true });
-            }}}, 'Trust new key'),
-        ),
-      ));
-    } else {
-      container.append(h('p', { className: 'error' }, step2Result.stderr ?? 'Setup failed. Check the output channel for details.'));
-    }
+    container.append(h('p', { className: 'error' },
+      step2Result.stderr
+        ? `Not connected yet: ${step2Result.stderr}`
+        : 'Not connected yet. Finish the steps in the terminal, then click Verify. If you saw "REMOTE HOST IDENTIFICATION HAS CHANGED", run: ssh-keygen -R <host>',
+    ));
   }
-
   if (state.error) container.append(h('p', { className: 'error' }, state.error));
-  if (state.busy) container.append(h('p', { className: 'note' }, h('span', { className: 'spinner' }, '⟳'), ' Installing SSH key…'));
+  if (state.busy) container.append(h('p', { className: 'note' }, h('span', { className: 'spinner' }, '⟳'), ' Verifying…'));
 
   container.append(h('div', { className: 'actions' },
     h('button', { className: 'secondary', events: { click: () => vscode.postMessage({ type: 'back' }) } }, 'Back'),
     h('button', {
+      className: 'secondary',
+      events: { click: () => {
+        if (!state.user) return;
+        step2Result = undefined;
+        vscode.postMessage({ type: 'openKeyInstallTerminal', user: state.user });
+      } },
+    }, 'Open terminal & install key'),
+    h('button', {
       disabled: state.busy,
       events: { click: () => {
-        if (!pwValue || !state.user) return;
-        step2Result = undefined;  // clear previous result on retry
-        vscode.postMessage({ type: 'step2Submit', user: state.user, password: pwValue });
-      }},
-    }, 'Install key & continue'),
+        if (!state.user) return;
+        step2Result = undefined;
+        vscode.postMessage({ type: 'verifyKey', user: state.user });
+      } },
+    }, 'Verify & continue'),
   ));
 
   return container;
@@ -218,6 +218,20 @@ function renderStep3(): HTMLElement {
   const submitBtn = h('button', { className: 'primary' }, 'Push & continue →');
   const progressEl = h('div', { className: 'progress' }, '');
 
+  const typeSelect = h('select', {}) as HTMLSelectElement;
+  for (const t of PROJECT_TYPES) {
+    typeSelect.append(h('option', { value: t }, PROJECT_TYPE_LABELS[t]));
+  }
+  typeSelect.value = selectedType;
+  typeSelect.addEventListener('change', () => {
+    typeUserEdited = true;
+    selectedType = typeSelect.value as ProjectType;
+  });
+
+  const requestDetect = () => {
+    if (localPathValue) vscode.postMessage({ type: 'detectProjectType', localPath: localPathValue });
+  };
+
   localPathInput.addEventListener('input', () => {
     localPathValue = localPathInput.value;
     if (!projectNameInput.dataset.userEdited) {
@@ -225,6 +239,7 @@ function renderStep3(): HTMLElement {
       projectNameInput.value = b;
       projectNameValue = b;
     }
+    requestDetect();
   });
   projectNameInput.addEventListener('input', () => {
     projectNameInput.dataset.userEdited = '1';
@@ -243,12 +258,19 @@ function renderStep3(): HTMLElement {
       projectNameInput,
       h('p', { className: 'hint' }, `Will be created at ~/workspace/<name>`),
     ),
+    h('div', { className: 'form-row' },
+      h('label', {}, 'Sync profile (what to skip when syncing)'),
+      typeSelect,
+      h('p', { className: 'hint' }, 'Auto-detected from your project; change it if needed. Skips build caches, dependencies, etc.'),
+    ),
     h('p', { className: 'warn-banner' },
       'The Mac Mini copy stays isolated from git — no remotes, no pushes, no leaked identity. ' +
       'You commit only on the laptop with your own git identity.',
     ),
     progressEl,
   );
+
+  requestDetect();
 
   if (state.error) {
     container.append(h('p', { className: 'error' }, state.error));
@@ -277,6 +299,7 @@ function renderStep3(): HTMLElement {
       type: 'step3Submit',
       localPath: localPathValue,
       projectName: projectNameValue,
+      projectType: selectedType,
     });
   });
 
