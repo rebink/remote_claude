@@ -1,4 +1,5 @@
 import { h, clear } from './h.ts';
+import { PROJECT_TYPES, PROJECT_TYPE_LABELS, type ProjectType } from '../syncTemplates.ts';
 
 declare const acquireVsCodeApi: () => { postMessage: (m: unknown) => void };
 const vscode = acquireVsCodeApi();
@@ -25,6 +26,9 @@ let selectedHost = '';
 let userValue = '';
 let portValue = 22;
 
+let selectedType: ProjectType = 'common';
+let typeUserEdited = false;
+
 interface Step2Result { ok: boolean; code?: string; stderr?: string }
 let step2Result: Step2Result | undefined;
 let pwValue = '';
@@ -41,6 +45,7 @@ window.addEventListener('message', (event: MessageEvent) => {
     type: string;
     state?: Partial<WizardState>;
     result?: Step2Result | Step3Result | Step4Result;
+    projectType?: string;
   };
   if (msg.type === 'state' && msg.state) {
     state = { ...state, ...msg.state };
@@ -71,6 +76,14 @@ window.addEventListener('message', (event: MessageEvent) => {
   } else if (msg.type === 'step4Result' && msg.result) {
     step4Result = msg.result as Step4Result;
     render();
+  } else if (msg.type === 'detectedProjectType' && msg.projectType) {
+    // Only re-render when the detected type actually changes. render() calls
+    // requestDetect() again, so without this guard the reply→render→detect loop
+    // would round-trip (and re-read project files on the host) forever.
+    if (!typeUserEdited && msg.projectType !== selectedType) {
+      selectedType = msg.projectType as ProjectType;
+      render();
+    }
   }
 });
 
@@ -218,6 +231,20 @@ function renderStep3(): HTMLElement {
   const submitBtn = h('button', { className: 'primary' }, 'Push & continue →');
   const progressEl = h('div', { className: 'progress' }, '');
 
+  const typeSelect = h('select', {}) as HTMLSelectElement;
+  for (const t of PROJECT_TYPES) {
+    typeSelect.append(h('option', { value: t }, PROJECT_TYPE_LABELS[t]));
+  }
+  typeSelect.value = selectedType;
+  typeSelect.addEventListener('change', () => {
+    typeUserEdited = true;
+    selectedType = typeSelect.value as ProjectType;
+  });
+
+  const requestDetect = () => {
+    if (localPathValue) vscode.postMessage({ type: 'detectProjectType', localPath: localPathValue });
+  };
+
   localPathInput.addEventListener('input', () => {
     localPathValue = localPathInput.value;
     if (!projectNameInput.dataset.userEdited) {
@@ -225,6 +252,7 @@ function renderStep3(): HTMLElement {
       projectNameInput.value = b;
       projectNameValue = b;
     }
+    requestDetect();
   });
   projectNameInput.addEventListener('input', () => {
     projectNameInput.dataset.userEdited = '1';
@@ -243,12 +271,19 @@ function renderStep3(): HTMLElement {
       projectNameInput,
       h('p', { className: 'hint' }, `Will be created at ~/workspace/<name>`),
     ),
+    h('div', { className: 'form-row' },
+      h('label', {}, 'Sync profile (what to skip when syncing)'),
+      typeSelect,
+      h('p', { className: 'hint' }, 'Auto-detected from your project; change it if needed. Skips build caches, dependencies, etc.'),
+    ),
     h('p', { className: 'warn-banner' },
       'The Mac Mini copy stays isolated from git — no remotes, no pushes, no leaked identity. ' +
       'You commit only on the laptop with your own git identity.',
     ),
     progressEl,
   );
+
+  requestDetect();
 
   if (state.error) {
     container.append(h('p', { className: 'error' }, state.error));
@@ -277,6 +312,7 @@ function renderStep3(): HTMLElement {
       type: 'step3Submit',
       localPath: localPathValue,
       projectName: projectNameValue,
+      projectType: selectedType,
     });
   });
 
