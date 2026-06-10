@@ -308,7 +308,26 @@ async function pollAgentHealth(host: string, port: number): Promise<boolean> {
  * Install + start the remote agent over the per-project key, set the token on the
  * laptop, and wait for /health. Prints a single JSON result to stdout.
  */
+/**
+ * Reject inputs that contain shell metacharacters before they are ever spliced
+ * into the remote `bash -lc` script. token/host/port are interpolated into the
+ * script text, so a value with `;`/`&`/`$()`/backticks would be command injection.
+ * The wizard's values (hex token, IP/hostname, integer port) always pass.
+ */
+function unsafeProvisionField(input: ProvisionAgentInput): string | null {
+  if (!/^[A-Za-z0-9_-]{16,}$/.test(input.token)) return 'token';
+  if (!/^[A-Za-z0-9._:-]+$/.test(input.host)) return 'host';
+  if (!/^[A-Za-z0-9._-]+$/.test(input.user)) return 'user';
+  if (!Number.isInteger(input.agentPort) || input.agentPort < 1 || input.agentPort > 65535) return 'agentPort';
+  return null;
+}
+
 export async function runProvisionAgent(input: ProvisionAgentInput): Promise<void> {
+  const bad = unsafeProvisionField(input);
+  if (bad) {
+    process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: `Refusing to provision: unsafe ${bad}.` }));
+    return;
+  }
   const remoteScript = [
     'set -e',
     'command -v node >/dev/null || { echo PW_NO_NODE; exit 3; }',

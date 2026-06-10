@@ -15,6 +15,8 @@ function captureStdout(fn: () => Promise<void>): Promise<string> {
   return fn().finally(() => { process.stdout.write = orig; }).then(() => writes.join(''));
 }
 
+const TOKEN = 'a1b2c3d4e5f60718293a4b5c'; // valid: hex-ish, ≥16 chars
+
 describe('setup --provision-agent', () => {
   it('ssh-installs via a login shell, writes the token, and reports healthy', async () => {
     vi.spyOn(cp, 'spawnSync').mockReturnValue({ status: 0, stdout: '', stderr: '' } as never);
@@ -25,22 +27,32 @@ describe('setup --provision-agent', () => {
     const { runProvisionAgent } = await import('../../src/commands/setup.ts');
 
     const out = await captureStdout(() => runProvisionAgent({
-      host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: 'abc',
+      host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN,
     }));
 
     expect(JSON.parse(out)).toEqual({ ok: true, healthy: true });
     const sshArgs = (cp.spawnSync as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][1] as string[];
     expect(sshArgs.join(' ')).toMatch(/bash -lc/);
-    expect(sshArgs.join(' ')).toMatch(/patchwire-agent install --token abc --host h --port 7878/);
+    expect(sshArgs.join(' ')).toMatch(new RegExp(`patchwire-agent install --token ${TOKEN} --host h --port 7878`));
     expect(sshArgs).toEqual(expect.arrayContaining(['-o', 'IdentitiesOnly=yes']));
     // token written to ~/.patchwire/env
-    expect(wf.mock.calls.some((c) => String(c[0]).endsWith('.patchwire/env') && String(c[1]).includes('PW_TOKEN=abc'))).toBe(true);
+    expect(wf.mock.calls.some((c) => String(c[0]).endsWith('.patchwire/env') && String(c[1]).includes(`PW_TOKEN=${TOKEN}`))).toBe(true);
   });
 
   it('maps a missing remote Node to code no_node', async () => {
     vi.spyOn(cp, 'spawnSync').mockReturnValue({ status: 3, stdout: 'PW_NO_NODE\n', stderr: '' } as never);
     const { runProvisionAgent } = await import('../../src/commands/setup.ts');
-    const out = await captureStdout(() => runProvisionAgent({ host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: 'abc' }));
+    const out = await captureStdout(() => runProvisionAgent({ host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN }));
     expect(JSON.parse(out).code).toBe('no_node');
+  });
+
+  it('rejects shell-metacharacter inputs without running ssh (command-injection guard)', async () => {
+    const spy = vi.spyOn(cp, 'spawnSync').mockReturnValue({ status: 0, stdout: '', stderr: '' } as never);
+    const { runProvisionAgent } = await import('../../src/commands/setup.ts');
+    const out = await captureStdout(() => runProvisionAgent({
+      host: 'h; rm -rf ~', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN,
+    }));
+    expect(JSON.parse(out)).toEqual({ ok: false, code: 'invalid_input', stderr: 'Refusing to provision: unsafe host.' });
+    expect(spy).not.toHaveBeenCalled();
   });
 });
