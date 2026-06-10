@@ -21,6 +21,7 @@ interface WizardState {
 
 const root = document.getElementById('app')!;
 let state: WizardState = { step: 1 };
+let provisionStatus = '';
 
 let selectedHost = '';
 let userValue = '';
@@ -74,6 +75,9 @@ window.addEventListener('message', (event: MessageEvent) => {
     }
   } else if (msg.type === 'step4Result' && msg.result) {
     step4Result = msg.result as Step4Result;
+    render();
+  } else if (msg.type === 'provisionStatus' && typeof (msg as unknown as { text?: string }).text === 'string') {
+    provisionStatus = (msg as unknown as { text: string }).text;
     render();
   } else if (msg.type === 'detectedProjectType' && msg.projectType) {
     // Only re-render when the detected type actually changes. render() calls
@@ -282,6 +286,10 @@ function renderStep3(): HTMLElement {
         h('pre', { className: 'note', style: { whiteSpace: 'pre-wrap' } as unknown as CSSStyleDeclaration }, step3Result.stderr ?? ''),
       ),
     );
+  }
+
+  if (provisionStatus) {
+    container.append(h('p', { className: 'note' }, provisionStatus));
   }
 
   container.append(

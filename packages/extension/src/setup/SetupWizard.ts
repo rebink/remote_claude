@@ -329,6 +329,14 @@ export class SetupWizard {
 
         if (doneOk && exit === 0) {
           this.panel?.webview.postMessage({ type: 'step3Result', result: { ok: true } });
+          // Auto-provision the agent (non-blocking: failure never prevents step 4).
+          const { keyPath = '' } = this.state;
+          let agentPort = 7878;
+          try {
+            const agentUrlStr = `http://${host}:7878`; // default; patchwire.yml always uses 7878
+            agentPort = parseInt(new URL(agentUrlStr).port, 10) || 7878;
+          } catch { /* use default */ }
+          await this.provisionAgent(host, user, sshPort, keyPath, agentPort).catch(() => { /* non-blocking */ });
           this.state = { ...this.state, step: 4 };
           return this.postState();
         }
@@ -426,6 +434,32 @@ export class SetupWizard {
       default:
         this.output.appendLine(`SetupWizard: unknown message type "${msg.type}"`);
     }
+  }
+
+  private async provisionAgent(host: string, user: string, sshPort: number, keyPath: string, agentPort: number): Promise<void> {
+    const crypto = await import('node:crypto');
+    const cp = await import('node:child_process');
+    const token = crypto.randomBytes(32).toString('hex');
+    this.panel?.webview.postMessage({ type: 'provisionStatus', text: 'Installing the agent on the remote…' });
+
+    const inv = resolveCli(this.extensionUri.fsPath);
+    const args = ['setup', '--provision-agent', '--host', host, '--user', user, '--ssh-port', String(sshPort),
+      '--key-path', keyPath, '--agent-port', String(agentPort), '--token', token];
+    const child = cp.spawn(inv.command, [...inv.baseArgs, ...args], { stdio: ['ignore', 'pipe', 'pipe'], env: inv.env });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', (c: Buffer) => { stdout += c.toString(); });
+    child.stderr.on('data', (c: Buffer) => { stderr += c.toString(); });
+    await new Promise<void>((resolve) => { child.on('error', () => resolve()); child.on('close', () => resolve()); });
+
+    if (stdout.trim()) this.output.appendLine(`[provision] ${stdout.trim()}`);
+    if (stderr.trim()) this.output.appendLine(`[provision stderr] ${stderr.trim()}`);
+
+    let result: { ok?: boolean; code?: string; stderr?: string } = {};
+    try { result = JSON.parse(stdout.trim() || '{}'); } catch { /* leave empty */ }
+    const text = result.ok
+      ? '✓ Agent provisioned.'
+      : `Agent not provisioned (${result.code ?? 'error'}): ${result.stderr ?? 'see output channel'}. The extension still works without it.`;
+    this.panel?.webview.postMessage({ type: 'provisionStatus', text });
   }
 
   private renderHtml(webview: vscode.Webview): string {

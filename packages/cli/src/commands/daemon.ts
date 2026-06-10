@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import * as cp from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { writeFile, mkdir, unlink, chmod } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
@@ -22,7 +22,7 @@ function envFile(): string {
 }
 
 function which(bin: string): string | undefined {
-  const r = spawnSync('command', ['-v', bin], { encoding: 'utf8', shell: '/bin/sh' });
+  const r = cp.spawnSync('command', ['-v', bin], { encoding: 'utf8', shell: '/bin/sh' });
   if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
   return undefined;
 }
@@ -43,6 +43,29 @@ interface InstallOptions {
   aiBin?: string;
 }
 
+/**
+ * Start (or restart) the LaunchAgent. Tries the modern GUI-domain `bootstrap`
+ * first (this is what works over SSH when the user is logged in), then the
+ * legacy `load`, then `kickstart`. Returns how it started, or a failure.
+ */
+export function startLaunchAgent(plist: string, uid: number): { ok: boolean; method?: string; stderr?: string } {
+  const domain = `gui/${uid}`;
+  // Clear any prior registration both ways (ignore errors).
+  cp.spawnSync('launchctl', ['bootout', `${domain}/${SERVICE_LABEL}`], { stdio: 'ignore' });
+  cp.spawnSync('launchctl', ['unload', plist], { stdio: 'ignore' });
+
+  const boot = cp.spawnSync('launchctl', ['bootstrap', domain, plist], { encoding: 'utf8' });
+  if (boot.status === 0) {
+    cp.spawnSync('launchctl', ['kickstart', '-k', `${domain}/${SERVICE_LABEL}`], { stdio: 'ignore' });
+    return { ok: true, method: 'bootstrap' };
+  }
+  const load = cp.spawnSync('launchctl', ['load', plist], { encoding: 'utf8' });
+  if (load.status === 0) return { ok: true, method: 'load' };
+
+  const stderr = (boot.stderr || load.stderr || 'launchctl could not start the agent').trim();
+  return { ok: false, stderr };
+}
+
 export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void> {
   if (platform() !== 'darwin') {
     log.err(`launchd install is macOS-only. On Linux, run \`patchwire-agent\` under systemd or tmux.`);
@@ -57,7 +80,6 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
     return;
   }
 
-  const nodeBin = which('node') ?? '/usr/bin/env node';
   const projectsRoot = opts.projectsRoot ?? process.env.PW_PROJECTS_ROOT ?? join(homedir(), 'workspace');
   const port = opts.port ?? Number(process.env.PW_AGENT_PORT ?? 7878);
   // Default to loopback; network reachability (Tailscale/LAN) must be opted into.
@@ -106,10 +128,11 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
   await mkdir(join(homedir(), 'Library', 'LaunchAgents'), { recursive: true });
   await writeFile(plistPath(), plist, { encoding: 'utf8', mode: 0o600 });
 
-  spawnSync('launchctl', ['unload', plistPath()], { stdio: 'ignore' });
-  const load = spawnSync('launchctl', ['load', plistPath()], { encoding: 'utf8' });
-  if (load.status !== 0) {
-    log.err(`launchctl load failed: ${load.stderr.trim()}`);
+  const uid = process.getuid?.() ?? 0;
+  const start = startLaunchAgent(plistPath(), uid);
+  if (!start.ok) {
+    log.err(`launchctl could not start the agent: ${start.stderr}`);
+    log.err(`The plist is written. If this remote is logged in, run: launchctl bootstrap gui/${uid} ${plistPath()}`);
     process.exitCode = 1;
     return;
   }
@@ -140,7 +163,7 @@ export async function runDaemonUninstall(): Promise<void> {
     log.warn('No launchd plist found — nothing to uninstall.');
     return;
   }
-  spawnSync('launchctl', ['unload', plistPath()], { stdio: 'ignore' });
+  cp.spawnSync('launchctl', ['unload', plistPath()], { stdio: 'ignore' });
   await unlink(plistPath());
   log.ok(`Removed ${plistPath()}`);
   log.dim(`(env file at ${envFile()} kept — delete manually if you want a clean slate)`);
