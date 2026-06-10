@@ -78,19 +78,19 @@ The extension shells out to a few binaries:
 
 On the remote machine you need:
 
-- An SSH user account with key-based auth (the wizard sets this up via a one-time password prompt).
+- An SSH user account. The wizard sets up key-based auth for you: it runs `ssh-copy-id` in a terminal where you enter your password once. (No `sshpass`, no extra install.)
 - `claude` (the Anthropic CLI): `npm install -g @anthropic-ai/claude-code`.
 
 Mutagen deploys its own agent binary to the remote automatically the first time it connects.
 
 ## After install
 
-1. Click the **Patchwire** speech-bubble icon in the activity bar.
+1. Click the **Patchwire** icon in the activity bar.
 2. The setup wizard opens automatically if no `patchwire.yml` exists in your workspace.
 3. Walk through the four steps:
    1. Pick your remote (IP, username, and port).
-   2. One-time SSH password to install a per-project key.
-   3. Push your local folder to bootstrap the remote.
+   2. Install your key: click **Open terminal & install key**, enter your password once when `ssh-copy-id` prompts, then **Verify & continue**.
+   3. Bootstrap the remote: pick a **sync profile** (auto-detected from your project: Flutter, Node, Python, …) and push your local folder.
    4. Doctor checks everything's healthy.
 4. The sidebar shows **✓ In sync** once Mutagen connects. Click **⎈ Open Claude session** to drop into a live REPL on the remote.
 
