@@ -2,39 +2,87 @@
   "name": "patchwire-vscode",
   "displayName": "Patchwire",
   "description": "Run a Claude Code session on a machine you own, kept in two-way sync with your editor. Your code stays on your own hardware.",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "publisher": "patchwire",
   "private": true,
   "icon": "media/icon.png",
-  "galleryBanner": { "color": "#0E0E10", "theme": "dark" },
-  "keywords": ["ai", "claude", "claude code", "remote", "ssh", "sync", "flutter", "patchwire"],
+  "galleryBanner": {
+    "color": "#0E0E10",
+    "theme": "dark"
+  },
+  "keywords": [
+    "ai",
+    "claude",
+    "claude code",
+    "remote",
+    "ssh",
+    "sync",
+    "flutter",
+    "patchwire"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rebink/patchwire.git",
     "directory": "packages/extension"
   },
   "license": "MIT",
-  "engines": { "vscode": "^1.80.0", "node": ">=20" },
-  "categories": ["AI", "Other"],
+  "engines": {
+    "vscode": "^1.80.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
   "main": "./dist/extension.cjs",
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "commands": [
-      { "command": "patchwire.openSetup", "title": "Patchwire: Setup…" },
-      { "command": "patchwire.newChat", "title": "Patchwire: New Chat" },
-      { "command": "patchwire.toggleLiveSync", "title": "Patchwire: Toggle Live Sync" },
-      { "command": "patchwire.viewOutput", "title": "Patchwire: Show Output" },
-      { "command": "patchwire.attachFile", "title": "Attach file to claude session", "category": "Patchwire" },
-      { "command": "patchwire.attachClipboardImage", "title": "Attach clipboard image to claude session", "category": "Patchwire" }
+      {
+        "command": "patchwire.openSetup",
+        "title": "Patchwire: Setup…"
+      },
+      {
+        "command": "patchwire.newChat",
+        "title": "Patchwire: New Chat"
+      },
+      {
+        "command": "patchwire.toggleLiveSync",
+        "title": "Patchwire: Toggle Live Sync"
+      },
+      {
+        "command": "patchwire.viewOutput",
+        "title": "Patchwire: Show Output"
+      },
+      {
+        "command": "patchwire.attachFile",
+        "title": "Attach file to claude session",
+        "category": "Patchwire"
+      },
+      {
+        "command": "patchwire.attachClipboardImage",
+        "title": "Attach clipboard image to claude session",
+        "category": "Patchwire"
+      }
     ],
     "viewsContainers": {
       "activitybar": [
-        { "id": "patchwire", "title": "Patchwire", "icon": "media/patchwire-activitybar.svg" }
+        {
+          "id": "patchwire",
+          "title": "Patchwire",
+          "icon": "media/patchwire-activitybar.svg"
+        }
       ]
     },
     "views": {
       "patchwire": [
-        { "type": "webview", "id": "patchwire.chatPanel", "name": "Chat" }
+        {
+          "type": "webview",
+          "id": "patchwire.chatPanel",
+          "name": "Chat"
+        }
       ]
     },
     "configuration": {
@@ -49,7 +97,7 @@
     }
   },
   "scripts": {
-    "build": "tsup && node scripts/bundle-cli.mjs",
+    "build": "tsup && node scripts/bundle-cli.mjs && node scripts/check-bundle.mjs",
     "dev": "pnpm build --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
