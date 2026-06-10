@@ -28,6 +28,7 @@ description: What's shipped, what's next, and what's intentionally deferred.
 - ✅ **Sync profiles by project type**: setup auto-detects Flutter / Node frontend / Node backend / Python / Common and seeds `sync.exclude`; the extension's two-way sync now honors it, so build caches and dependencies stay off the wire. See [Configuration](/configuration/).
 - ✅ **Terminal-based key install** (no `sshpass`): the setup wizard installs your SSH key via an interactive `ssh-copy-id` plus a Verify step. No GPL binary, no brew tap; macOS and Linux out of the box.
 - ✅ **Reliable onboarding**: installable from npm (`@rebink/patchwire`), the extension activates on fresh machines (even with no folder open at launch), and the activity bar shows the Patchwire mark.
+- ✅ **Automatic agent provisioning**: after key install + push, the wizard installs and starts the remote `patchwire-agent` over SSH and sets the token on both ends, so the CLI `ask` flow and `doctor` work with no manual remote steps. Non-blocking if it can't finish.
 - 🧪 **Default-deny egress** (macOS, **experimental, off by default**): the seatbelt deny works, but the Anthropic allowlist is brittle against the API's CDN IPs, so it's **not production-usable yet** and not recommended for trusted-network setups. See [Security → Default-deny egress](/security/#default-deny-egress-experimental--not-recommended-yet).
 - ✅ GitHub repo: [rebink/remote_claude](https://github.com/rebink/remote_claude)
 
