@@ -90,8 +90,8 @@ Mutagen deploys its own agent binary to the remote automatically the first time 
 3. Walk through the four steps:
    1. Pick your remote (IP, username, and port).
    2. Install your key: click **Open terminal & install key**, enter your password once when `ssh-copy-id` prompts, then **Verify & continue**.
-   3. Bootstrap the remote: pick a **sync profile** (auto-detected from your project: Flutter, Node, Python, …) and push your local folder.
-   4. Doctor checks everything's healthy.
+   3. Bootstrap the remote: pick a **sync profile** (auto-detected from your project: Flutter, Node, Python, …), push your local folder, and the wizard installs and starts the `patchwire-agent` on the remote and sets the token for you, with no manual SSH.
+   4. Doctor confirms everything (key, sync, and agent) is healthy.
 4. The sidebar shows **✓ In sync** once Mutagen connects. Click **⎈ Open Claude session** to drop into a live REPL on the remote.
 
 ## Updating
