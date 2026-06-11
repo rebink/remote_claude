@@ -92,6 +92,11 @@
           "type": "string",
           "default": "",
           "description": "Absolute path to the patchwire CLI. Leave empty to use the CLI bundled with the extension."
+        },
+        "patchwire.dangerouslySkipPermissions": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "⚠️ Launch Claude with `--dangerously-skip-permissions`, bypassing ALL of Claude's tool-permission prompts in the session terminal. Only enable on machines/projects you fully trust."
         }
       }
     }
