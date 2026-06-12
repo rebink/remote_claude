@@ -53,3 +53,40 @@ describe('resolveMutagen — cached tier', () => {
     await expect(resolveMutagen(deps, EMPTY_MANIFEST)).resolves.toBe(cached);
   });
 });
+
+const ONE_ENTRY: MutagenManifest = {
+  'darwin-arm64': { url: 'https://dl.example/mutagen-darwin-arm64', sha256: 'abc123' },
+};
+
+describe('resolveMutagen — download tier', () => {
+  it('downloads, verifies sha256, writes to cache, and returns the cached path', async () => {
+    const cached = join('/home/u', '.patchwire', 'bin', 'mutagen');
+    const written: { path: string; bytes: string }[] = [];
+    const deps = baseDeps({
+      which: () => null,
+      bundledPath: () => null,
+      fileExists: () => false,
+      download: async (url) => Buffer.from(`BIN:${url}`),
+      sha256: () => 'abc123',
+      writeExecutable: (p, b) => written.push({ path: p, bytes: b.toString() }),
+    });
+    await expect(resolveMutagen(deps, ONE_ENTRY)).resolves.toBe(cached);
+    expect(written).toEqual([{ path: cached, bytes: 'BIN:https://dl.example/mutagen-darwin-arm64' }]);
+  });
+
+  it('rejects when the downloaded checksum does not match', async () => {
+    const deps = baseDeps({
+      which: () => null,
+      bundledPath: () => null,
+      fileExists: () => false,
+      download: async () => Buffer.from('tampered'),
+      sha256: () => 'deadbeef',
+    });
+    await expect(resolveMutagen(deps, ONE_ENTRY)).rejects.toThrow(/checksum/i);
+  });
+
+  it('rejects with an actionable message when no manifest entry matches the os-arch', async () => {
+    const deps = baseDeps({ platform: 'linux', arch: 'arm64', which: () => null, bundledPath: () => null });
+    await expect(resolveMutagen(deps, ONE_ENTRY)).rejects.toThrow(/no mutagen build for linux-arm64/i);
+  });
+});
