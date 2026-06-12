@@ -1,7 +1,8 @@
 {
-  "darwin-arm64": { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_darwin_arm64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
-  "darwin-x64":   { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_darwin_amd64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
-  "linux-x64":    { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_linux_amd64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
-  "linux-arm64":  { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_linux_arm64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
-  "win32-x64":    { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_windows_amd64_v0.18.1.zip", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen.exe" }
+  "darwin-arm64": { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_darwin_arm64_v0.18.1.tar.gz", "sha256": "6f810416d9e5fc4fd5e18431146f8b3c5a2056ba5a24f76c1e66da86eb3257e2", "archiveBinaryPath": "mutagen" },
+  "darwin-x64":   { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_darwin_amd64_v0.18.1.tar.gz", "sha256": "7d06f7d8fcfe90bc7e55cc834a2f2f20c2e0af9ea9bc35911fc4341ad56a9bbf", "archiveBinaryPath": "mutagen" },
+  "linux-x64":    { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_linux_amd64_v0.18.1.tar.gz", "sha256": "7735286c778cc438418209f24d03a64f3a0151c8065ef0fe079cfaf093af6f8f", "archiveBinaryPath": "mutagen" },
+  "linux-arm64":  { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_linux_arm64_v0.18.1.tar.gz", "sha256": "bcba735aebf8cbc11da9b3742118a665599ac697fa06bc5751cac8dcd540db8a", "archiveBinaryPath": "mutagen" },
+  "win32-x64":    { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_windows_amd64_v0.18.1.zip", "sha256": "76f8223d5e6b607efdd9516473669ae5492e4f142887352d59bc6934d1f07a2d", "archiveBinaryPath": "mutagen.exe" },
+  "win32-arm64":  { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_windows_arm64_v0.18.1.zip", "sha256": "d0dd95b60f6077f0c02baee3128f754c1507bc4abfa63ae0bcae12e01a3d45f1", "archiveBinaryPath": "mutagen.exe" }
 }
