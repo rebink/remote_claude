@@ -36,6 +36,8 @@ export interface ResolveMutagenDeps {
   sha256(buf: Buffer): string;
   /** Write `buf` to `p` (creating dirs) with executable permission. */
   writeExecutable(p: string, buf: Buffer): void;
+  /** Extract the named binary from a downloaded archive (pure transform, no I/O). */
+  extractArchive(archiveBytes: Buffer, archiveBinaryPath: string, format: 'tar.gz' | 'zip'): Buffer;
 }
 
 /** Client-side OS seam (Core spec, Pillar 4). Resolver is its first method. */

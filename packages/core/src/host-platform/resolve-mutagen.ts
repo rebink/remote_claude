@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import type { ResolveMutagenDeps, MutagenManifest, OsArch } from './types.ts';
+import { archiveFormat } from './archive.ts';
 
 export function mutagenBinName(platform: NodeJS.Platform): string {
   return platform === 'win32' ? 'mutagen.exe' : 'mutagen';
@@ -36,18 +37,14 @@ export async function resolveMutagen(
     throw new Error(`no mutagen build for ${key ?? `${deps.platform}-${deps.arch}`}`);
   }
 
-  if (entry.archiveBinaryPath) {
-    throw new Error(
-      `mutagen archive extraction not yet implemented for ${key}; ` +
-        `install mutagen on PATH or provide a bundled binary`,
-    );
-  }
-
   const bytes = await deps.download(entry.url);
   const got = deps.sha256(bytes);
   if (got !== entry.sha256) {
     throw new Error(`mutagen checksum mismatch: expected ${entry.sha256}, got ${got}`);
   }
-  deps.writeExecutable(cached, bytes);
+  const fmt = archiveFormat(entry.url);
+  const binary =
+    fmt === 'raw' ? bytes : deps.extractArchive(bytes, entry.archiveBinaryPath ?? '', fmt);
+  deps.writeExecutable(cached, binary);
   return cached;
 }
