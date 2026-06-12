@@ -1,0 +1,7 @@
+{
+  "darwin-arm64": { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_darwin_arm64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
+  "darwin-x64":   { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_darwin_amd64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
+  "linux-x64":    { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_linux_amd64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
+  "linux-arm64":  { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_linux_arm64_v0.18.1.tar.gz", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen" },
+  "win32-x64":    { "url": "https://github.com/mutagen-io/mutagen/releases/download/v0.18.1/mutagen_windows_amd64_v0.18.1.zip", "sha256": "FILL_FROM_RELEASE", "archiveBinaryPath": "mutagen.exe" }
+}
