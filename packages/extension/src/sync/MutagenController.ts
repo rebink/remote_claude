@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { spawnSync } from 'node:child_process';
+import { createNodeHostPlatform } from '@patchwire/core';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -67,11 +68,15 @@ export class MutagenController {
   private last: MutagenStatus = { kind: 'no_session' };
   private timer?: NodeJS.Timeout;
   private terminated = false;
+  private mutagenBin: string;
 
   constructor(
     private readonly target: MutagenTarget,
     private readonly output: vscode.OutputChannel,
-  ) {}
+    mutagenBin = 'mutagen',
+  ) {
+    this.mutagenBin = mutagenBin;
+  }
 
   /**
    * Stable session name. Mutagen names must match `[a-z0-9](-?[a-z0-9])*` —
@@ -139,10 +144,13 @@ export class MutagenController {
     chmodSync(cfgPath, 0o600);
   }
 
-  /** True if `mutagen` is on PATH. */
-  static isInstalled(): boolean {
-    const r = spawnSync('mutagen', ['version'], { encoding: 'utf8', timeout: 5000 });
-    return r.status === 0;
+  /** Resolve the mutagen binary (PATH → bundled → download) or null if unavailable. */
+  static async resolveBinary(): Promise<string | null> {
+    try {
+      return await createNodeHostPlatform().resolveMutagen();
+    } catch {
+      return null;
+    }
   }
 
   /** True if a session with our name currently exists in the mutagen daemon. */
@@ -150,7 +158,7 @@ export class MutagenController {
     // `mutagen sync list <name>` returns the matching session if found, or
     // exits non-zero with "did not match any sessions" if not. Template uses
     // `range` because list returns an array even when filtered to one name.
-    const r = spawnSync('mutagen', ['sync', 'list', this.sessionName, '--template', '{{ range . }}{{ .Name }}{{ end }}'], {
+    const r = spawnSync(this.mutagenBin,['sync', 'list', this.sessionName, '--template', '{{ range . }}{{ .Name }}{{ end }}'], {
       encoding: 'utf8',
       timeout: 10000,
     });
@@ -159,16 +167,11 @@ export class MutagenController {
 
   /** Create the bidirectional sync session if it doesn't exist yet. */
   async ensureSession(): Promise<{ ok: true } | { ok: false; error: string }> {
-    if (!MutagenController.isInstalled()) {
-      this.emit({ kind: 'not_installed' });
-      return { ok: false, error: 'mutagen not installed' };
-    }
-
     if (this.sessionExists()) {
       // Check the existing session's status. If it's healthy (watching/syncing)
       // reattach. If it's in an error state (failed SSH, bad config, etc.)
       // terminate + recreate so we don't perpetuate the bad state.
-      const r = spawnSync('mutagen', ['sync', 'list', this.sessionName, '--template', '{{ range . }}{{ .Status }}{{ end }}'], {
+      const r = spawnSync(this.mutagenBin,['sync', 'list', this.sessionName, '--template', '{{ range . }}{{ .Status }}{{ end }}'], {
         encoding: 'utf8',
         timeout: 10000,
         env: this.mutagenEnv(),
@@ -181,7 +184,7 @@ export class MutagenController {
         return { ok: true };
       }
       this.output.appendLine(`[mutagen] existing session is in bad state (${status}); terminating + recreating`);
-      spawnSync('mutagen', ['sync', 'terminate', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
+      spawnSync(this.mutagenBin,['sync', 'terminate', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
     }
 
     this.emit({ kind: 'connecting' });
@@ -206,7 +209,7 @@ export class MutagenController {
     const env = { ...process.env };
 
     this.output.appendLine(`[mutagen] creating session "${this.sessionName}" → ${beta}`);
-    const r = spawnSync('mutagen', args, { encoding: 'utf8', timeout: 60000, env });
+    const r = spawnSync(this.mutagenBin,args, { encoding: 'utf8', timeout: 60000, env });
     if (r.status !== 0) {
       const err = (r.stderr || r.stdout || `exit ${r.status}`).trim();
       this.output.appendLine(`[mutagen] create failed: ${err}`);
@@ -225,17 +228,17 @@ export class MutagenController {
   }
 
   async flush(): Promise<void> {
-    spawnSync('mutagen', ['sync', 'flush', this.sessionName], { encoding: 'utf8', timeout: 60000, env: this.mutagenEnv() });
+    spawnSync(this.mutagenBin,['sync', 'flush', this.sessionName], { encoding: 'utf8', timeout: 60000, env: this.mutagenEnv() });
     this.poll();
   }
 
   pause(): void {
-    spawnSync('mutagen', ['sync', 'pause', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
+    spawnSync(this.mutagenBin,['sync', 'pause', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
     this.poll();
   }
 
   resume(): void {
-    spawnSync('mutagen', ['sync', 'resume', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
+    spawnSync(this.mutagenBin,['sync', 'resume', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
     this.poll();
   }
 
@@ -243,7 +246,7 @@ export class MutagenController {
   async terminate(): Promise<void> {
     this.terminated = true;
     if (this.timer) clearInterval(this.timer);
-    spawnSync('mutagen', ['sync', 'terminate', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
+    spawnSync(this.mutagenBin,['sync', 'terminate', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
     this.statusEmitter.dispose();
   }
 
@@ -268,7 +271,7 @@ export class MutagenController {
     // Template: status word + paused flag + conflict count. Wrapped in `range`
     // because `mutagen sync list` returns an array (even for a single session).
     const tpl = `{{ range . }}{{ .Status }}|{{ .Paused }}|{{ len .Conflicts }}{{ end }}`;
-    const r = spawnSync('mutagen', ['sync', 'list', this.sessionName, '--template', tpl], {
+    const r = spawnSync(this.mutagenBin,['sync', 'list', this.sessionName, '--template', tpl], {
       encoding: 'utf8',
       timeout: 10000,
     });
@@ -290,7 +293,7 @@ export class MutagenController {
     if (conflictCount > 0) {
       // Get conflict file paths via a more specific template
       const cr = spawnSync(
-        'mutagen',
+        this.mutagenBin,
         ['sync', 'list', this.sessionName, '--long'],
         { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() },
       );

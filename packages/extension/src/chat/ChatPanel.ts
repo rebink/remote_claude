@@ -78,7 +78,8 @@ export class ChatPanel implements vscode.WebviewViewProvider {
     const ws = this.workspaceFolder;
     const cfg = this.loadConfig();
     if (!cfg || !ws) return;
-    if (!MutagenController.isInstalled()) {
+    const mutagenBin = await MutagenController.resolveBinary();
+    if (!mutagenBin) {
       this.syncStatus = { kind: 'not_installed' };
       this.postState();
       return;
@@ -94,6 +95,7 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         ignore: cfg.syncExclude,
       },
       this.deps.output,
+      mutagenBin,
     );
     this.mutagen.onStatusChange((s) => {
       this.syncStatus = s;

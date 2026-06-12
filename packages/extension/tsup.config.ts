@@ -17,7 +17,7 @@ export default defineConfig([
     // dependency throws "Cannot find module" at activation. tsup externalizes
     // package.json dependencies by default, so force-inline all non-vscode imports.
     external: ['vscode'],
-    noExternal: ['yaml'],
+    noExternal: ['yaml', '@patchwire/core', '@patchwire/protocol'],
     outDir: 'dist',
     outExtension: () => ({ js: '.cjs' }),
     banner: {},
