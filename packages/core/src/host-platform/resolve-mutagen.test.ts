@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { join } from 'node:path';
 import { resolveMutagen, mutagenBinName } from './resolve-mutagen.ts';
 import type { ResolveMutagenDeps, MutagenManifest } from './types.ts';
 
@@ -31,5 +32,24 @@ describe('resolveMutagen — PATH tier', () => {
   it('returns the PATH hit when mutagen is on PATH', async () => {
     const deps = baseDeps({ which: (c) => (c === 'mutagen' ? '/usr/local/bin/mutagen' : null) });
     await expect(resolveMutagen(deps, EMPTY_MANIFEST)).resolves.toBe('/usr/local/bin/mutagen');
+  });
+});
+
+describe('resolveMutagen — bundled tier', () => {
+  it('returns the bundled path when PATH misses but a bundle exists', async () => {
+    const deps = baseDeps({ which: () => null, bundledPath: () => '/app/bin/mutagen' });
+    await expect(resolveMutagen(deps, EMPTY_MANIFEST)).resolves.toBe('/app/bin/mutagen');
+  });
+});
+
+describe('resolveMutagen — cached tier', () => {
+  it('returns the cached binary in ~/.patchwire/bin when it already exists', async () => {
+    const cached = join('/home/u', '.patchwire', 'bin', 'mutagen');
+    const deps = baseDeps({
+      which: () => null,
+      bundledPath: () => null,
+      fileExists: (p) => p === cached,
+    });
+    await expect(resolveMutagen(deps, EMPTY_MANIFEST)).resolves.toBe(cached);
   });
 });
