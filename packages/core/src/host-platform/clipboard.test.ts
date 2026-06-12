@@ -18,3 +18,18 @@ describe('clipboardImageCommands', () => {
     expect(c.every((x) => x.writesToStdout)).toBe(true);
   });
 });
+
+describe('clipboardImageCommands — injection hardening', () => {
+  it('escapes a double-quote in the darwin osascript path', () => {
+    const c = clipboardImageCommands('darwin', '/tmp/a"b.png');
+    const script = c[1]!.args[1]!;
+    expect(script).toContain('POSIX file "/tmp/a\\"b.png"');
+  });
+  it('escapes a single-quote in the win32 powershell path', () => {
+    const c = clipboardImageCommands('win32', "C:\\a'b.png");
+    expect(c[0]!.args[2]).toContain("'C:\\a''b.png'");
+  });
+  it('rejects a path containing a newline', () => {
+    expect(() => clipboardImageCommands('darwin', '/tmp/x\n.png')).toThrow(/newline/i);
+  });
+});
