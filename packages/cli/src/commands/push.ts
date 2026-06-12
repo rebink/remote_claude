@@ -6,6 +6,7 @@ import { loadConfig, type Config } from '../lib/config.ts';
 import { stageAttachment, remoteAttachmentPath, pruneInbox, INBOX_DIR } from '../lib/attachments.ts';
 import { runSsh, quoteForShell } from '../lib/ssh-runner.ts';
 import { log } from '../lib/log.ts';
+import { assertRsyncAvailable } from '../lib/rsync-preflight.ts';
 
 export interface PushPlan {
   remotePath: string;
@@ -65,6 +66,7 @@ export async function runPush(cwd: string, files: string[], opts: PushOpts = {})
 
   const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
   const results: string[] = [];
+  if (!opts.stageOnly) assertRsyncAvailable();
   try {
     for (const src of sources) {
       const rel = stageAttachment(resolve(cwd, src), cwd);

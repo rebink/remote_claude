@@ -6,6 +6,7 @@ import * as rsync from '../lib/rsync.ts';
 import { runSsh } from '../lib/ssh-runner.ts';
 import { log } from '../lib/log.ts';
 import { preSyncSecretGate } from '../lib/secret-scan.ts';
+import { assertRsyncAvailable } from '../lib/rsync-preflight.ts';
 import type { Config } from '../lib/config.ts';
 
 export interface SyncOpts {
@@ -54,6 +55,8 @@ export async function runSync(cwd: string, opts: SyncOpts = {}): Promise<void> {
     process.exitCode = 1;
     return;
   }
+
+  assertRsyncAvailable();
 
   if (opts.json) {
     const emit = (e: unknown): void => {
