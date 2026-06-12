@@ -43,4 +43,10 @@ export interface ResolveMutagenDeps {
 /** Client-side OS seam (Core spec, Pillar 4). Resolver is its first method. */
 export interface HostPlatform {
   resolveMutagen(): Promise<string>;
+  /** Normalize a patch's line endings to LF (CRLF-safe round-trips on Windows). */
+  normalizePatch(patch: string): string;
+  /** Absolute path to an external tool (e.g. 'tailscale'), or null if not found. */
+  discoverTool(name: string): Promise<string | null>;
+  /** Capture a clipboard image to a temp PNG and return its path, or null if none/unsupported. */
+  captureClipboardImage(): Promise<string | null>;
 }
