@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { detectServerPlatform } from '../../../src/agent/server-platform/detect.ts';
 import type { DetectDeps } from '../../../src/agent/server-platform/types.ts';
+import { detectNodeServerPlatform, nodeDetectDeps } from '../../../src/agent/server-platform/node-detect.ts';
 
 function deps(platform: NodeJS.Platform, arch: string, present: string[]): DetectDeps {
   const set = new Set(present);
@@ -57,5 +58,19 @@ describe('detectServerPlatform — Windows', () => {
     expect(d.capabilities.packageManager.type).toBe('winget');
     expect(d.capabilities.egress.type).toBe('none'); // WFP impl deferred to S3
     expect(d.capabilities.filesystemIsolation.type).toBe('none');
+  });
+});
+
+describe('node detection adapter', () => {
+  it('reports this host with consistent os/arch and a full capability set', () => {
+    const dd = nodeDetectDeps();
+    expect(dd.arch).toBe(process.arch);
+    const d = detectNodeServerPlatform();
+    expect(['macos', 'linux', 'windows']).toContain(d.os);
+    expect(d.arch).toBe(process.arch);
+    for (const cap of Object.values(d.capabilities)) {
+      expect(typeof cap.type).toBe('string');
+      expect(typeof cap.requiresElevation).toBe('boolean');
+    }
   });
 });
