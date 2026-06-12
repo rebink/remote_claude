@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, delimiter, join } from 'node:path';
 import type { ResolveMutagenDeps } from './types.ts';
+import { extractMutagenBinary } from './archive.ts';
 
 /** Look up `cmd` on PATH without shelling out to which/where. */
 function whichOnPath(cmd: string): string | null {
@@ -40,5 +41,6 @@ export function nodeResolveMutagenDeps(opts: {
       mkdirSync(dirname(p), { recursive: true });
       writeFileSync(p, new Uint8Array(buf), { mode: 0o755 });
     },
+    extractArchive: (bytes, path, format) => extractMutagenBinary(bytes, path, format),
   };
 }
