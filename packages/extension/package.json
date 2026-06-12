@@ -110,6 +110,7 @@
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
+    "@patchwire/core": "workspace:*",
     "@patchwire/protocol": "workspace:*",
     "yaml": "^2.5.1"
   },
