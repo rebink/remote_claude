@@ -16,6 +16,7 @@ function baseDeps(over: Partial<ResolveMutagenDeps> = {}): ResolveMutagenDeps {
     download: async () => Buffer.from(''),
     sha256: () => '',
     writeExecutable: () => {},
+    extractArchive: () => Buffer.from(''),
     ...over,
   };
 }
@@ -91,20 +92,29 @@ describe('resolveMutagen — download tier', () => {
   });
 });
 
-describe('resolveMutagen — archive entries are not yet supported', () => {
-  it('rejects (without downloading) when the matched entry requires archive extraction', async () => {
+describe('resolveMutagen — archive entries are extracted', () => {
+  it('downloads, verifies, extracts via deps.extractArchive, and writes the extracted binary', async () => {
+    const cached = join('/home/u', '.patchwire', 'bin', 'mutagen');
     const ARCHIVE_ENTRY: MutagenManifest = {
       'darwin-arm64': { url: 'https://dl.example/mutagen.tar.gz', sha256: 'abc123', archiveBinaryPath: 'mutagen' },
     };
-    let downloaded = false;
+    const written: { path: string; bytes: string }[] = [];
+    let extractArgs: { bytes: string; path: string; fmt: string } | undefined;
     const deps = baseDeps({
       which: () => null,
       bundledPath: () => null,
       fileExists: () => false,
-      download: async () => { downloaded = true; return Buffer.from('archive'); },
+      download: async () => Buffer.from('ARCHIVE-BYTES'),
+      sha256: () => 'abc123',
+      extractArchive: (bytes, path, fmt) => {
+        extractArgs = { bytes: bytes.toString(), path, fmt };
+        return Buffer.from('EXTRACTED-BINARY');
+      },
+      writeExecutable: (p, b) => written.push({ path: p, bytes: b.toString() }),
     });
-    await expect(resolveMutagen(deps, ARCHIVE_ENTRY)).rejects.toThrow(/archive extraction not yet implemented/i);
-    expect(downloaded).toBe(false);
+    await expect(resolveMutagen(deps, ARCHIVE_ENTRY)).resolves.toBe(cached);
+    expect(extractArgs).toEqual({ bytes: 'ARCHIVE-BYTES', path: 'mutagen', fmt: 'tar.gz' });
+    expect(written).toEqual([{ path: cached, bytes: 'EXTRACTED-BINARY' }]);
   });
 });
 
