@@ -55,11 +55,12 @@ interface ServerPlatform {
   readonly pathStyle: 'posix' | 'win';
 
   readonly capabilities: {
-    egress: CapabilityDescriptor;        // type: 'seatbelt'|'nftables'|'firewall'|'none'
-    secrets: CapabilityDescriptor;       // type: 'keychain'|'file'|'libsecret'|'dpapi'
-    service: CapabilityDescriptor;       // type: 'launchd'|'systemd-user'|'systemd-system'|'windows-service'
-    shell: CapabilityDescriptor;         // type: 'zsh'|'bash'|'pwsh'
-    packageManager: CapabilityDescriptor;// type: 'brew'|'apt'|'winget'|'manual'
+    egress: CapabilityDescriptor;             // type: 'seatbelt'|'nftables'|'firewall'|'none'
+    filesystemIsolation: CapabilityDescriptor;// type: 'seatbelt'|'namespaces'|'none' — parallel to egress; enforces projection (see Projection spec)
+    secrets: CapabilityDescriptor;            // type: 'keychain'|'file'|'libsecret'|'dpapi'
+    service: CapabilityDescriptor;            // type: 'launchd'|'systemd-user'|'systemd-system'|'windows-service'
+    shell: CapabilityDescriptor;              // type: 'zsh'|'bash'|'pwsh'
+    packageManager: CapabilityDescriptor;     // type: 'brew'|'apt'|'winget'|'manual'
   };
 
   // Behaviors (each returns typed results; never throws raw):
