@@ -29,6 +29,7 @@ function readTar(tar: Uint8Array): Map<string, Uint8Array> {
     if (header.every((byte) => byte === 0)) break;
     const name = readField(header, 0, 100);
     const size = parseInt(readField(header, 124, 12).trim() || '0', 8);
+    if (!Number.isFinite(size) || size < 0) break;
     off += 512;
     if (name) files.set(name, tar.subarray(off, off + size));
     off += Math.ceil(size / 512) * 512;
@@ -55,6 +56,9 @@ export function extractMutagenBinary(
       : new Map<string, Uint8Array>(Object.entries(unzipSync(bytes)));
 
   const exact = files.get(archiveBinaryPath);
+  // Prefer an exact path match; fall back to basename only when no exact entry exists.
+  // Assumes the target basename is unique among archive entries (true for Mutagen's
+  // release archives, which expose a single `mutagen`/`mutagen.exe` binary).
   const found =
     exact ??
     [...files.entries()].find(([name]) => basename(name) === basename(archiveBinaryPath))?.[1];

@@ -43,6 +43,9 @@ export async function resolveMutagen(
     throw new Error(`mutagen checksum mismatch: expected ${entry.sha256}, got ${got}`);
   }
   const fmt = archiveFormat(entry.url);
+  if (fmt !== 'raw' && !entry.archiveBinaryPath) {
+    throw new Error(`manifest entry for ${key} has format ${fmt} but no archiveBinaryPath`);
+  }
   const binary =
     fmt === 'raw' ? bytes : deps.extractArchive(bytes, entry.archiveBinaryPath ?? '', fmt);
   deps.writeExecutable(cached, binary);
