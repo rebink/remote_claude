@@ -36,6 +36,13 @@ export async function resolveMutagen(
     throw new Error(`no mutagen build for ${key ?? `${deps.platform}-${deps.arch}`}`);
   }
 
+  if (entry.archiveBinaryPath) {
+    throw new Error(
+      `mutagen archive extraction not yet implemented for ${key}; ` +
+        `install mutagen on PATH or provide a bundled binary`,
+    );
+  }
+
   const bytes = await deps.download(entry.url);
   const got = deps.sha256(bytes);
   if (got !== entry.sha256) {

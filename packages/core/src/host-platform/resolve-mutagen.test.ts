@@ -90,3 +90,27 @@ describe('resolveMutagen — download tier', () => {
     await expect(resolveMutagen(deps, ONE_ENTRY)).rejects.toThrow(/no mutagen build for linux-arm64/i);
   });
 });
+
+describe('resolveMutagen — archive entries are not yet supported', () => {
+  it('rejects (without downloading) when the matched entry requires archive extraction', async () => {
+    const ARCHIVE_ENTRY: MutagenManifest = {
+      'darwin-arm64': { url: 'https://dl.example/mutagen.tar.gz', sha256: 'abc123', archiveBinaryPath: 'mutagen' },
+    };
+    let downloaded = false;
+    const deps = baseDeps({
+      which: () => null,
+      bundledPath: () => null,
+      fileExists: () => false,
+      download: async () => { downloaded = true; return Buffer.from('archive'); },
+    });
+    await expect(resolveMutagen(deps, ARCHIVE_ENTRY)).rejects.toThrow(/archive extraction not yet implemented/i);
+    expect(downloaded).toBe(false);
+  });
+});
+
+describe('resolveMutagen — unsupported OS (no os-arch key)', () => {
+  it('rejects with an actionable message on a platform with no manifest key', async () => {
+    const deps = baseDeps({ platform: 'freebsd' as NodeJS.Platform, arch: 'x64', which: () => null, bundledPath: () => null });
+    await expect(resolveMutagen(deps, ONE_ENTRY)).rejects.toThrow(/no mutagen build for freebsd-x64/i);
+  });
+});
