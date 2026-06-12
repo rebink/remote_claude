@@ -35,3 +35,14 @@ devbridge-agent-*/
 .qodo/
 .playwright-mcp/
 .vercel
+
+# Personal Claude Code state + skill lockfile
+.claude/
+skills-lock.json
+
+# Local research scratch (kept on disk, intentionally not committed)
+docs/build-vs-buy-and-remote-flutter.md
+docs/marketing-positioning-monetization.md
+
+# Root-level Vite SSR transform caches (random-nanoid dirs leaked into repo root)
+/*/ssr/
