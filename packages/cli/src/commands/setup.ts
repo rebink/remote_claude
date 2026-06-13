@@ -11,6 +11,9 @@ import { log } from '../lib/log.ts';
 import * as tailscale from '../lib/tailscale.ts';
 import { tailscaleStatus, type TailscalePeer } from '../lib/tailscale.ts';
 import { buildAgentEnv, WRITE_AGENT_ENV_CMD, AGENT_INSTALL_CMD } from '../agent/provision/primitives.ts';
+import { runVerify } from '../agent/provision/verify.ts';
+import type { HealthReport } from '../agent/provision/provision-remote.ts';
+import type { RemoteConn } from '../agent/provision/remote-detect.ts';
 
 interface SetupAnswers {
   project: string;
@@ -323,7 +326,7 @@ function unsafeProvisionField(input: ProvisionAgentInput): string | null {
   return null;
 }
 
-export async function runProvisionAgent(input: ProvisionAgentInput): Promise<void> {
+export async function runProvisionAgent(input: ProvisionAgentInput, deps: { verify?: (conn: RemoteConn) => Promise<HealthReport> } = {}): Promise<void> {
   const bad = unsafeProvisionField(input);
   if (bad) {
     process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: `Refusing to provision: unsafe ${bad}.` }));
@@ -366,8 +369,10 @@ export async function runProvisionAgent(input: ProvisionAgentInput): Promise<voi
   }
 
   writeLocalToken(input.token);
-  const healthy = await pollAgentHealth(input.host, input.agentPort);
-  process.stdout.write(JSON.stringify(healthy ? { ok: true, healthy: true } : { ok: false, code: 'unhealthy', healthy: false }));
+  const conn: RemoteConn = { host: input.host, user: input.user, port: input.port, keyPath: input.keyPath };
+  const verify = deps.verify ?? ((c: RemoteConn) => runVerify(c, { agentHealth: async () => ({ ok: await pollAgentHealth(input.host, input.agentPort) }) }));
+  const health = await verify(conn);
+  process.stdout.write(JSON.stringify(health.agent === 'healthy' ? { ok: true, healthy: true, health } : { ok: false, code: 'unhealthy', healthy: false, health }));
 }
 
 /**

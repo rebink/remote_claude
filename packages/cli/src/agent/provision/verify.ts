@@ -11,6 +11,30 @@ export interface VerifyDeps {
 }
 
 /**
+ * Core verify logic: tailnet reachability + agent /health.
+ * Never throws — any failure is captured into the report.
+ */
+export async function runVerify(conn: RemoteConn, deps: VerifyDeps): Promise<HealthReport> {
+  const runner = deps.runner ?? defaultRemoteRunner(conn);
+  let tailnet = false;
+  try {
+    const ts = await runner('tailscale status >/dev/null 2>&1');
+    tailnet = ts.code === 0;
+  } catch { /* tailnet probe failed — non-fatal */ }
+  let agent: HealthReport['agent'] = 'unknown';
+  let detail: string | undefined;
+  try {
+    const h = await deps.agentHealth();
+    agent = h.ok ? 'healthy' : 'unhealthy';
+    detail = h.detail;
+  } catch (err) {
+    agent = 'unhealthy';
+    detail = err instanceof Error ? err.message : String(err);
+  }
+  return { tailnet, agent, detail };
+}
+
+/**
  * Build the orchestrator's non-fatal `verify`: tailnet reachability + agent /health.
  * Never throws — any failure is captured into the report.
  */
@@ -18,19 +42,5 @@ export function makeVerify(
   conn: RemoteConn,
   deps: VerifyDeps,
 ): (conn: RemoteConn, detected: DetectedServerPlatform) => Promise<HealthReport> {
-  const runner = deps.runner ?? defaultRemoteRunner(conn);
-  return async () => {
-    const ts = await runner('tailscale status >/dev/null 2>&1');
-    let agent: HealthReport['agent'] = 'unknown';
-    let detail: string | undefined;
-    try {
-      const h = await deps.agentHealth();
-      agent = h.ok ? 'healthy' : 'unhealthy';
-      detail = h.detail;
-    } catch (err) {
-      agent = 'unhealthy';
-      detail = err instanceof Error ? err.message : String(err);
-    }
-    return { tailnet: ts.code === 0, agent, detail };
-  };
+  return () => runVerify(conn, deps);
 }

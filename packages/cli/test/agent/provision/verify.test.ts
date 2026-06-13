@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { makeVerify } from '../../../src/agent/provision/verify.ts';
+import { makeVerify, runVerify } from '../../../src/agent/provision/verify.ts';
 import type { DetectedServerPlatform } from '../../../src/agent/server-platform/types.ts';
 
 const CONN = { host: 'h', user: 'u', port: 22, keyPath: '/k' };
@@ -42,5 +42,33 @@ describe('makeVerify', () => {
     const r = await verify(CONN, DETECTED);
     expect(r.agent).toBe('unhealthy');
     expect(r.detail).toMatch(/connection refused/);
+  });
+});
+
+describe('runVerify', () => {
+  it('tailnet up + agent healthy → { tailnet: true, agent: "healthy", detail: undefined }', async () => {
+    const r = await runVerify(CONN, {
+      runner: async () => ({ stdout: '', stderr: '', code: 0 }),
+      agentHealth: async () => ({ ok: true }),
+    });
+    expect(r).toEqual({ tailnet: true, agent: 'healthy', detail: undefined });
+  });
+
+  it('runner that throws → tailnet falls back to false, agent still evaluated', async () => {
+    const r = await runVerify(CONN, {
+      runner: async () => { throw new Error('SSH timeout'); },
+      agentHealth: async () => ({ ok: true }),
+    });
+    expect(r.tailnet).toBe(false);
+    expect(r.agent).toBe('healthy');
+  });
+
+  it('agentHealth ok:false with detail → agent unhealthy, detail preserved', async () => {
+    const r = await runVerify(CONN, {
+      runner: async () => ({ stdout: '', stderr: '', code: 0 }),
+      agentHealth: async () => ({ ok: false, detail: 'no claude' }),
+    });
+    expect(r.agent).toBe('unhealthy');
+    expect(r.detail).toBe('no claude');
   });
 });
