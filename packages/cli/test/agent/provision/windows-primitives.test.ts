@@ -6,6 +6,9 @@ import {
   buildSchtasksCreate,
   buildSchtasksDelete,
   WINDOWS_TASK_NAME,
+  buildWindowsBinaryInstallPs,
+  WINDOWS_BIN_VERSION_CMD,
+  REMOVE_WINDOWS_BIN_PS,
 } from '../../../src/agent/provision/windows-primitives.ts';
 
 describe('WRITE_AGENT_ENV_PS', () => {
@@ -81,5 +84,47 @@ describe('buildSchtasksDelete', () => {
   });
   it('contains /TN PatchwireAgent', () => {
     expect(cmd).toContain(`/TN ${WINDOWS_TASK_NAME}`);
+  });
+});
+
+describe('buildWindowsBinaryInstallPs', () => {
+  const SHA = 'a'.repeat(64);
+  const ps = buildWindowsBinaryInstallPs(SHA);
+
+  it('contains [Convert]::FromBase64String', () => {
+    expect(ps).toContain('[Convert]::FromBase64String');
+  });
+  it('contains [IO.File]::WriteAllBytes', () => {
+    expect(ps).toContain('[IO.File]::WriteAllBytes');
+  });
+  it('contains Get-FileHash', () => {
+    expect(ps).toContain('Get-FileHash');
+  });
+  it('embeds the sha256 digest', () => {
+    expect(ps).toContain(`'${SHA}'`);
+  });
+  it('signals success with PW_BIN_OK', () => {
+    expect(ps).toContain('PW_BIN_OK');
+  });
+  it('throws on invalid sha256', () => {
+    expect(() => buildWindowsBinaryInstallPs('xyz')).toThrow(/invalid artifact sha256/);
+  });
+});
+
+describe('WINDOWS_BIN_VERSION_CMD', () => {
+  it('contains --version', () => {
+    expect(WINDOWS_BIN_VERSION_CMD).toContain('--version');
+  });
+  it('references patchwire-agent.exe', () => {
+    expect(WINDOWS_BIN_VERSION_CMD).toContain('patchwire-agent.exe');
+  });
+});
+
+describe('REMOVE_WINDOWS_BIN_PS', () => {
+  it('contains Remove-Item', () => {
+    expect(REMOVE_WINDOWS_BIN_PS).toContain('Remove-Item');
+  });
+  it('references patchwire-agent.exe', () => {
+    expect(REMOVE_WINDOWS_BIN_PS).toContain('patchwire-agent.exe');
   });
 });

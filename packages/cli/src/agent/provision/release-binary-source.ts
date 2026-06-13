@@ -11,7 +11,7 @@ export type FetchLike = (url: string) => Promise<{
 }>;
 
 /** detected.os → release asset OS token (matches scripts/build-agent-binaries.mjs). */
-const OS_TOKEN: Record<string, string> = { macos: 'darwin', linux: 'linux' };
+const OS_TOKEN: Record<string, string> = { macos: 'darwin', linux: 'linux', windows: 'windows' };
 
 const REPO = 'rebink/remote_claude';
 
@@ -23,7 +23,8 @@ const REPO = 'rebink/remote_claude';
 export function assetName(os: string, arch: string): string {
   const token = OS_TOKEN[os];
   if (!token) throw new Error(`no standalone agent binary for os "${os}"`);
-  return `patchwire-agent-${token}-${arch}`;
+  const base = `patchwire-agent-${token}-${arch}`;
+  return os === 'windows' ? `${base}.exe` : base;
 }
 
 export interface ReleaseBinarySourceOpts {

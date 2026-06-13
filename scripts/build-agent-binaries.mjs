@@ -14,10 +14,12 @@ const { version } = JSON.parse(readFileSync(join(root, 'packages/cli/package.jso
 
 /** @type {Array<{ target: string; asset: string; key: string }>} */
 const targets = [
-  { target: 'bun-darwin-x64',  asset: 'patchwire-agent-darwin-x64',  key: 'darwin-x64'  },
-  { target: 'bun-darwin-arm64', asset: 'patchwire-agent-darwin-arm64', key: 'darwin-arm64' },
-  { target: 'bun-linux-x64',   asset: 'patchwire-agent-linux-x64',   key: 'linux-x64'   },
-  { target: 'bun-linux-arm64',  asset: 'patchwire-agent-linux-arm64',  key: 'linux-arm64'  },
+  { target: 'bun-darwin-x64',   asset: 'patchwire-agent-darwin-x64',        key: 'darwin-x64'  },
+  { target: 'bun-darwin-arm64',  asset: 'patchwire-agent-darwin-arm64',       key: 'darwin-arm64' },
+  { target: 'bun-linux-x64',    asset: 'patchwire-agent-linux-x64',          key: 'linux-x64'   },
+  { target: 'bun-linux-arm64',   asset: 'patchwire-agent-linux-arm64',         key: 'linux-arm64'  },
+  { target: 'bun-windows-x64',  asset: 'patchwire-agent-windows-x64.exe',    key: 'windows-x64' },
+  // bun-windows-arm64 omitted — limited Bun support for Windows ARM64; TODO when Bun adds stable support
 ];
 
 const distBin = join(root, 'dist-bin');
