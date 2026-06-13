@@ -68,7 +68,7 @@ reused for the logs view.
   │            ▼                                       │ NDJSON lines               │
   │  Rust shell (thin):                                                            │
   │    • spawn bundled CLI sidecar   • pipe stdout(NDJSON)→UI   • UI→stdin(consent)│
-  │    • read/write hosts.json (app-data dir)   • OS keychain for tokens           │
+  │    • read/write hosts.json (app-data dir)   • stronghold vault for tokens      │
   └───────────────────────────────┬───────────────────────────────────────────────┘
                                    │ spawns
                        bun-compiled `patchwire` binary (sidecar, per-OS)
@@ -85,20 +85,22 @@ reused for the logs view.
    stdout→event / stdin←consent piping, host-store + secret persistence. *Interface:* Tauri
    commands (`start_provision`, `send_consent`, `list_hosts`, `host_health`, `host_logs`,
    `uninstall_host`) + an event channel for NDJSON lines. *Depends on:* the bundled CLI binary,
-   Tauri sidecar API, OS keychain plugin.
+   Tauri sidecar API (`tauri-plugin-shell`), encrypted secret vault (`tauri-plugin-stronghold`).
 3. **Web UI** (`packages/desktop/src`). *Purpose:* render wizard/inventory/logs; collect inputs;
    show live progress; gate consent. *Interface:* Tauri IPC only. *Depends on:* `h()` helper
    (copied/shared from extension), `@patchwire/protocol` types (compile-time), CSS.
 4. **Host store** (`hosts.json` in app-data). *Purpose:* persist the fleet. *Schema:*
    `{ id, label, host, user, port, keyPath, agentPort, lastStatus, lastHealth, lastProvisionedAt }`.
-   **Secrets (agent token) are NOT stored here** — kept in the OS keychain via the Tauri secret
-   plugin, referenced by host `id`.
+   **Secrets (agent token) are NOT stored here** — kept in an encrypted **stronghold** vault
+   (`tauri-plugin-stronghold`, `vault.hold` in app-data), referenced by host `id`. (Resolved in the
+   Tauri spike: stronghold is the first-party, cross-platform encrypted store; chosen over a per-OS
+   keychain for uniformity. See `2026-06-13-tauri-spike-findings.md`.)
 
 ## 4. Data flows
 
 **Provision (wizard):** form (label, host, user, port, SSH key path, agent port) → UI calls
 `start_provision` → Rust spawns `patchwire setup --provision-remote --stream …` (token generated
-securely, stored in keychain) → NDJSON events stream over the event channel → UI renders detect →
+securely, stored in the stronghold vault) → NDJSON events stream over the event channel → UI renders detect →
 **preview (plan + elevation) with Approve/Cancel** → on Approve, UI calls `send_consent(true)` →
 Rust writes `{"consent":true}` to the CLI's stdin → step events render live → terminal `done`+`health`
 → host upserted into `hosts.json`.
@@ -156,7 +158,8 @@ until Core is extracted — a deliberate future migration, not v1).
   built (documented gap).
 - **Consent-over-stdin robustness:** define timeout behavior if the GUI never answers (CLI should
   not hang forever — pick a sane timeout → cancel).
-- **Token secret storage:** confirm the Tauri OS-keychain plugin covers mac/linux/windows; fall back
-  to an encrypted local store if a platform lacks keychain support.
+- **Token secret storage:** RESOLVED — use `tauri-plugin-stronghold` (encrypted vault, cross-platform).
+  Remaining micro-decision for the plan: the v1 vault-password strategy (app-managed key for the
+  internal MVP). See `2026-06-13-tauri-spike-findings.md`.
 - **`h()` sharing:** copy into `packages/desktop` for v1, or promote the extension's `h.ts` to a tiny
   shared package? Copy for v1 (avoid premature coupling); revisit if it drifts.
