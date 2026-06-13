@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 
 interface RunResult {
   stdout: string;
@@ -21,8 +22,19 @@ function run(cmd: string, args: string[], cwd: string, input?: string): Promise<
 }
 
 export async function isGitRepo(cwd: string): Promise<boolean> {
-  const r = await run('git', ['rev-parse', '--is-inside-work-tree'], cwd);
-  return r.code === 0 && r.stdout.trim() === 'true';
+  // The agent's project dir is git-init'ed as its own repo root. Use --show-toplevel
+  // (not --is-inside-work-tree, which also returns true for any PARENT work tree) and
+  // confirm the repo root IS this dir, so a plain dir nested under another repo is not
+  // mistaken for a repository.
+  const r = await run('git', ['rev-parse', '--show-toplevel'], cwd);
+  if (r.code !== 0) return false;
+  const top = r.stdout.trim();
+  if (!top) return false;
+  try {
+    return realpathSync(top) === realpathSync(cwd);
+  } catch {
+    return false;
+  }
 }
 
 export async function isClean(cwd: string): Promise<{ clean: boolean; status: string }> {
