@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Readable } from 'node:stream';
 
 // No real SSH, fs, or network calls needed — provision is fully injected.
 vi.mock('undici', () => ({ fetch: vi.fn(async () => ({ ok: true })) }));
@@ -16,6 +17,43 @@ const TOKEN = 'a1b2c3d4e5f60718293a4b5c'; // valid: hex-ish, ≥16 chars
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fakeProvision(impl: (conn: any, opts: any, deps: any) => Promise<any>) { return impl as any; }
+
+function fakeStream(): Readable { return new Readable({ read() {} }); }
+
+describe('defaultReadConsentLine', () => {
+  it('single chunk with newline resolves the line without trailing newline', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(600_000, s);
+    s.push('{"consent":true}\n');
+    expect(await promise).toBe('{"consent":true}');
+  });
+
+  it('partial chunks across two data events resolves the full line', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(600_000, s);
+    s.push('{"con');
+    s.push('sent":true}\n');
+    expect(await promise).toBe('{"consent":true}');
+  });
+
+  it('EOF with no newline resolves the accumulated buffer', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(600_000, s);
+    s.push('abc');
+    s.push(null); // EOF
+    expect(await promise).toBe('abc');
+  });
+
+  it('timeout resolves empty string when stream never emits', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(10, s);
+    expect(await promise).toBe('');
+  });
+});
 
 describe('setup --provision-remote', () => {
   it('json + yes → completed result emitted to stdout', async () => {

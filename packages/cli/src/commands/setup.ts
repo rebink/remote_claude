@@ -422,14 +422,14 @@ export interface ProvisionRemoteInput {
 type ProvisionFn = typeof provisionRemote;
 
 /** Read one line of stdin, resolving '' on timeout/EOF. Injected in tests. */
-function defaultReadConsentLine(timeoutMs = 600_000): Promise<string> {
+export function defaultReadConsentLine(timeoutMs = 600_000, stream: NodeJS.ReadableStream = process.stdin): Promise<string> {
   return new Promise((resolve) => {
     let buf = '';
     const cleanup = () => {
       clearTimeout(timer);
-      process.stdin.off('data', onData);
-      process.stdin.off('end', onEnd);
-      process.stdin.pause();
+      stream.off('data', onData);
+      stream.off('end', onEnd);
+      (stream as NodeJS.ReadableStream & { pause?: () => void }).pause?.();
     };
     const onData = (chunk: Buffer) => {
       buf += chunk.toString();
@@ -438,9 +438,9 @@ function defaultReadConsentLine(timeoutMs = 600_000): Promise<string> {
     };
     const onEnd = () => { cleanup(); resolve(buf); };
     const timer = setTimeout(() => { cleanup(); resolve(''); }, timeoutMs);
-    process.stdin.resume();
-    process.stdin.on('data', onData);
-    process.stdin.on('end', onEnd);
+    (stream as NodeJS.ReadableStream & { resume?: () => void }).resume?.();
+    stream.on('data', onData);
+    stream.on('end', onEnd);
   });
 }
 
