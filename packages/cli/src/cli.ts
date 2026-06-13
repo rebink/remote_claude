@@ -35,6 +35,7 @@ program
   .option('--provision-agent', 'install + start the remote agent and set the token (used by the wizard)')
   .option('--provision-remote', 'drive the structured provisioning orchestrator (detect→plan→consent→execute→verify)')
   .option('--yes', 'auto-approve the provisioning consent gate (required for --json/non-interactive)')
+  .option('--stream', 'emit NDJSON provisioning events + read {"consent":…} from stdin (for the desktop console)')
   .action(async (opts) => {
     if (opts.listPeers) {
       const { runSetupListPeers } = await import('./commands/setup.ts');
@@ -74,6 +75,7 @@ program
         token: opts.token,
         yes: !!opts.yes,
         json: !!opts.json,
+        stream: !!opts.stream,
       });
       return;
     }
