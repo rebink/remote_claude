@@ -3,9 +3,16 @@ import { quoteForShell } from '../../lib/ssh-runner.ts';
 export const AGENT_PACKAGE = '@rebink/patchwire';
 export const PNPM_VERSION = '10.26.1';
 
+/**
+ * PATH prefix prepended to every POSIX SSH command so that Homebrew (/opt/homebrew/bin),
+ * the classic /usr/local/bin prefix, and user-local binaries (~/.local/bin) are found even
+ * in a non-interactive SSH session whose default PATH is only /usr/bin:/bin:/usr/sbin:/sbin.
+ */
+export const POSIX_PATH_PREFIX = 'PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"';
+
 /** Install the agent globally via Corepack-activated pnpm (Node >=20 is the only prerequisite). */
 export const AGENT_INSTALL_CMD =
-  `corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate && pnpm add -g ${AGENT_PACKAGE}`;
+  `${POSIX_PATH_PREFIX} corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate && pnpm add -g ${AGENT_PACKAGE}`;
 
 /** Atomic, mode-600 write of stdin into ~/.patchwire/agent.env (temp → rename). */
 export const WRITE_AGENT_ENV_CMD =
