@@ -12,7 +12,7 @@ function render() {
   const nodes: (Node | string)[] = [
     h('h2', {}, 'Patchwire — provision a host'),
     field('host', '127.0.0.1'), field('user', 'admin'), field('port', '22'),
-    field('keyPath', `${'$'}HOME/.ssh/pw_validate`), field('agentPort', '7878'),
+    field('keyPath', '~/.ssh/pw_validate'), field('agentPort', '7878'),
     h('button', { events: { click: onStart } }, 'Provision'),
   ];
   if (state.phase === 'preview' && state.awaitingConsent) {
