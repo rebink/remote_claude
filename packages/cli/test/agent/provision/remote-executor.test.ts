@@ -3,6 +3,8 @@ import { remoteExecutor } from '../../../src/agent/provision/remote-executor.ts'
 import type { AgentInstaller } from '../../../src/agent/provision/installer.ts';
 import type { DetectedServerPlatform } from '../../../src/agent/server-platform/types.ts';
 import { quoteForShell } from '../../../src/lib/ssh-runner.ts';
+import { WRITE_AGENT_ENV_PS, REMOVE_AGENT_ENV_PS } from '../../../src/agent/provision/windows-primitives.ts';
+import { buildAgentEnv } from '../../../src/agent/provision/primitives.ts';
 
 const CONN = { host: 'h', user: 'u', port: 22, keyPath: '/k' };
 
@@ -91,11 +93,12 @@ describe('remoteExecutor', () => {
     expect(typeof out.compensate).toBe('function');
   });
 
-  it('bootstrap-agent fails (fatal) on a Windows remote (not yet supported)', async () => {
-    const exec = remoteExecutor(CONN, detected('windows'), { token: 't', installer: fakeInstaller([]) });
+  it('bootstrap-agent on Windows delegates to the installer', async () => {
+    const calls: string[] = [];
+    const exec = remoteExecutor(CONN, detected('windows'), { token: 't', installer: fakeInstaller(calls) });
     const out = await exec(step('bootstrap-agent'));
-    expect(out.result.ok).toBe(false);
-    expect(out.result.detail).toMatch(/Windows/);
+    expect(out.result.ok).toBe(true);
+    expect(calls).toContain('install');
   });
 
   it('an unimplemented step completes as degraded (non-fatal)', async () => {
@@ -249,6 +252,62 @@ describe('remoteExecutor — apply-egress', () => {
     const runner = async () => ({ stdout: '', stderr: 'mv failed', code: 1 });
     const exec = remoteExecutor(CONN, detectedWithEgress('macos', 'seatbelt'), { token: 't', installer: fakeInstaller([]), runner });
     const out = await exec(step('apply-egress'));
+    expect(out.result.ok).toBe(false);
+    expect(out.compensate).toBeUndefined();
+  });
+});
+
+describe('remoteExecutor — write-secret (Windows)', () => {
+  it('runs WRITE_AGENT_ENV_PS with the env payload via stdin, compensate runs REMOVE_AGENT_ENV_PS', async () => {
+    const calls: { command: string; input?: string }[] = [];
+    const runner = async (command: string, input?: string) => {
+      calls.push({ command, input });
+      return { stdout: 'PW_ENV_OK', stderr: '', code: 0 };
+    };
+    const exec = remoteExecutor(CONN, detected('windows'), {
+      token: 'TKN-WIN', host: '100.64.0.1', port: 7878, aiBin: 'claude',
+      installer: fakeInstaller([]), runner,
+    });
+    const out = await exec(step('write-secret'));
+
+    expect(out.result.ok).toBe(true);
+    const w = calls[0]!;
+    expect(w.command).toBe(WRITE_AGENT_ENV_PS);
+    const expectedPayload = buildAgentEnv({ token: 'TKN-WIN', host: '100.64.0.1', port: 7878, aiBin: 'claude' });
+    expect(w.input).toBe(expectedPayload);
+    expect(w.input).toContain('PW_AGENT_TOKEN');
+
+    await out.compensate!();
+    expect(calls[1]!.command).toBe(REMOVE_AGENT_ENV_PS);
+  });
+
+  it('reports failure (no compensate) on non-zero exit', async () => {
+    const runner = async () => ({ stdout: '', stderr: 'access denied', code: 1 });
+    const exec = remoteExecutor(CONN, detected('windows'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('write-secret'));
+    expect(out.result.ok).toBe(false);
+    expect(out.compensate).toBeUndefined();
+  });
+});
+
+describe('remoteExecutor — install-service (Windows)', () => {
+  it('runs patchwire-agent install directly (NOT bash -lc), compensate uninstalls', async () => {
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detected('windows'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('install-service'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBeFalsy();
+    expect(calls[0]).toMatch(/patchwire-agent install/);
+    expect(calls[0]).not.toMatch(/bash -lc/);
+    await out.compensate!();
+    expect(calls[1]).toMatch(/patchwire-agent uninstall/);
+  });
+
+  it('reports failure (no compensate) on non-zero exit', async () => {
+    const runner = async () => ({ stdout: '', stderr: 'schtasks failed', code: 1 });
+    const exec = remoteExecutor(CONN, detected('windows'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('install-service'));
     expect(out.result.ok).toBe(false);
     expect(out.compensate).toBeUndefined();
   });
