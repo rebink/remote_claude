@@ -51,8 +51,8 @@ describe('remoteExecutor', () => {
 
   it('an unimplemented step completes as degraded (non-fatal)', async () => {
     const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]) });
-    const out = await exec(step('apply-egress'));
-    expect(out.result).toEqual({ ok: true, degraded: true, detail: 'step "apply-egress" not yet implemented' });
+    const out = await exec(step('bind-tailnet'));
+    expect(out.result).toEqual({ ok: true, degraded: true, detail: 'step "bind-tailnet" not yet implemented' });
   });
 });
 
@@ -156,5 +156,47 @@ describe('remoteExecutor — install-service', () => {
     expect(out.result.ok).toBe(true);
     expect(out.result.degraded).toBe(true);
     expect(out.result.detail).toMatch(/linux|systemd/i);
+  });
+});
+
+function detectedWithEgress(os: DetectedServerPlatform['os'], egressType: string): DetectedServerPlatform {
+  const d = detected(os);
+  return { ...d, capabilities: { ...d.capabilities, egress: { type: egressType, requiresElevation: false } } };
+}
+
+describe('remoteExecutor — apply-egress', () => {
+  it('sets PW_EGRESS=deny idempotently in agent.env when egress is enforceable', async () => {
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detectedWithEgress('macos', 'seatbelt'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('apply-egress'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBeFalsy();
+    expect(calls[0]).toMatch(/agent\.env/);
+    expect(calls[0]).toMatch(/PW_EGRESS=deny/);
+    expect(calls[0]).toMatch(/grep -v .\^export PW_EGRESS=/); // idempotent: strips any prior line first
+    expect(out.result.detail).toMatch(/seatbelt/);
+    await out.compensate!();
+    expect(calls[1]).toMatch(/grep -v .\^export PW_EGRESS=/); // compensate removes the line
+    expect(calls[1]).not.toMatch(/PW_EGRESS=deny/);
+  });
+
+  it('degrades (warn) when egress is not enforceable — never sets deny on an unconfinable host', async () => {
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detectedWithEgress('linux', 'none'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('apply-egress'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBe(true);
+    expect(out.result.detail).toMatch(/not enforceable|without network confinement/i);
+    expect(calls.length).toBe(0); // no env edit attempted
+  });
+
+  it('apply-egress reports failure (no compensate) on non-zero exit', async () => {
+    const runner = async () => ({ stdout: '', stderr: 'mv failed', code: 1 });
+    const exec = remoteExecutor(CONN, detectedWithEgress('macos', 'seatbelt'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('apply-egress'));
+    expect(out.result.ok).toBe(false);
+    expect(out.compensate).toBeUndefined();
   });
 });
