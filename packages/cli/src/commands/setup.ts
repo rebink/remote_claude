@@ -11,9 +11,12 @@ import { log } from '../lib/log.ts';
 import * as tailscale from '../lib/tailscale.ts';
 import { tailscaleStatus, type TailscalePeer } from '../lib/tailscale.ts';
 import { buildAgentEnv, WRITE_AGENT_ENV_CMD, AGENT_INSTALL_CMD } from '../agent/provision/primitives.ts';
-import { runVerify } from '../agent/provision/verify.ts';
+import { runVerify, makeVerify } from '../agent/provision/verify.ts';
+import { provisionRemote, type ProvisionRemoteResult, type PreviewEvent } from '../agent/provision/provision-remote.ts';
 import type { HealthReport } from '../agent/provision/provision-remote.ts';
 import type { RemoteConn } from '../agent/provision/remote-detect.ts';
+import type { RemoteExecutorOpts } from '../agent/provision/remote-executor.ts';
+import type { ProvisionPlan, ProvisionStep, ProvisionEvent } from '../agent/provision/types.ts';
 
 interface SetupAnswers {
   project: string;
@@ -400,4 +403,85 @@ export function runVerifyKey(input: VerifyKeyInput): void {
   }
   const stderr = (r.stderr || r.stdout || `ssh exited ${r.status ?? 'null'}`).trim();
   process.stdout.write(JSON.stringify({ ok: false, code: 'verify_failed', stderr }));
+}
+
+export interface ProvisionRemoteInput {
+  host: string;
+  user: string;
+  port: number;
+  keyPath: string;
+  agentPort: number;
+  token: string;
+  aiBin?: string;
+  yes?: boolean;
+  json?: boolean;
+}
+
+type ProvisionFn = typeof provisionRemote;
+
+export async function runProvisionRemote(
+  input: ProvisionRemoteInput,
+  deps: { provision?: ProvisionFn } = {},
+): Promise<void> {
+  // Reuse the existing injection guard (same fields as ProvisionAgentInput)
+  const bad = unsafeProvisionField({
+    host: input.host,
+    user: input.user,
+    port: input.port,
+    keyPath: input.keyPath,
+    agentPort: input.agentPort,
+    token: input.token,
+  });
+  if (bad) {
+    process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: `Refusing to provision: unsafe ${bad}.` }));
+    return;
+  }
+
+  const provision = deps.provision ?? provisionRemote;
+  const conn: RemoteConn = { host: input.host, user: input.user, port: input.port, keyPath: input.keyPath };
+  const execOpts: RemoteExecutorOpts = { token: input.token, port: input.agentPort, aiBin: input.aiBin };
+
+  // Consent gate
+  const confirm = async (plan: ProvisionPlan, elevation: ProvisionStep[]): Promise<boolean> => {
+    if (input.yes) return true;
+    if (input.json || !process.stdout.isTTY) return false; // cannot prompt
+    const { proceed } = await prompts({
+      type: 'confirm',
+      name: 'proceed',
+      message: `Provision ${input.user}@${input.host} — ${plan.steps.length} steps${elevation.length ? `, ${elevation.length} need elevation` : ''}. Proceed?`,
+      initial: false,
+    });
+    return !!proceed;
+  };
+
+  // Progress rendering (human mode only)
+  const human = !input.json;
+  const onEvent = (e: ProvisionEvent | PreviewEvent) => {
+    if (!human) return;
+    if (e.type === 'preview') {
+      log.info(`Plan (${e.plan.steps.length} steps): ${e.plan.steps.map((s) => s.id).join(', ')}`);
+      if (e.elevation.length) log.warn(`${e.elevation.length} steps need elevation: ${e.elevation.map((s) => s.id).join(', ')}`);
+    } else if (e.type === 'step') {
+      if (e.status === 'start') log.info(`  ▶ ${e.step} …`);
+      else if (e.status === 'ok') log.info(`  ✓ ${e.step}${e.detail ? ` — ${e.detail}` : ''}`);
+      else if (e.status === 'degraded') log.warn(`  ⚠ ${e.step} — ${e.detail ?? 'degraded'}`);
+      else if (e.status === 'failed') log.err(`  ✗ ${e.step} — ${e.detail ?? 'failed'}`);
+    } else if (e.type === 'rollback') {
+      log.warn(`  ↩ rolling back ${e.step}`);
+    }
+  };
+
+  const verify = makeVerify(conn, { agentHealth: async () => ({ ok: await pollAgentHealth(input.host, input.agentPort) }) });
+
+  const result: ProvisionRemoteResult = await provision(conn, execOpts, { confirm, onEvent, verify });
+
+  if (input.json) {
+    process.stdout.write(JSON.stringify({ status: result.status, detected: result.detected, plan: result.plan, outcome: result.outcome, health: result.health }));
+    return;
+  }
+  // Human summary
+  if (result.status === 'completed') log.ok('✓ provisioning completed');
+  else if (result.status === 'rolled-back') log.err(`✗ provisioning rolled back at ${result.outcome?.failedStep ?? 'unknown step'}`);
+  else log.info('provisioning cancelled');
+  if (result.health) log.info(`Health: tailnet ${result.health.tailnet ? 'up' : 'down'} · agent ${result.health.agent}`);
 }
