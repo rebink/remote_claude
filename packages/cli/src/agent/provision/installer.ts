@@ -5,7 +5,7 @@ import type { StepResult, CompensatingAction } from './types.ts';
 export type RemoteConn = Omit<SshOpts, 'command'>;
 
 /** Runs one command on the remote, returning its streams + exit code. Injected for testing. */
-export type RemoteRunner = (command: string) => Promise<{ stdout: string; stderr: string; code: number | null }>;
+export type RemoteRunner = (command: string, input?: string) => Promise<{ stdout: string; stderr: string; code: number | null }>;
 
 /** Installs/uninstalls the patchwire agent on a remote. One impl per OS / distribution mechanism. */
 export interface AgentInstaller {
@@ -23,9 +23,9 @@ export interface AgentInstaller {
 const PNPM_VERSION = '10.26.1';
 const PACKAGE = '@rebink/patchwire';
 
-function defaultRunner(conn: RemoteConn): RemoteRunner {
-  return async (command) => {
-    const r = await runSsh({ ...conn, command });
+export function defaultRemoteRunner(conn: RemoteConn): RemoteRunner {
+  return async (command, input) => {
+    const r = await runSsh({ ...conn, command, input });
     return { stdout: r.stdout, stderr: r.stderr, code: r.code };
   };
 }
@@ -33,7 +33,7 @@ function defaultRunner(conn: RemoteConn): RemoteRunner {
 /** POSIX (macOS + Linux) installer: Corepack-activated pnpm installs the agent globally. */
 export function corepackPnpmInstaller(
   conn: RemoteConn,
-  runner: RemoteRunner = defaultRunner(conn),
+  runner: RemoteRunner = defaultRemoteRunner(conn),
 ): AgentInstaller {
   async function version(): Promise<string | null> {
     const r = await runner('patchwire --version');
