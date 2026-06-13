@@ -72,3 +72,36 @@ questions from the desktop spec are resolved on paper; the sidecar I/O model map
 - **Linux:** build in CI on an Ubuntu 22.04 base; ship AppImage/deb.
 - **No further CLI work needed** — Phase 0's `--stream`/stdin-consent is the exact interface the Rust shell drives.
 - **Open micro-decision deferred to the plan:** stronghold vault-password strategy for v1.
+
+## Empirical PoC — PASSED (2026-06-14)
+
+Built a throwaway Tauri v2 app (vanilla-ts) and proved the sidecar streaming loop end-to-end —
+not just on paper. The PoC: a mock sidecar `pw-mock-aarch64-apple-darwin` (a shell script mimicking
+`patchwire … --stream`: emit `preview` → block on a stdin `read` → emit step/done/result), wired via
+`bundle.externalBin: ["binaries/pw-mock"]`, spawned from the Rust `setup` hook with
+`app.shell().sidecar("pw-mock").args(["--stream"]).spawn()`, reading `CommandEvent::Stdout` and writing
+consent with `child.write(b"{\"consent\":true}\n")`.
+
+Observed (stderr, `tauri dev`, first build 1m01s):
+```
+POC> spawned sidecar pw-mock --stream
+POC> stdout: {"type":"preview",...}
+POC> preview received -> writing consent to stdin
+POC> stdout: {"type":"step",...,"status":"start"}  → ok ×2 → done → result
+POC> result received -> SUCCESS (full loop proven), exiting
+POC> sidecar terminated: code Some(0)
+```
+
+**Proven:** triple-named externalBin resolution; line-buffered stdout events (each NDJSON line arrives
+as its own `Stdout` event); mid-stream `child.write` to stdin unblocks the sidecar's consent `read`;
+clean child termination. This is exactly the Phase 0 `--stream` + `{"consent":…}` contract — **no
+adaptation needed**. Rust-side `app.shell().sidecar()` worked with only the default `shell:default`
+capability (no extra scope entry required for backend-initiated spawns).
+
+**Toolchain note (for whoever builds Phase 1–3):** Rust installed on the dev Mac via `brew install
+rustup` + `rustup toolchain install stable` (curl|sh installer is blocked here). brew's rustup does
+NOT create `~/.cargo/bin` proxies — put `~/.rustup/toolchains/stable-aarch64-apple-darwin/bin` on PATH
+(or run `rustup default stable` to generate proxies). rustc/cargo 1.96.0; host triple `aarch64-apple-darwin`.
+
+**PoC location:** `/Users/apple/Documents/Workspace/pw-tauri-poc` (outside the repo, throwaway — safe to
+delete; ~1–2 GB cargo `target/`).
