@@ -6,6 +6,8 @@ import chalk from 'chalk';
 import { loadConfig } from '../lib/config.ts';
 import { AgentClient } from '../lib/client.ts';
 import { log } from '../lib/log.ts';
+import { hasRsyncBinary } from '../lib/rsync-preflight.ts';
+import { tailscaleStatus } from '../lib/tailscale.ts';
 
 interface Check {
   name: string;
@@ -16,7 +18,37 @@ interface Check {
 export async function runDoctor(cwd: string): Promise<void> {
   const checks: Check[] = [];
 
-  checks.push(localBinary('rsync', ['--version']));
+  // Sync engine: rsync (Unix-only one-shot CLI) or mutagen (cross-platform live sync via the extension).
+  const rsyncOk = process.platform !== 'win32' && hasRsyncBinary();
+  const mutagenOk = spawnSync('mutagen', ['version'], { stdio: 'ignore' }).status === 0;
+  checks.push({
+    name: 'sync engine available',
+    pass: rsyncOk || mutagenOk,
+    detail: mutagenOk
+      ? 'mutagen'
+      : rsyncOk
+        ? 'rsync (Unix)'
+        : process.platform === 'win32'
+          ? 'none on PATH — the VS Code extension auto-installs Mutagen (CLI sync is Unix-only)'
+          : 'install rsync, or use the VS Code extension (Mutagen)',
+  });
+
+  // Tailscale: the agent should be reached over a tailnet, not the public internet.
+  try {
+    const ts = tailscaleStatus();
+    checks.push({
+      name: 'tailscale',
+      pass: ts.running,
+      detail: ts.running
+        ? (ts.self?.ipv4 ? `running — self ${ts.self.ipv4}` : 'running')
+        : ts.installed
+          ? 'installed but not running — run `tailscale up`'
+          : 'not installed — https://tailscale.com/download',
+    });
+  } catch (err) {
+    checks.push({ name: 'tailscale', pass: false, detail: (err as Error).message });
+  }
+
   checks.push(localBinary('ssh', ['-V']));
   checks.push(localBinary('git', ['--version']));
 
