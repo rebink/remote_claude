@@ -1,10 +1,14 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
 #[derive(Default)]
-struct ProvisionState(Mutex<Option<CommandChild>>);
+struct ProvisionState {
+    child: Mutex<Option<CommandChild>>,
+    busy: AtomicBool,
+}
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -59,16 +63,19 @@ async fn start_provision(
     state: State<'_, ProvisionState>,
     args: ProvisionArgs,
 ) -> Result<(), String> {
-    // FIX A — validate inputs at the Tauri boundary
+    // Validate inputs BEFORE claiming busy — a validation error must NOT leave busy set.
     let key_path = validate_and_resolve(&args)?;
 
-    // FIX B — reject concurrent provisions
-    if state.0.lock().unwrap().is_some() {
+    // Get sidecar handle BEFORE claiming busy — so only .spawn() is inside the claimed region.
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+
+    // Atomic in-progress claim: compare_exchange false→true; fail if already true.
+    if state.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
         return Err("a provision is already in progress".into());
     }
 
-    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
-    let (mut rx, child) = sidecar
+    // Spawn the sidecar. On failure, reset busy before returning.
+    let (mut rx, child) = match sidecar
         .args([
             "setup", "--provision-remote", "--stream",
             "--host", &args.host,
@@ -79,8 +86,15 @@ async fn start_provision(
             "--token", &args.token,
         ])
         .spawn()
-        .map_err(|e| e.to_string())?;
-    *state.0.lock().unwrap() = Some(child);
+    {
+        Ok(v) => v,
+        Err(e) => {
+            state.busy.store(false, Ordering::SeqCst);
+            return Err(e.to_string());
+        }
+    };
+
+    *state.child.lock().unwrap() = Some(child);
 
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
@@ -92,9 +106,10 @@ async fn start_provision(
                     }
                 }
                 CommandEvent::Terminated(p) => {
-                    // FIX B — clear state slot on termination
+                    // Clear both child slot and busy flag atomically on termination.
                     if let Some(st) = app.try_state::<ProvisionState>() {
-                        *st.0.lock().unwrap() = None;
+                        *st.child.lock().unwrap() = None;
+                        st.busy.store(false, Ordering::SeqCst);
                     }
                     let _ = app.emit("pw://prov-end", p.code);
                 }
@@ -107,7 +122,7 @@ async fn start_provision(
 
 #[tauri::command]
 fn send_consent(state: State<'_, ProvisionState>, consent: bool) -> Result<(), String> {
-    let mut guard = state.0.lock().unwrap();
+    let mut guard = state.child.lock().unwrap();
     let child = guard.as_mut().ok_or("no active provision")?;
     let line = if consent { "{\"consent\":true}\n" } else { "{\"consent\":false}\n" };
     child.write(line.as_bytes()).map_err(|e| e.to_string())

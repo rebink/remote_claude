@@ -1,6 +1,6 @@
 import { h, clear } from './h.ts';
 import { initialState, reduce, type ProvisionUiState } from './provision-state.ts';
-import { startProvision, sendConsent, onProvEvent, type ProvisionArgs } from './ipc.ts';
+import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs } from './ipc.ts';
 let state: ProvisionUiState = initialState();
 const root = document.getElementById('app')!;
 function field(name: string, initial: string) {
@@ -37,4 +37,8 @@ async function onStart() {
   await startProvision(args);
 }
 onProvEvent((line) => { state = reduce(state, line); render(); });
+onProvEnd((code) => {
+  if (state.phase !== 'done') { state.phase = 'done'; render(); }
+  console.log('provision sidecar exited with code', code);
+});
 render();
