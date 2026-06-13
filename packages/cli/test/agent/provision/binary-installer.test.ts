@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { binaryInstaller, REMOTE_BIN_PATH, type BinaryArtifact, type BinaryArtifactSource } from '../../../src/agent/provision/binary-installer.ts';
+import { WINDOWS_BIN_VERSION_CMD, REMOVE_WINDOWS_BIN_PS } from '../../../src/agent/provision/windows-primitives.ts';
 import type { RemoteRunner } from '../../../src/agent/provision/installer.ts';
 import type { DetectedServerPlatform } from '../../../src/agent/server-platform/types.ts';
 
@@ -109,5 +110,79 @@ describe('binaryInstaller.uninstall', () => {
     const r = await inst.uninstall();
     expect(r.ok).toBe(false);
     expect(r.detail).toContain('permission denied');
+  });
+});
+
+// ── Windows branch ────────────────────────────────────────────────────────────
+const WIN_DETECTED = { os: 'windows', arch: 'x64' } as unknown as DetectedServerPlatform;
+
+describe('binaryInstaller (Windows) — install', () => {
+  it('uses PowerShell install command, passes base64 payload, returns ok:true', async () => {
+    const f = fakeRunner([{ code: 0, stdout: 'PW_BIN_OK' }]);
+    const artifact: BinaryArtifact = { bytes: Buffer.from('BIN'), sha256: SHA, version: '1.0.0' };
+    const inst = binaryInstaller(CONN, { source: src(artifact), detected: WIN_DETECTED, runner: f.runner });
+    const { result, compensate } = await inst.install();
+
+    expect(result.ok).toBe(true);
+    expect(result.detail).toContain('1.0.0');
+    expect(result.detail).toContain('sha256 verified');
+
+    expect(f.commands[0]).toContain('FromBase64String');
+    expect(f.commands[0]).toContain('Get-FileHash');
+    expect(f.inputs[0]).toBe(Buffer.from('BIN').toString('base64'));
+    expect(typeof compensate).toBe('function');
+  });
+
+  it('compensate runs the Remove-Item PowerShell', async () => {
+    const f = fakeRunner([{ code: 0 }, { code: 0 }]);
+    const artifact: BinaryArtifact = { bytes: Buffer.from('BIN'), sha256: SHA };
+    const inst = binaryInstaller(CONN, { source: src(artifact), detected: WIN_DETECTED, runner: f.runner });
+    const { compensate } = await inst.install();
+    await compensate!();
+    expect(f.commands[1]).toBe(REMOVE_WINDOWS_BIN_PS);
+  });
+
+  it('returns ok:false on non-zero exit (e.g. sha mismatch)', async () => {
+    const f = fakeRunner([{ code: 4, stderr: 'PW_SHA_MISMATCH' }]);
+    const artifact: BinaryArtifact = { bytes: Buffer.from('BIN'), sha256: SHA };
+    const inst = binaryInstaller(CONN, { source: src(artifact), detected: WIN_DETECTED, runner: f.runner });
+    const { result, compensate } = await inst.install();
+    expect(result.ok).toBe(false);
+    expect(result.detail).toContain('PW_SHA_MISMATCH');
+    expect(compensate).toBeUndefined();
+  });
+});
+
+describe('binaryInstaller (Windows) — version', () => {
+  it('uses WINDOWS_BIN_VERSION_CMD', async () => {
+    const f = fakeRunner([{ stdout: '2.0.0\n', code: 0 }]);
+    const inst = binaryInstaller(CONN, { source: src({ bytes: Buffer.alloc(0), sha256: SHA }), detected: WIN_DETECTED, runner: f.runner });
+    expect(await inst.version()).toBe('2.0.0');
+    expect(f.commands[0]).toBe(WINDOWS_BIN_VERSION_CMD);
+  });
+
+  it('returns null on non-zero exit', async () => {
+    const f = fakeRunner([{ code: 1 }]);
+    const inst = binaryInstaller(CONN, { source: src({ bytes: Buffer.alloc(0), sha256: SHA }), detected: WIN_DETECTED, runner: f.runner });
+    expect(await inst.version()).toBeNull();
+  });
+});
+
+describe('binaryInstaller (Windows) — uninstall', () => {
+  it('uses REMOVE_WINDOWS_BIN_PS and returns ok:true', async () => {
+    const f = fakeRunner([{ code: 0 }]);
+    const inst = binaryInstaller(CONN, { source: src({ bytes: Buffer.alloc(0), sha256: SHA }), detected: WIN_DETECTED, runner: f.runner });
+    const r = await inst.uninstall();
+    expect(r.ok).toBe(true);
+    expect(r.detail).toBe('removed');
+    expect(f.commands[0]).toBe(REMOVE_WINDOWS_BIN_PS);
+  });
+
+  it('returns ok:false with stderr on non-zero exit', async () => {
+    const f = fakeRunner([{ code: 1, stderr: 'access denied' }]);
+    const inst = binaryInstaller(CONN, { source: src({ bytes: Buffer.alloc(0), sha256: SHA }), detected: WIN_DETECTED, runner: f.runner });
+    const r = await inst.uninstall();
+    expect(r.ok).toBe(false);
+    expect(r.detail).toContain('access denied');
   });
 });
