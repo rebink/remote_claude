@@ -38,8 +38,9 @@ export function remoteExecutor(
   opts: RemoteExecutorOpts,
 ): StepExecutor {
   const runner = opts.runner ?? defaultRemoteRunner(conn);
+  const nodeAbsent = detected.node?.present === false;
   const installer = opts.installer
-    ?? (opts.binarySource
+    ?? (opts.binarySource && nodeAbsent
       ? binaryInstaller(conn, { source: opts.binarySource, detected, runner })
       : corepackPnpmInstaller(conn, runner));
   return async (step) => {

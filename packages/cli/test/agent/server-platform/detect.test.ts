@@ -10,7 +10,7 @@ function deps(platform: NodeJS.Platform, arch: string, present: string[]): Detec
 
 describe('detectServerPlatform — macOS', () => {
   it('maps a full macOS host to real capabilities', () => {
-    const d = detectServerPlatform(deps('darwin', 'arm64', ['sandbox-exec', 'launchctl', 'brew', 'zsh']));
+    const d = detectServerPlatform(deps('darwin', 'arm64', ['sandbox-exec', 'launchctl', 'brew', 'zsh', 'node']));
     expect(d.os).toBe('macos');
     expect(d.arch).toBe('arm64');
     expect(d.pathStyle).toBe('posix');
@@ -20,12 +20,25 @@ describe('detectServerPlatform — macOS', () => {
     expect(d.capabilities.service.type).toBe('launchd');
     expect(d.capabilities.shell.type).toBe('zsh');
     expect(d.capabilities.packageManager.type).toBe('brew');
+    expect(d.node?.present).toBe(true);
   });
 
   it('reports egress + filesystemIsolation as none when sandbox-exec is absent (fail-closed signal)', () => {
     const d = detectServerPlatform(deps('darwin', 'x64', ['launchctl']));
     expect(d.capabilities.egress.type).toBe('none');
     expect(d.capabilities.filesystemIsolation.type).toBe('none');
+  });
+});
+
+describe('detectServerPlatform — node presence signal', () => {
+  it('reports node present when node is in the probe set', () => {
+    const d = detectServerPlatform(deps('linux', 'x64', ['node']));
+    expect(d.node?.present).toBe(true);
+  });
+
+  it('reports node absent when node is not in the probe set', () => {
+    const d = detectServerPlatform(deps('linux', 'x64', []));
+    expect(d.node?.present).toBe(false);
   });
 });
 
