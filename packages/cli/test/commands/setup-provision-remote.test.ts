@@ -272,4 +272,36 @@ describe('setup --provision-remote', () => {
     const okCalls = okSpy.mock.calls.map((c) => c[0]);
     expect(okCalls.some((msg) => msg.includes('provisioning completed'))).toBe(true);
   });
+
+  it('stream + tokenStdin → reads {"token":…} from stdin before consent', async () => {
+    const lines = ['{"token":"streamedtokenABCDEF123456"}', '{"consent":true}'];
+    let seenToken: string | undefined;
+    const provision = fakeProvision(async (_conn, opts, deps) => {
+      seenToken = opts.token;
+      const ok = await deps.confirm({ steps: [] }, []);
+      return { status: ok ? 'completed' : 'cancelled', detected: {}, plan: { steps: [] }, outcome: { status: 'completed', degraded: [] } };
+    });
+    const { runProvisionRemote } = await import('../../src/commands/setup.ts');
+    await captureStdout(() =>
+      runProvisionRemote(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: 'ARGV-IGNORED-000', stream: true, tokenStdin: true },
+        { provision, readConsentLine: async () => lines.shift() ?? '' },
+      ),
+    );
+    expect(seenToken).toBe('streamedtokenABCDEF123456');
+  });
+
+  it('tokenStdin with malformed token line → invalid_input, no provision', async () => {
+    let called = false;
+    const provision = fakeProvision(async () => { called = true; return { status: 'completed', detected: {}, plan: { steps: [] }, outcome: { status: 'completed', degraded: [] } }; });
+    const { runProvisionRemote } = await import('../../src/commands/setup.ts');
+    const out = await captureStdout(() =>
+      runProvisionRemote(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: 'x', stream: true, tokenStdin: true },
+        { provision, readConsentLine: async () => 'not json' },
+      ),
+    );
+    expect(called).toBe(false);
+    expect(out).toContain('invalid_input');
+  });
 });
