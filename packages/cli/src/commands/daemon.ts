@@ -6,9 +6,14 @@ import { join } from 'node:path';
 import { log } from '../lib/log.ts';
 
 const SERVICE_LABEL = 'com.patchwire.agent';
+const SYSTEMD_UNIT = 'patchwire-agent.service';
 
 function plistPath(): string {
   return join(homedir(), 'Library', 'LaunchAgents', `${SERVICE_LABEL}.plist`);
+}
+
+function unitPath(): string {
+  return join(homedir(), '.config', 'systemd', 'user', SYSTEMD_UNIT);
 }
 
 function logDir(): string {
@@ -64,6 +69,31 @@ export function buildAgentPlist(agentBin: string, env: string, outLog: string, e
 }
 
 /**
+ * Build a systemd --user unit that sources the agent env file and then exec's the agent binary.
+ * Pure function — exported for testing.
+ *
+ * NOTE: systemd EnvironmentFile= cannot parse `export VAR=val` lines (it takes the literal string
+ * "export VAR" as the key). Instead we source the env via a login shell exactly like the launchd
+ * plist does: ExecStart=/bin/sh -lc '. <envFile>; exec <agentBin> serve'
+ */
+export function buildAgentUnit(agentBin: string, env: string): string {
+  return `[Unit]
+Description=Patchwire agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/bin/sh -lc '. ${env}; exec ${agentBin} serve'
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+`;
+}
+
+/**
  * Start (or restart) the LaunchAgent. Tries the modern GUI-domain `bootstrap`
  * first (this is what works over SSH when the user is logged in), then the
  * legacy `load`, then `kickstart`. Returns how it started, or a failure.
@@ -86,13 +116,22 @@ export function startLaunchAgent(plist: string, uid: number): { ok: boolean; met
   return { ok: false, stderr };
 }
 
-export async function runDaemonInstall(_opts: InstallOptions = {}): Promise<void> {
-  if (platform() !== 'darwin') {
-    log.err(`launchd install is macOS-only. On Linux, run \`patchwire-agent\` under systemd or tmux.`);
-    process.exitCode = 1;
-    return;
-  }
+/**
+ * Enable and start the systemd --user service. Analogous to startLaunchAgent.
+ * Also attempts best-effort loginctl enable-linger so the unit survives across logout;
+ * linger failure is non-fatal (requires polkit/root on many distros).
+ */
+export function startSystemdUser(): { ok: boolean; stderr?: string } {
+  cp.spawnSync('systemctl', ['--user', 'daemon-reload'], { encoding: 'utf8' });
+  const enable = cp.spawnSync('systemctl', ['--user', 'enable', '--now', SYSTEMD_UNIT], { encoding: 'utf8' });
+  // Best-effort linger: allows the user unit to survive across logout. Non-fatal.
+  cp.spawnSync('loginctl', ['enable-linger'], { stdio: 'ignore' });
+  if (enable.status === 0) return { ok: true };
+  return { ok: false, stderr: (enable.stderr || 'systemctl --user enable --now failed').trim() };
+}
 
+export async function runDaemonInstall(_opts: InstallOptions = {}): Promise<void> {
+  // Platform-agnostic checks first.
   const agentBin = which('patchwire-agent');
   if (!agentBin) {
     log.err('`patchwire-agent` not found on PATH. Install with `pnpm add -g github:rebink/patchwire` first.');
@@ -106,43 +145,84 @@ export async function runDaemonInstall(_opts: InstallOptions = {}): Promise<void
     return;
   }
 
-  await mkdir(logDir(), { recursive: true });
-  await mkdir(join(homedir(), 'Library', 'LaunchAgents'), { recursive: true });
+  if (platform() === 'darwin') {
+    await mkdir(logDir(), { recursive: true });
+    await mkdir(join(homedir(), 'Library', 'LaunchAgents'), { recursive: true });
 
-  const plist = buildAgentPlist(agentBin, envFile(), join(logDir(), 'agent.out.log'), join(logDir(), 'agent.err.log'));
-  await writeFile(plistPath(), plist, { encoding: 'utf8', mode: 0o600 });
+    const plist = buildAgentPlist(agentBin, envFile(), join(logDir(), 'agent.out.log'), join(logDir(), 'agent.err.log'));
+    await writeFile(plistPath(), plist, { encoding: 'utf8', mode: 0o600 });
 
-  const uid = process.getuid?.() ?? 0;
-  const start = startLaunchAgent(plistPath(), uid);
-  if (!start.ok) {
-    log.err(`launchctl could not start the agent: ${start.stderr}`);
-    log.err(`The plist is written. If this remote is logged in, run: launchctl bootstrap gui/${uid} ${plistPath()}`);
-    process.exitCode = 1;
+    const uid = process.getuid?.() ?? 0;
+    const start = startLaunchAgent(plistPath(), uid);
+    if (!start.ok) {
+      log.err(`launchctl could not start the agent: ${start.stderr}`);
+      log.err(`The plist is written. If this remote is logged in, run: launchctl bootstrap gui/${uid} ${plistPath()}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    log.ok(`Installed launchd service: ${SERVICE_LABEL}`);
+    log.ok(`Plist: ${plistPath()}`);
+    log.ok(`Env: ${envFile()} (sourced at launch)`);
+    log.ok(`Logs: ${logDir()}/agent.{out,err}.log`);
+    log.step('Manage the service:');
+    console.log(`  launchctl unload ${plistPath()}    # stop`);
+    console.log(`  launchctl load   ${plistPath()}    # start`);
+    console.log(`  patchwire-agent uninstall        # remove`);
     return;
   }
 
-  log.ok(`Installed launchd service: ${SERVICE_LABEL}`);
-  log.ok(`Plist: ${plistPath()}`);
-  log.ok(`Env: ${envFile()} (sourced at launch)`);
-  log.ok(`Logs: ${logDir()}/agent.{out,err}.log`);
-  log.step('Manage the service:');
-  console.log(`  launchctl unload ${plistPath()}    # stop`);
-  console.log(`  launchctl load   ${plistPath()}    # start`);
-  console.log(`  patchwire-agent uninstall        # remove`);
+  if (platform() === 'linux') {
+    await mkdir(join(homedir(), '.config', 'systemd', 'user'), { recursive: true });
+    const unit = buildAgentUnit(agentBin, envFile());
+    await writeFile(unitPath(), unit, { encoding: 'utf8', mode: 0o644 });
+    const start = startSystemdUser();
+    if (!start.ok) {
+      log.err(`systemctl --user could not start the agent: ${start.stderr}`);
+      log.err(`The unit is written at ${unitPath()}. If this is a fresh login session you may need: loginctl enable-linger`);
+      process.exitCode = 1;
+      return;
+    }
+    log.ok(`Installed systemd --user service: ${SYSTEMD_UNIT}`);
+    log.ok(`Unit: ${unitPath()}`);
+    log.ok(`Env: ${envFile()} (sourced at launch)`);
+    log.step('Manage the service:');
+    console.log(`  systemctl --user stop ${SYSTEMD_UNIT}`);
+    console.log(`  systemctl --user start ${SYSTEMD_UNIT}`);
+    console.log(`  patchwire-agent uninstall        # remove`);
+    return;
+  }
+
+  log.err(`service install is not supported on ${platform()}.`);
+  process.exitCode = 1;
 }
 
 export async function runDaemonUninstall(): Promise<void> {
-  if (platform() !== 'darwin') {
-    log.err('launchd uninstall is macOS-only.');
-    process.exitCode = 1;
+  if (platform() === 'darwin') {
+    if (!existsSync(plistPath())) {
+      log.warn('No launchd plist found — nothing to uninstall.');
+      return;
+    }
+    cp.spawnSync('launchctl', ['unload', plistPath()], { stdio: 'ignore' });
+    await unlink(plistPath());
+    log.ok(`Removed ${plistPath()}`);
+    log.dim(`(env file at ${envFile()} kept — delete manually if you want a clean slate)`);
     return;
   }
-  if (!existsSync(plistPath())) {
-    log.warn('No launchd plist found — nothing to uninstall.');
+
+  if (platform() === 'linux') {
+    if (!existsSync(unitPath())) {
+      log.warn('No systemd unit found — nothing to uninstall.');
+      return;
+    }
+    cp.spawnSync('systemctl', ['--user', 'disable', '--now', SYSTEMD_UNIT], { stdio: 'ignore' });
+    await unlink(unitPath());
+    cp.spawnSync('systemctl', ['--user', 'daemon-reload'], { stdio: 'ignore' });
+    log.ok(`Removed ${unitPath()}`);
+    log.dim(`(env file at ${envFile()} kept — delete manually if you want a clean slate)`);
     return;
   }
-  cp.spawnSync('launchctl', ['unload', plistPath()], { stdio: 'ignore' });
-  await unlink(plistPath());
-  log.ok(`Removed ${plistPath()}`);
-  log.dim(`(env file at ${envFile()} kept — delete manually if you want a clean slate)`);
+
+  log.err('service uninstall is not supported on this platform.');
+  process.exitCode = 1;
 }

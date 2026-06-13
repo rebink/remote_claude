@@ -150,12 +150,16 @@ describe('remoteExecutor — install-service', () => {
     expect(out.compensate).toBeUndefined();
   });
 
-  it('Linux: degraded (systemd --user not yet wired)', async () => {
-    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner: async () => ({ stdout: '', stderr: '', code: 0 }) });
+  it('Linux: installs the systemd --user service via patchwire-agent install, with compensate', async () => {
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner });
     const out = await exec(step('install-service'));
     expect(out.result.ok).toBe(true);
-    expect(out.result.degraded).toBe(true);
-    expect(out.result.detail).toMatch(/linux|systemd/i);
+    expect(out.result.degraded).toBeFalsy();
+    expect(calls[0]).toMatch(/patchwire-agent install/);
+    await out.compensate!();
+    expect(calls[1]).toMatch(/patchwire-agent uninstall/);
   });
 });
 
