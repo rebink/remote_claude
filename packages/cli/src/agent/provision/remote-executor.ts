@@ -1,7 +1,7 @@
 import type { DetectedServerPlatform } from '../server-platform/types.ts';
 import type { StepExecutor } from './types.ts';
 import { corepackPnpmInstaller, defaultRemoteRunner, type AgentInstaller, type RemoteConn, type RemoteRunner } from './installer.ts';
-import { quoteForShell } from '../../lib/ssh-runner.ts';
+import { buildAgentEnv, WRITE_AGENT_ENV_CMD } from './primitives.ts';
 
 export interface RemoteExecutorOpts {
   /** Agent bearer token to provision onto the remote. */
@@ -17,10 +17,6 @@ export interface RemoteExecutorOpts {
   /** Override the SSH command runner used by non-install steps. */
   runner?: RemoteRunner;
 }
-
-/** Atomic, mode-600 write of the agent env file, driven over stdin (token never on argv). */
-const WRITE_ENV_CMD =
-  'umask 077; mkdir -p "$HOME/.patchwire" && cat > "$HOME/.patchwire/agent.env.tmp" && mv -f "$HOME/.patchwire/agent.env.tmp" "$HOME/.patchwire/agent.env"';
 
 /** Idempotently set PW_EGRESS=deny in the agent env (strip any prior line, append, tmp→rename). */
 const SET_EGRESS_DENY_CMD =
@@ -48,24 +44,14 @@ export function remoteExecutor(
         return installer.install();
 
       case 'write-secret': {
-        const host = opts.host ?? '127.0.0.1';
-        const port = opts.port ?? 7878;
-        const aiBin = opts.aiBin ?? 'claude';
-        const payload =
-          '# patchwire-agent environment (managed by patchwire provisioning)\n' +
-          `export PW_AGENT_TOKEN=${quoteForShell(opts.token)}\n` +
-          `export PW_AGENT_HOST=${quoteForShell(host)}\n` +
-          `export PW_AGENT_PORT=${quoteForShell(String(port))}\n` +
-          `export PW_AI_BIN=${quoteForShell(aiBin)}\n`;
-        const r = await runner(WRITE_ENV_CMD, payload);
+        const payload = buildAgentEnv({ token: opts.token, host: opts.host, port: opts.port, aiBin: opts.aiBin });
+        const r = await runner(WRITE_AGENT_ENV_CMD, payload);
         if (r.code !== 0) {
           return { result: { ok: false, detail: (r.stderr || r.stdout || 'write-secret failed').trim() } };
         }
         return {
           result: { ok: true, detail: 'agent env written to ~/.patchwire/agent.env (mode 600)' },
-          compensate: async () => {
-            await runner('rm -f "$HOME/.patchwire/agent.env"');
-          },
+          compensate: async () => { await runner('rm -f "$HOME/.patchwire/agent.env"'); },
         };
       }
 

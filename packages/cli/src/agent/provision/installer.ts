@@ -1,5 +1,6 @@
 import { runSsh, type SshOpts } from '../../lib/ssh-runner.ts';
 import type { StepResult, CompensatingAction } from './types.ts';
+import { AGENT_INSTALL_CMD, AGENT_PACKAGE } from './primitives.ts';
 
 /** SSH connection params without the per-call `command`. */
 export type RemoteConn = Omit<SshOpts, 'command'>;
@@ -19,9 +20,6 @@ export interface AgentInstaller {
   uninstall(): Promise<StepResult>;
 }
 
-/** Pinned to the repo's `packageManager` so the remote uses the same pnpm. */
-const PNPM_VERSION = '10.26.1';
-const PACKAGE = '@rebink/patchwire';
 
 export function defaultRemoteRunner(conn: RemoteConn): RemoteRunner {
   return async (command, input) => {
@@ -41,7 +39,7 @@ export function corepackPnpmInstaller(
   }
 
   async function uninstall(): Promise<StepResult> {
-    const r = await runner(`pnpm remove -g ${PACKAGE}`);
+    const r = await runner(`pnpm remove -g ${AGENT_PACKAGE}`);
     return r.code === 0
       ? { ok: true, detail: 'removed' }
       : { ok: false, detail: (r.stderr || r.stdout || 'uninstall failed').trim() };
@@ -55,14 +53,12 @@ export function corepackPnpmInstaller(
       return v === null ? { present: false } : { present: true, version: v };
     },
     async install() {
-      const cmd =
-        `corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate && pnpm add -g ${PACKAGE}`;
-      const r = await runner(cmd);
+      const r = await runner(AGENT_INSTALL_CMD);
       if (r.code !== 0) {
         return { result: { ok: false, detail: (r.stderr || r.stdout || 'install failed').trim() } };
       }
       return {
-        result: { ok: true, detail: `installed ${PACKAGE} via corepack+pnpm` },
+        result: { ok: true, detail: `installed ${AGENT_PACKAGE} via corepack+pnpm` },
         compensate: async () => {
           await uninstall();
         },
