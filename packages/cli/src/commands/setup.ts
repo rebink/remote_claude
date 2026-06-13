@@ -417,6 +417,8 @@ export interface ProvisionRemoteInput {
   json?: boolean;
   /** Machine event-stream mode: NDJSON events to stdout, consent via a stdin line. */
   stream?: boolean;
+  /** Read the agent token from a leading {"token":…} stdin line in stream mode (avoids argv exposure). */
+  tokenStdin?: boolean;
 }
 
 type ProvisionFn = typeof provisionRemote;
@@ -448,6 +450,22 @@ export async function runProvisionRemote(
   input: ProvisionRemoteInput,
   deps: { provision?: ProvisionFn; readConsentLine?: () => Promise<string> } = {},
 ): Promise<void> {
+  const provision = deps.provision ?? provisionRemote;
+  const stream = !!input.stream;
+  const readConsentLine = deps.readConsentLine ?? defaultReadConsentLine;
+
+  let token = input.token;
+  if (input.stream && input.tokenStdin) {
+    try {
+      const parsed = JSON.parse(await readConsentLine()) as { token?: string };
+      if (!parsed.token) throw new Error('no token');
+      token = parsed.token;
+    } catch {
+      process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: 'Refusing to provision: missing/invalid token on stdin.' }) + '\n');
+      return;
+    }
+  }
+
   // Reuse the existing injection guard (same fields as ProvisionAgentInput)
   const bad = unsafeProvisionField({
     host: input.host,
@@ -455,18 +473,15 @@ export async function runProvisionRemote(
     port: input.port,
     keyPath: input.keyPath,
     agentPort: input.agentPort,
-    token: input.token,
+    token,
   });
   if (bad) {
     process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: `Refusing to provision: unsafe ${bad}.` }));
     return;
   }
 
-  const provision = deps.provision ?? provisionRemote;
-  const stream = !!input.stream;
-  const readConsentLine = deps.readConsentLine ?? defaultReadConsentLine;
   const conn: RemoteConn = { host: input.host, user: input.user, port: input.port, keyPath: input.keyPath };
-  const execOpts: RemoteExecutorOpts = { token: input.token, port: input.agentPort, aiBin: input.aiBin };
+  const execOpts: RemoteExecutorOpts = { token, port: input.agentPort, aiBin: input.aiBin };
 
   // Consent gate
   const confirm = async (plan: ProvisionPlan, elevation: ProvisionStep[]): Promise<boolean> => {
