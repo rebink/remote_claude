@@ -22,6 +22,11 @@ describe('buildProbeScript', () => {
     expect(s).toContain('$PATH"');
   });
 
+  it('probe script does not contain ";;" (which would be a case-terminator parse error)', () => {
+    const s = buildProbeScript();
+    expect(s).not.toContain(';;');
+  });
+
   it('does not modify the Windows probe script (buildWindowsProbeScript)', () => {
     const w = buildWindowsProbeScript();
     expect(w).not.toContain('/opt/homebrew/bin');

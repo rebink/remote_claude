@@ -59,9 +59,57 @@ and Homebrew both being installed.
   Prefer the explicit PATH prefix. Add a unit test: probe script must find a tool that only
   exists under `/opt/homebrew/bin`.
 
-## Notes / expected-degraded
-- Not reached — consent declined before execute, so no degraded steps to assess this run.
-  The degraded matrix (egress/mutagen/tailscale/claude-CLI) gets validated in a real execute.
+---
+
+# EXECUTE pass (real install on this Mac) — ✅ PASS (2026-06-13)
+
+After fixing BUG-1, a real execute (`scripts/validate-execute.ts`, consent=YES) surfaced a
+cascade of bootstrap bugs — each fixed in turn, then provisioning **completed** with the agent
+healthy on loopback.
+
+```
+status: completed
+bootstrap-agent ok · install-claude ok · install-mutagen ok · write-secret ok ·
+install-service ok (launchd) · apply-egress ok (seatbelt deny) ·
+bind-tailnet DEGRADED (Tailscale not up — EXPECTED) ·
+/health → HTTP 200 {"ok":true,"version":"0.3.17","claude":{"found":true}}
+plist RunAtLoad+KeepAlive ✓ · agent.env mode 600 ✓
+```
+
+### BUG-2 (P0) — `bootstrap-agent` hard-required `corepack` (missing on Homebrew Node 25)
+`corepack enable && …` aborted the `&&` chain even though pnpm was already present.
+**Fix:** fallback chain — existing pnpm → corepack (→ error; **no npm**, per user policy).
+
+### BUG-3 (P0) — PATH prefix used as assignment-prefix → `zsh: parse error near 'if'`
+`POSIX_PATH_PREFIX` was `PATH="…"` (assignment-prefix), invalid before the `if` keyword and it
+only set PATH for the first command in a chain. **Fix:** make it a statement
+`export PATH="…"; ` and drop consumers' duplicate `;` (no `;;`). Verified with `sh -n`.
+
+### BUG-4 (P0) — `pnpm add -g` → ERR_PNPM_NO_GLOBAL_BIN_DIR
+Fresh host has no `PNPM_HOME`/global-bin-dir. **Fix:** new `POSIX_PNPM_ENV` constant sets
+`PNPM_HOME` + puts it on PATH + `mkdir -p` before install.
+
+### BUG-5 (P0) — service install couldn't find the agent binary
+`install-service` ran `bash -lc 'patchwire-agent install'`; the pnpm-global binary lives in
+`$PNPM_HOME`, absent from a login shell's PATH → command not found. **Fix:** prefix the
+install/uninstall `bash -lc` with `POSIX_PATH_PREFIX + POSIX_PNPM_ENV`.
+(Why boot still works: the agent's own `install` resolves an **absolute** `agentBin` via
+`which` and bakes it + an augmented PATH into the plist env — the pnpm shim finds node at boot.)
+
+### Expected-degraded confirmed (NOT bugs)
+- `bind-tailnet` degraded (Tailscale not up) — exactly as the plan predicts. Everything else
+  (egress seatbelt-deny, mutagen, claude) resolved `ok` because those tools are present on this host.
+
+### Decision context
+Per [[patchwire-pnpm-not-npm]] the user rejected switching to `npm i -g`; BUG-4/5 fixed by
+hardening the pnpm path (PNPM_HOME) instead.
+
+### Minor: harness probe timing
+`validate-execute.ts` probes `/health` immediately after `provisionRemote` returns, but launchd
+takes ~1–2s to boot the agent → first probe shows `fetch failed`; a re-probe is green. Add a
+short retry to the harness (low priority).
+
+## macOS ARM verdict: **PASS** (dry run + execute). Reboot survival via RunAtLoad/KeepAlive (not hard-rebooted).
 
 ## Machine state left behind (cleanup)
 - `~/.ssh/pw_validate{,.pub}` — dedicated unencrypted validation key (ed25519).
