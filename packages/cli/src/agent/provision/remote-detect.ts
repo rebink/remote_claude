@@ -1,4 +1,6 @@
-import type { DetectDeps } from '../server-platform/types.ts';
+import type { DetectDeps, DetectedServerPlatform } from '../server-platform/types.ts';
+import { detectServerPlatform } from '../server-platform/detect.ts';
+import { runSsh, type SshOpts } from '../../lib/ssh-runner.ts';
 
 /** Capability tools probed on the remote (mirrors the local detector's signals). */
 export const PROBE_TOOLS = [
@@ -35,4 +37,36 @@ export function parseProbe(stdout: string): DetectDeps | null {
   if (!platform) return null;
   const present = new Set(lines.filter((l) => l.startsWith('has:')).map((l) => l.slice(4)));
   return { platform, arch: mapArch(parts[1] ?? ''), has: (c) => present.has(c) };
+}
+
+/** SSH connection params without the per-call `command`. */
+export type RemoteConn = Omit<SshOpts, 'command'>;
+
+/** Runs a probe script on the remote and returns its stdout + exit code. Injected for testing. */
+export type ProbeRunner = (script: string) => Promise<{ stdout: string; code: number | null }>;
+
+function sshProbeRunner(conn: RemoteConn): ProbeRunner {
+  return async (script) => {
+    const r = await runSsh({ ...conn, command: script });
+    return { stdout: r.stdout, code: r.code };
+  };
+}
+
+/**
+ * Detect the remote host's ServerPlatform over SSH. Node-independent: a missing Node
+ * is `has('node') === false`, surfaced as a plan-time prerequisite — never a detection failure.
+ */
+export async function detectRemoteServerPlatform(
+  conn: RemoteConn,
+  runner: ProbeRunner = sshProbeRunner(conn),
+): Promise<DetectedServerPlatform> {
+  const { stdout } = await runner(buildProbeScript());
+  const deps = parseProbe(stdout);
+  if (!deps) {
+    throw new Error(
+      'Could not detect the remote OS (no POSIX `uname`). ' +
+        'Windows remote provisioning is not yet supported.',
+    );
+  }
+  return detectServerPlatform(deps);
 }
