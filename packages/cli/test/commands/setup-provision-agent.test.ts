@@ -34,9 +34,12 @@ describe('setup --provision-agent', () => {
     expect(JSON.parse(out)).toEqual({ ok: true, healthy: true, health: { tailnet: true, agent: 'healthy' } });
     const sshArgs = (cp.spawnSync as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][1] as string[];
     expect(sshArgs.join(' ')).toMatch(/bash -lc/);
+    expect(sshArgs.join(' ')).toMatch(/command -v pnpm/);
     expect(sshArgs.join(' ')).toMatch(/corepack enable/);
+    // no npm fallback — corepack is the last resort; npm does not set PNPM_HOME correctly
+    expect(sshArgs.join(' ')).not.toMatch(/npm i -g pnpm@/);
+    expect(sshArgs.join(' ')).toMatch(/PNPM_HOME/);
     expect(sshArgs.join(' ')).toMatch(/pnpm add -g @rebink\/patchwire/);
-    expect(sshArgs.join(' ')).not.toMatch(/npm i -g/);
     expect(sshArgs.join(' ')).toMatch(/agent\.env/);
     expect(sshArgs.join(' ')).not.toContain(TOKEN); // token rides stdin, not the command
     expect(sshArgs.join(' ')).toMatch(/patchwire-agent install/);

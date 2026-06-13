@@ -12,7 +12,7 @@ export const PROBE_TOOLS = [
 
 /** One POSIX probe: prints `<sysname> <machine>`, then `has:<tool>` for each present tool. */
 export function buildProbeScript(tools: readonly string[] = PROBE_TOOLS): string {
-  return `${POSIX_PATH_PREFIX}; uname -sm; for c in ${tools.join(' ')}; do command -v "$c" >/dev/null 2>&1 && echo "has:$c"; done`;
+  return `${POSIX_PATH_PREFIX}uname -sm; for c in ${tools.join(' ')}; do command -v "$c" >/dev/null 2>&1 && echo "has:$c"; done`;
 }
 
 function mapPlatform(sysname: string): NodeJS.Platform | null {
