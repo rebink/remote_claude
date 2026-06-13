@@ -56,18 +56,16 @@ export function remoteExecutor(
       }
 
       case 'install-service': {
-        if (detected.os === 'macos') {
+        if (detected.os === 'macos' || detected.os === 'linux') {
           const r = await runner("bash -lc 'patchwire-agent install'");
           if (r.code !== 0) {
             return { result: { ok: false, detail: (r.stderr || r.stdout || 'service install failed').trim() } };
           }
+          const detail = detected.os === 'macos' ? 'launchd service installed' : 'systemd --user service installed';
           return {
-            result: { ok: true, detail: 'launchd service installed' },
+            result: { ok: true, detail },
             compensate: async () => { await runner("bash -lc 'patchwire-agent uninstall'"); },
           };
-        }
-        if (detected.os === 'linux') {
-          return { result: { ok: true, degraded: true, detail: 'linux service install (systemd --user) not yet wired; run the agent manually' } };
         }
         return { result: { ok: true, degraded: true, detail: `service install not yet supported on ${detected.os}` } };
       }
