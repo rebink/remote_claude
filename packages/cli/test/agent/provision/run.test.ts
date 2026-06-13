@@ -15,7 +15,7 @@ describe('runProvision', () => {
     const events: ProvisionEvent[] = [];
     const executor: StepExecutor = async () => ({ result: { ok: true } });
     const out = await runProvision(PLAN, { executor, onEvent: (e) => events.push(e) });
-    expect(out).toEqual({ status: 'completed' });
+    expect(out).toEqual({ status: 'completed', degraded: [] });
     expect(events.filter((e) => e.type === 'step' && e.status === 'ok').length).toBe(3);
     expect(events.some((e) => e.type === 'rollback')).toBe(false);
     expect(events.at(-1)).toEqual({ type: 'done', status: 'completed' });
@@ -29,7 +29,7 @@ describe('runProvision', () => {
     };
     const events: ProvisionEvent[] = [];
     const out = await runProvision(PLAN, { executor, onEvent: (e) => events.push(e) });
-    expect(out).toEqual({ status: 'rolled-back', failedStep: 'c' });
+    expect(out).toEqual({ status: 'rolled-back', failedStep: 'c', degraded: [] });
     expect(order).toEqual(['undo-b', 'undo-a']); // reverse order, c registered nothing
     expect(events.at(-1)).toEqual({ type: 'done', status: 'rolled-back', failedStep: 'c' });
   });
@@ -41,7 +41,7 @@ describe('runProvision', () => {
       return { result: { ok: true }, compensate: async () => { order.push(`undo-${step.id}`); } };
     };
     const out = await runProvision(PLAN, { executor });
-    expect(out).toEqual({ status: 'rolled-back', failedStep: 'b' });
+    expect(out).toEqual({ status: 'rolled-back', failedStep: 'b', degraded: [] });
     expect(order).toEqual(['undo-a']);
   });
 
@@ -60,5 +60,19 @@ describe('runProvision', () => {
     const out = await runProvision(PLAN, { executor });
     expect(out.status).toBe('rolled-back');
     expect(order).toEqual(['undo-a']); // b's compensation threw but a's still ran
+  });
+});
+
+describe('runProvision — degraded steps', () => {
+  it('collects degraded steps without rolling back and reports them in the outcome', async () => {
+    const events: ProvisionEvent[] = [];
+    const executor: StepExecutor = async (step) =>
+      step.id === 'b'
+        ? { result: { ok: true, degraded: true, detail: 'b is warn-only' } }
+        : { result: { ok: true } };
+    const out = await runProvision(PLAN, { executor, onEvent: (e) => events.push(e) });
+    expect(out).toEqual({ status: 'completed', degraded: ['b is warn-only'] });
+    expect(events.some((e) => e.type === 'step' && e.status === 'degraded' && e.step === 'b')).toBe(true);
+    expect(events.some((e) => e.type === 'rollback')).toBe(false);
   });
 });
