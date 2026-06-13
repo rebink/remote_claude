@@ -2,6 +2,8 @@ import type { DetectedServerPlatform } from '../server-platform/types.ts';
 import type { StepExecutor } from './types.ts';
 import { corepackPnpmInstaller, defaultRemoteRunner, type AgentInstaller, type RemoteConn, type RemoteRunner } from './installer.ts';
 import { buildAgentEnv, WRITE_AGENT_ENV_CMD } from './primitives.ts';
+import { binaryInstaller } from './binary-installer.ts';
+import type { BinaryArtifactSource } from './binary-installer.ts';
 
 export interface RemoteExecutorOpts {
   /** Agent bearer token to provision onto the remote. */
@@ -16,6 +18,8 @@ export interface RemoteExecutorOpts {
   installer?: AgentInstaller;
   /** Override the SSH command runner used by non-install steps. */
   runner?: RemoteRunner;
+  /** When set (and no explicit installer), bootstrap via the prereq-free binary installer instead of Corepack/pnpm. */
+  binarySource?: BinaryArtifactSource;
 }
 
 /** Idempotently set PW_EGRESS=deny in the agent env (strip any prior line, append, tmp→rename). */
@@ -33,8 +37,11 @@ export function remoteExecutor(
   detected: DetectedServerPlatform,
   opts: RemoteExecutorOpts,
 ): StepExecutor {
-  const installer = opts.installer ?? corepackPnpmInstaller(conn);
   const runner = opts.runner ?? defaultRemoteRunner(conn);
+  const installer = opts.installer
+    ?? (opts.binarySource
+      ? binaryInstaller(conn, { source: opts.binarySource, detected, runner })
+      : corepackPnpmInstaller(conn, runner));
   return async (step) => {
     switch (step.id) {
       case 'bootstrap-agent':
@@ -96,6 +103,13 @@ export function remoteExecutor(
           result: { ok: true, detail: `egress: deny (enforced via ${detected.capabilities.egress.type})` },
           compensate: async () => { await runner(UNSET_EGRESS_CMD); },
         };
+      }
+
+      case 'install-claude': {
+        const r = await runner('command -v claude >/dev/null 2>&1');
+        return r.code === 0
+          ? { result: { ok: true, detail: 'claude CLI present' } }
+          : { result: { ok: true, degraded: true, detail: 'Claude Code CLI not found — install it and run `claude /login` on the remote (the agent needs it to run tasks)' } };
       }
 
       default:
