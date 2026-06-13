@@ -33,14 +33,35 @@ const fakeInstaller = (calls: string[]): AgentInstaller => ({
 const step = (id: string) => ({ id, title: id, requiresElevation: false });
 
 describe('remoteExecutor — bootstrap-agent (binary installer)', () => {
-  it('bootstrap-agent uses the binary installer when a binarySource is provided', async () => {
+  it('bootstrap-agent uses the binary installer when Node is absent and a binarySource is provided', async () => {
     const calls: string[] = [];
     const runner = async (cmd: string) => { calls.push(cmd); return { stdout: '', stderr: '', code: 0 }; };
     const source = async () => ({ bytes: Buffer.from('BIN'), sha256: 'a'.repeat(64), version: '1.0.0' });
-    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', binarySource: source, runner });
+    const exec = remoteExecutor(CONN, { ...detected('linux'), node: { present: false } }, { token: 't', binarySource: source, runner });
     const out = await exec(step('bootstrap-agent'));
     expect(out.result.ok).toBe(true);
     expect(calls.some((c) => c.includes('openssl base64 -A -d'))).toBe(true);
+  });
+
+  it('bootstrap-agent uses corepack (NOT binary) when Node is present, even with a binarySource', async () => {
+    const calls: string[] = [];
+    const runner = async (cmd: string) => { calls.push(cmd); return { stdout: '', stderr: '', code: 0 }; };
+    const source = async () => ({ bytes: Buffer.from('BIN'), sha256: 'a'.repeat(64), version: '1.0.0' });
+    const exec = remoteExecutor(CONN, { ...detected('linux'), node: { present: true } }, { token: 't', binarySource: source, runner });
+    const out = await exec(step('bootstrap-agent'));
+    expect(out.result.ok).toBe(true);
+    expect(calls.some((c) => c.includes('openssl base64 -A -d'))).toBe(false);
+    expect(calls.some((c) => c.includes('corepack enable') || c.includes('pnpm add -g'))).toBe(true);
+  });
+
+  it('bootstrap-agent uses corepack when Node is absent but no binarySource is configured', async () => {
+    const calls: string[] = [];
+    const runner = async (cmd: string) => { calls.push(cmd); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, { ...detected('linux'), node: { present: false } }, { token: 't', runner });
+    const out = await exec(step('bootstrap-agent'));
+    expect(out.result.ok).toBe(true);
+    expect(calls.some((c) => c.includes('openssl base64 -A -d'))).toBe(false);
+    expect(calls.some((c) => c.includes('corepack enable') || c.includes('pnpm add -g'))).toBe(true);
   });
 });
 

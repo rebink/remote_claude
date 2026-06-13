@@ -72,5 +72,5 @@ export function detectServerPlatform(deps: DetectDeps): DetectedServerPlatform {
     packageManager,
   };
 
-  return { os, arch: deps.arch, pathStyle: win ? 'win' : 'posix', capabilities };
+  return { os, arch: deps.arch, pathStyle: win ? 'win' : 'posix', node: { present: deps.has('node') }, capabilities };
 }
