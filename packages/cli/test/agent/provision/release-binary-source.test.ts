@@ -26,8 +26,8 @@ describe('assetName', () => {
     expect(assetName('linux', 'x64')).toBe('patchwire-agent-linux-x64');
   });
 
-  it('throws for windows', () => {
-    expect(() => assetName('windows', 'x64')).toThrow();
+  it('maps windows/x64 to patchwire-agent-windows-x64.exe', () => {
+    expect(assetName('windows', 'x64')).toBe('patchwire-agent-windows-x64.exe');
   });
 });
 
@@ -100,9 +100,36 @@ describe('releaseBinarySource', () => {
     await expect(source(DETECTED('linux', 'x64'))).rejects.toThrow(/404/);
   });
 
-  it('unsupported os (windows) throws /no standalone agent binary/', async () => {
+  it('unsupported os (solaris) throws /no standalone agent binary/', async () => {
     const fakeFetch: FetchLike = async () => res({ json: {} });
     const source = releaseBinarySource({ version: '9.9.9', baseUrl: 'http://x/rel', fetch: fakeFetch });
-    await expect(source(DETECTED('windows'))).rejects.toThrow(/no standalone agent binary/);
+    await expect(source(DETECTED('solaris'))).rejects.toThrow(/no standalone agent binary/);
+  });
+
+  it('windows happy path: returns bytes + sha256 + version, asset URL ends with .exe', async () => {
+    const bytes = Buffer.from('WINBIN');
+    const sha = createHash('sha256').update(bytes).digest('hex');
+    const manifest = {
+      version: '2.0.0',
+      binaries: {
+        'windows-x64': { file: 'patchwire-agent-windows-x64.exe', sha256: sha },
+      },
+    };
+
+    const requested: string[] = [];
+    const fakeFetch: FetchLike = async (url) => {
+      requested.push(url);
+      if (url.endsWith('/manifest.json')) return res({ json: manifest });
+      if (url.endsWith('/patchwire-agent-windows-x64.exe')) return res({ bytes });
+      return res({ ok: false, status: 404 });
+    };
+
+    const source = releaseBinarySource({ version: '2.0.0', baseUrl: 'http://x/rel', fetch: fakeFetch });
+    const artifact = await source(DETECTED('windows', 'x64'));
+
+    expect(artifact.bytes).toEqual(bytes);
+    expect(artifact.sha256).toBe(sha);
+    expect(artifact.version).toBe('2.0.0');
+    expect(requested[1]).toMatch(/patchwire-agent-windows-x64\.exe$/);
   });
 });
