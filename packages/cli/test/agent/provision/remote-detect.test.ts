@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildProbeScript, parseProbe, PROBE_TOOLS, detectRemoteServerPlatform } from '../../../src/agent/provision/remote-detect.ts';
+import { buildProbeScript, parseProbe, PROBE_TOOLS, detectRemoteServerPlatform, buildWindowsProbeScript, parseWindowsProbe, WINDOWS_PROBE_TOOLS } from '../../../src/agent/provision/remote-detect.ts';
 
 describe('buildProbeScript', () => {
   it('emits a uname line then a command -v loop over the probe tools', () => {
@@ -41,6 +41,38 @@ describe('parseProbe', () => {
 
 const CONN = { host: 'h', user: 'u', port: 22, keyPath: '/k' };
 
+describe('buildWindowsProbeScript', () => {
+  it('contains the expected PowerShell invocation and all probe tools', () => {
+    const s = buildWindowsProbeScript();
+    expect(s).toContain('powershell -NoProfile -Command');
+    expect(s).toContain('OSArchitecture');
+    expect(s).toContain('Get-Command');
+    for (const t of WINDOWS_PROBE_TOOLS) expect(s).toContain(t);
+  });
+});
+
+describe('parseWindowsProbe', () => {
+  it('parses WINDOWS X64 with present tools', () => {
+    const deps = parseWindowsProbe('WINDOWS X64\r\nhas:node\r\nhas:winget');
+    expect(deps).not.toBeNull();
+    expect(deps!.platform).toBe('win32');
+    expect(deps!.arch).toBe('x64');
+    expect(deps!.has('winget')).toBe(true);
+    expect(deps!.has('sc')).toBe(false);
+  });
+
+  it('maps Arm64 → arm64', () => {
+    const deps = parseWindowsProbe('WINDOWS Arm64');
+    expect(deps).not.toBeNull();
+    expect(deps!.arch).toBe('arm64');
+  });
+
+  it('returns null for a non-WINDOWS first line', () => {
+    expect(parseWindowsProbe('Darwin arm64')).toBeNull();
+    expect(parseWindowsProbe('')).toBeNull();
+  });
+});
+
 describe('detectRemoteServerPlatform', () => {
   it('runs the probe and maps a macOS host to real capabilities', async () => {
     const runner = async () => ({ stdout: 'Darwin arm64\nhas:sandbox-exec\nhas:launchctl\nhas:zsh\nhas:brew\nhas:node', code: 0 });
@@ -59,8 +91,20 @@ describe('detectRemoteServerPlatform', () => {
     // (the caller treats missing node as a plan-time prerequisite, not a detection error)
   });
 
-  it('throws an actionable error when the remote is not a recognized POSIX host', async () => {
-    const runner = async () => ({ stdout: "'uname' is not recognized", code: 1 });
-    await expect(detectRemoteServerPlatform(CONN, runner)).rejects.toThrow(/Windows remote provisioning is not yet supported/);
+  it('falls back to the Windows PowerShell probe when the POSIX probe is unrecognized', async () => {
+    const runner = async (script: string) =>
+      script.includes('powershell')
+        ? { stdout: 'WINDOWS X64\r\nhas:sc\r\nhas:winget\r\nhas:node', code: 0 }
+        : { stdout: "'uname' is not recognized", code: 1 };
+    const d = await detectRemoteServerPlatform(CONN, runner);
+    expect(d.os).toBe('windows');
+    expect(d.arch).toBe('x64');
+    expect(d.capabilities.service.type).toBe('windows-service');
+    expect(d.capabilities.secrets.type).toBe('dpapi');
+  });
+
+  it('throws an actionable error when neither POSIX nor Windows probe is recognized', async () => {
+    const runner = async () => ({ stdout: 'garbage output', code: 1 });
+    await expect(detectRemoteServerPlatform(CONN, runner)).rejects.toThrow(/Could not detect the remote OS/);
   });
 });
