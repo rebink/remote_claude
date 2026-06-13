@@ -51,8 +51,8 @@ describe('remoteExecutor', () => {
 
   it('an unimplemented step completes as degraded (non-fatal)', async () => {
     const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]) });
-    const out = await exec(step('bind-tailnet'));
-    expect(out.result).toEqual({ ok: true, degraded: true, detail: 'step "bind-tailnet" not yet implemented' });
+    const out = await exec(step('does-not-exist'));
+    expect(out.result).toEqual({ ok: true, degraded: true, detail: 'step "does-not-exist" not yet implemented' });
   });
 });
 
@@ -198,5 +198,26 @@ describe('remoteExecutor — apply-egress', () => {
     const out = await exec(step('apply-egress'));
     expect(out.result.ok).toBe(false);
     expect(out.compensate).toBeUndefined();
+  });
+});
+
+describe('remoteExecutor — bind-tailnet', () => {
+  it('is ok when tailscale status succeeds', async () => {
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('bind-tailnet'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBeFalsy();
+    expect(calls[0]).toMatch(/tailscale status/);
+  });
+
+  it('degrades with guidance when tailscale is not up', async () => {
+    const runner = async () => ({ stdout: '', stderr: '', code: 1 });
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('bind-tailnet'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBe(true);
+    expect(out.result.detail).toMatch(/tailscale up|tailnet/i);
   });
 });
