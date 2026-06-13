@@ -14,6 +14,8 @@ import { registerAgentLogCommand } from './commands/agent-log.ts';
 import { registerUsageCommand } from './commands/usage.ts';
 import { loadPricing } from './agent/pricing.ts';
 import { mergeAllowHosts, resolveHosts, buildSeatbeltProfile, egressAvailable, runEgressProbe } from './agent/egress.ts';
+import { detectNodeServerPlatform } from './agent/server-platform/node-detect.ts';
+import { summarizeCapabilities } from './agent/server-platform/guards.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { VERSION } from './version.ts';
 
@@ -36,6 +38,12 @@ async function runServe(): Promise<void> {
   const verifyCommand = process.env.PW_VERIFY_CMD?.trim() || undefined;
   const verifyTimeoutSec = Number(process.env.PW_VERIFY_TIMEOUT_SEC ?? 300);
   const pricing = loadPricing(process.env.PW_PRICING_FILE ?? join(homedir(), '.patchwire', 'pricing.yml'));
+
+  // Surface the detected server platform + capabilities at startup so degraded
+  // security (e.g. egress: NONE) is visible rather than silent.
+  for (const line of summarizeCapabilities(detectNodeServerPlatform())) {
+    console.error(`[platform] ${line}`);
+  }
 
   // Default-deny egress (M3, macOS). When enabled, the AI runs under a seatbelt
   // profile that blocks all outbound except localhost, DNS, and the resolved
