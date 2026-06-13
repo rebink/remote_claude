@@ -40,7 +40,7 @@ export function reduce(state: ProvisionUiState, line: string): ProvisionUiState 
     case 'result': {
       next.phase = 'done';
       const outcome = e.outcome as { failedStep?: string } | undefined;
-      next.result = { status: e.status as string, failedStep: outcome?.failedStep, health: e.health as ProvisionUiState['result']['health'] };
+      next.result = { status: e.status as string, failedStep: outcome?.failedStep, health: e.health as NonNullable<ProvisionUiState['result']>['health'] };
       return next;
     }
     default:
