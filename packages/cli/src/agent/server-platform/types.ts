@@ -23,6 +23,8 @@ export interface DetectedServerPlatform {
   os: OsKind;
   arch: string;
   pathStyle: 'posix' | 'win';
+  /** Node.js runtime presence on the host. Absent Node → the prereq-free binary install path. */
+  node?: { present: boolean };
   capabilities: ServerCapabilities;
 }
 
