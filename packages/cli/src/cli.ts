@@ -36,6 +36,7 @@ program
   .option('--provision-remote', 'drive the structured provisioning orchestrator (detect→plan→consent→execute→verify)')
   .option('--yes', 'auto-approve the provisioning consent gate (required for --json/non-interactive)')
   .option('--stream', 'emit NDJSON provisioning events + read {"consent":…} from stdin (for the desktop console)')
+  .option('--token-stdin', 'read the agent token from a {"token":…} stdin line instead of --token (avoids argv exposure)')
   .action(async (opts) => {
     if (opts.listPeers) {
       const { runSetupListPeers } = await import('./commands/setup.ts');
@@ -76,6 +77,7 @@ program
         yes: !!opts.yes,
         json: !!opts.json,
         stream: !!opts.stream,
+        tokenStdin: !!opts.tokenStdin,
       });
       return;
     }
