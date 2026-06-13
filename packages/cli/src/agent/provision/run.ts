@@ -10,12 +10,13 @@ import type {
 export async function runProvision(plan: ProvisionPlan, deps: RunProvisionDeps): Promise<ProvisionOutcome> {
   const emit = deps.onEvent ?? (() => {});
   const applied: { step: string; compensate: CompensatingAction }[] = [];
+  const degraded: string[] = [];
 
   emit({ type: 'phase', phase: 'execute' });
   for (const step of plan.steps) {
     emit({ type: 'step', step: step.id, status: 'start' });
 
-    let outcome: { result: { ok: boolean; detail?: string }; compensate?: CompensatingAction };
+    let outcome: { result: { ok: boolean; degraded?: boolean; detail?: string }; compensate?: CompensatingAction };
     try {
       outcome = await deps.executor(step);
     } catch (err) {
@@ -26,15 +27,20 @@ export async function runProvision(plan: ProvisionPlan, deps: RunProvisionDeps):
       emit({ type: 'step', step: step.id, status: 'failed', detail: outcome.result.detail });
       await rollback(applied, emit);
       emit({ type: 'done', status: 'rolled-back', failedStep: step.id });
-      return { status: 'rolled-back', failedStep: step.id };
+      return { status: 'rolled-back', failedStep: step.id, degraded };
     }
 
-    emit({ type: 'step', step: step.id, status: 'ok', detail: outcome.result.detail });
+    if (outcome.result.degraded) {
+      degraded.push(outcome.result.detail ?? step.id);
+      emit({ type: 'step', step: step.id, status: 'degraded', detail: outcome.result.detail });
+    } else {
+      emit({ type: 'step', step: step.id, status: 'ok', detail: outcome.result.detail });
+    }
     if (outcome.compensate) applied.push({ step: step.id, compensate: outcome.compensate });
   }
 
   emit({ type: 'done', status: 'completed' });
-  return { status: 'completed' };
+  return { status: 'completed', degraded };
 }
 
 async function rollback(

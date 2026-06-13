@@ -332,9 +332,17 @@ export async function runProvisionAgent(input: ProvisionAgentInput): Promise<voi
     'set -e',
     'command -v node >/dev/null || { echo PW_NO_NODE; exit 3; }',
     'command -v patchwire-agent >/dev/null || npm i -g @rebink/patchwire >/dev/null 2>&1',
-    `patchwire-agent install --token ${input.token} --host ${input.host} --port ${input.agentPort}`,
-  ].join('; ');
+    'umask 077',
+    'mkdir -p "$HOME/.patchwire"',
+    'cat > "$HOME/.patchwire/agent.env.tmp"',
+    'mv -f "$HOME/.patchwire/agent.env.tmp" "$HOME/.patchwire/agent.env"',
+    `patchwire-agent install --host ${input.host} --port ${input.agentPort}`,
+  ].join(' && ');
   const remoteCmd = `bash -lc '${remoteScript.replace(/'/g, `'\\''`)}'`;
+  const envPayload =
+    `export PW_AGENT_TOKEN='${input.token}'\n` +
+    `export PW_AGENT_HOST='${input.host}'\n` +
+    `export PW_AGENT_PORT='${input.agentPort}'\n`;
 
   const ssh = spawnSync('ssh', [
     '-i', input.keyPath,
@@ -346,7 +354,7 @@ export async function runProvisionAgent(input: ProvisionAgentInput): Promise<voi
     '-p', String(input.port),
     `${input.user}@${input.host}`,
     remoteCmd,
-  ], { encoding: 'utf8' });
+  ], { encoding: 'utf8', input: envPayload });
 
   const stdout = ssh.stdout ?? '';
   const stderr = (ssh.stderr ?? '').trim();
