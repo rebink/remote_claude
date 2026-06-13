@@ -36,3 +36,32 @@ describe('corepackPnpmInstaller.version / check', () => {
     expect(await absent.check()).toEqual({ present: false });
   });
 });
+
+describe('corepackPnpmInstaller.install / uninstall', () => {
+  it('install runs corepack+pnpm and returns ok with a compensating uninstall', async () => {
+    const f = fakeRunner([{ code: 0 }, { code: 0 }]); // [install, uninstall(via compensate)]
+    const inst = corepackPnpmInstaller(CONN, f.runner);
+    const { result, compensate } = await inst.install();
+    expect(result.ok).toBe(true);
+    expect(f.commands[0]).toContain('corepack enable');
+    expect(f.commands[0]).toContain('corepack prepare pnpm@10.26.1 --activate');
+    expect(f.commands[0]).toContain('pnpm add -g @rebink/patchwire');
+    expect(typeof compensate).toBe('function');
+
+    await compensate!();
+    expect(f.commands[1]).toBe('pnpm remove -g @rebink/patchwire');
+  });
+
+  it('install reports failure (no compensate) on non-zero exit', async () => {
+    const inst = corepackPnpmInstaller(CONN, fakeRunner([{ code: 1, stderr: 'EACCES' }]).runner);
+    const { result, compensate } = await inst.install();
+    expect(result.ok).toBe(false);
+    expect(result.detail).toContain('EACCES');
+    expect(compensate).toBeUndefined();
+  });
+
+  it('uninstall runs pnpm remove and reports ok', async () => {
+    const inst = corepackPnpmInstaller(CONN, fakeRunner([{ code: 0 }]).runner);
+    expect(await inst.uninstall()).toEqual({ ok: true, detail: 'removed' });
+  });
+});
