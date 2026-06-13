@@ -57,29 +57,45 @@ describe('remoteExecutor', () => {
 });
 
 describe('remoteExecutor — write-secret', () => {
-  it('writes the token atomically via stdin, keeping it off the command argv', async () => {
+  it('writes the FULL agent env (PW_AGENT_TOKEN + config) atomically to ~/.patchwire/agent.env via stdin', async () => {
     const calls: { command: string; input?: string }[] = [];
     const runner = async (command: string, input?: string) => {
       calls.push({ command, input });
       return { stdout: '', stderr: '', code: 0 };
     };
-    const exec = remoteExecutor(CONN, detected('linux'), { token: 'TKN-123', installer: fakeInstaller([]), runner });
+    const exec = remoteExecutor(CONN, detected('linux'), {
+      token: 'TKN-123', host: '100.64.0.1', port: 7878, aiBin: 'claude',
+      installer: fakeInstaller([]), runner,
+    });
     const out = await exec(step('write-secret'));
 
     expect(out.result.ok).toBe(true);
-    const write = calls[0]!;
-    // Atomic temp→rename, mode 600 via umask, into ~/.patchwire/env
-    expect(write.command).toContain('umask 077');
-    expect(write.command).toContain('mkdir -p');
-    expect(write.command).toMatch(/cat > .*env\.tmp/);
-    expect(write.command).toMatch(/mv -f .*env\.tmp.*env/);
-    // Token must NOT be in the command string (no ps leak).
-    expect(write.command).not.toContain('TKN-123');
-    expect(write.input).toBe(`export PW_TOKEN=${quoteForShell('TKN-123')}\n`);
+    const w = calls[0]!;
+    // Atomic temp→rename, mode 600, into ~/.patchwire/agent.env
+    expect(w.command).toContain('umask 077');
+    expect(w.command).toMatch(/cat > .*agent\.env\.tmp/);
+    expect(w.command).toMatch(/mv -f .*agent\.env\.tmp.* .*\/\.patchwire\/agent\.env/);
+    // The token is in stdin only, never in the command argv.
+    expect(w.command).not.toContain('TKN-123');
+    // Stdin payload carries the agent's env vars (PW_AGENT_TOKEN — NOT PW_TOKEN).
+    expect(w.input).toContain(`export PW_AGENT_TOKEN=${quoteForShell('TKN-123')}`);
+    expect(w.input).toContain(`export PW_AGENT_HOST=${quoteForShell('100.64.0.1')}`);
+    expect(w.input).toContain(`export PW_AGENT_PORT=${quoteForShell('7878')}`);
+    expect(w.input).toContain(`export PW_AI_BIN=${quoteForShell('claude')}`);
+    expect(w.input).not.toContain('PW_TOKEN=');
 
-    // compensate removes the secret file.
     await out.compensate!();
-    expect(calls[1]!.command).toMatch(/rm -f .*\/\.patchwire\/env/);
+    expect(calls[1]!.command).toMatch(/rm -f .*\/\.patchwire\/agent\.env/);
+  });
+
+  it('defaults host/port/aiBin when not provided', async () => {
+    const calls: { command: string; input?: string }[] = [];
+    const runner = async (command: string, input?: string) => { calls.push({ command, input }); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detected('macos'), { token: 't', installer: fakeInstaller([]), runner });
+    await exec(step('write-secret'));
+    expect(calls[0]!.input).toContain(`export PW_AGENT_HOST=${quoteForShell('127.0.0.1')}`);
+    expect(calls[0]!.input).toContain(`export PW_AGENT_PORT=${quoteForShell('7878')}`);
+    expect(calls[0]!.input).toContain(`export PW_AI_BIN=${quoteForShell('claude')}`);
   });
 
   it('write-secret reports failure (no compensate) on non-zero exit', async () => {
