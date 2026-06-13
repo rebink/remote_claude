@@ -61,13 +61,13 @@ describe('detectServerPlatform — Linux', () => {
 });
 
 describe('detectServerPlatform — Windows', () => {
-  it('maps win path style, pwsh, dpapi, windows-service, winget', () => {
-    const d = detectServerPlatform(deps('win32', 'x64', ['sc', 'winget']));
+  it('maps win path style, pwsh, dpapi, schtasks, winget', () => {
+    const d = detectServerPlatform(deps('win32', 'x64', ['winget']));
     expect(d.os).toBe('windows');
     expect(d.pathStyle).toBe('win');
     expect(d.capabilities.shell.type).toBe('pwsh');
     expect(d.capabilities.secrets.type).toBe('dpapi');
-    expect(d.capabilities.service).toEqual({ type: 'windows-service', requiresElevation: true });
+    expect(d.capabilities.service).toEqual({ type: 'schtasks', requiresElevation: false });
     expect(d.capabilities.packageManager.type).toBe('winget');
     expect(d.capabilities.egress.type).toBe('none'); // WFP impl deferred to S3
     expect(d.capabilities.filesystemIsolation.type).toBe('none');

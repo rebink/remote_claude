@@ -2,6 +2,7 @@ import type { DetectedServerPlatform } from '../server-platform/types.ts';
 import type { StepExecutor } from './types.ts';
 import { corepackPnpmInstaller, defaultRemoteRunner, type AgentInstaller, type RemoteConn, type RemoteRunner } from './installer.ts';
 import { buildAgentEnv, WRITE_AGENT_ENV_CMD } from './primitives.ts';
+import { WRITE_AGENT_ENV_PS, REMOVE_AGENT_ENV_PS } from './windows-primitives.ts';
 import { binaryInstaller } from './binary-installer.ts';
 import type { BinaryArtifactSource } from './binary-installer.ts';
 
@@ -46,13 +47,18 @@ export function remoteExecutor(
   return async (step) => {
     switch (step.id) {
       case 'bootstrap-agent':
-        if (detected.os === 'windows') {
-          return { result: { ok: false, detail: 'Windows agent install is not yet supported' } };
-        }
         return installer.install();
 
       case 'write-secret': {
         const payload = buildAgentEnv({ token: opts.token, host: opts.host, port: opts.port, aiBin: opts.aiBin });
+        if (detected.os === 'windows') {
+          const r = await runner(WRITE_AGENT_ENV_PS, payload);
+          if (r.code !== 0) return { result: { ok: false, detail: (r.stderr || r.stdout || 'write-secret failed').trim() } };
+          return {
+            result: { ok: true, detail: 'agent env written to %USERPROFILE%\\.patchwire\\agent.env' },
+            compensate: async () => { await runner(REMOVE_AGENT_ENV_PS); },
+          };
+        }
         const r = await runner(WRITE_AGENT_ENV_CMD, payload);
         if (r.code !== 0) {
           return { result: { ok: false, detail: (r.stderr || r.stdout || 'write-secret failed').trim() } };
@@ -73,6 +79,14 @@ export function remoteExecutor(
           return {
             result: { ok: true, detail },
             compensate: async () => { await runner("bash -lc 'patchwire-agent uninstall'"); },
+          };
+        }
+        if (detected.os === 'windows') {
+          const r = await runner('patchwire-agent install');
+          if (r.code !== 0) return { result: { ok: false, detail: (r.stderr || r.stdout || 'service install failed').trim() } };
+          return {
+            result: { ok: true, detail: 'scheduled task installed' },
+            compensate: async () => { await runner('patchwire-agent uninstall'); },
           };
         }
         return { result: { ok: true, degraded: true, detail: `service install not yet supported on ${detected.os}` } };
