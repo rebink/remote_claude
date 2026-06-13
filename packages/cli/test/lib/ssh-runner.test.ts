@@ -85,3 +85,20 @@ describe('runSsh', () => {
     }
   });
 });
+
+describe('runSsh stdin', () => {
+  it('forwards opts.input to the adapter as the third argument', async () => {
+    let received: { args: string[]; input?: string } | undefined;
+    const adapter = async (_cmd: string, args: string[], input?: string) => {
+      received = { args, input };
+      return { code: 0, stdout: '', stderr: '' };
+    };
+    await runSsh(
+      { host: 'h', user: 'u', port: 22, keyPath: '/k', command: 'cat > f', input: 'SECRET-DATA' },
+      adapter,
+    );
+    expect(received?.input).toBe('SECRET-DATA');
+    // The command (argv) must NOT contain the secret — it travels via stdin only.
+    expect(received?.args.join(' ')).not.toContain('SECRET-DATA');
+  });
+});
