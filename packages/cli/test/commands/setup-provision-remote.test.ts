@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Readable } from 'node:stream';
+import { makeLineReader } from '../../src/commands/setup.ts';
 
 // No real SSH, fs, or network calls needed — provision is fully injected.
 vi.mock('undici', () => ({ fetch: vi.fn(async () => ({ ok: true })) }));
@@ -52,6 +53,27 @@ describe('defaultReadConsentLine', () => {
     const s = fakeStream();
     const promise = defaultReadConsentLine(10, s);
     expect(await promise).toBe('');
+  });
+});
+
+describe('makeLineReader', () => {
+  it('makeLineReader returns successive lines from one coalesced chunk', async () => {
+    const s = new Readable({ read() {} });
+    const read = makeLineReader(s, 5000);
+    s.push('{"token":"t"}\n{"consent":true}\n');
+    expect(await read()).toBe('{"token":"t"}');
+    expect(await read()).toBe('{"consent":true}');
+  });
+  it('makeLineReader resolves "" on timeout when no line arrives', async () => {
+    const s = new Readable({ read() {} });
+    const read = makeLineReader(s, 10);
+    expect(await read()).toBe('');
+  });
+  it('makeLineReader drains remaining buffer on EOF', async () => {
+    const s = new Readable({ read() {} });
+    const read = makeLineReader(s, 5000);
+    s.push('no-newline'); s.push(null);
+    expect(await read()).toBe('no-newline');
   });
 });
 
