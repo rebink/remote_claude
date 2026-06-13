@@ -75,15 +75,15 @@ async fn start_provision(
     }
 
     // Spawn the sidecar. On failure, reset busy before returning.
-    let (mut rx, child) = match sidecar
+    let (mut rx, mut child) = match sidecar
         .args([
             "setup", "--provision-remote", "--stream",
+            "--token-stdin",
             "--host", &args.host,
             "--user", &args.user,
             "--ssh-port", &args.port.to_string(),
             "--key-path", &key_path,
             "--agent-port", &args.agent_port.to_string(),
-            "--token", &args.token,
         ])
         .spawn()
     {
@@ -93,6 +93,9 @@ async fn start_provision(
             return Err(e.to_string());
         }
     };
+
+    let token_line = format!("{{\"token\":\"{}\"}}\n", args.token);
+    child.write(token_line.as_bytes()).map_err(|e| e.to_string())?;
 
     *state.child.lock().unwrap() = Some(child);
 
