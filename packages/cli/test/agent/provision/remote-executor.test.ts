@@ -51,8 +51,8 @@ describe('remoteExecutor', () => {
 
   it('an unimplemented step completes as degraded (non-fatal)', async () => {
     const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]) });
-    const out = await exec(step('install-mutagen'));
-    expect(out.result).toEqual({ ok: true, degraded: true, detail: 'step "install-mutagen" not yet implemented' });
+    const out = await exec(step('apply-egress'));
+    expect(out.result).toEqual({ ok: true, degraded: true, detail: 'step "apply-egress" not yet implemented' });
   });
 });
 
@@ -104,5 +104,26 @@ describe('remoteExecutor — write-secret', () => {
     const out = await exec(step('write-secret'));
     expect(out.result.ok).toBe(false);
     expect(out.compensate).toBeUndefined();
+  });
+});
+
+describe('remoteExecutor — install-mutagen', () => {
+  it('is ok when mutagen is already present on the remote', async () => {
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('install-mutagen'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBeFalsy();
+    expect(calls[0]).toMatch(/command -v mutagen|\.patchwire\/bin\/mutagen/);
+  });
+
+  it('is degraded (non-fatal) when mutagen is absent — the agent resolves it lazily', async () => {
+    const runner = async () => ({ stdout: '', stderr: '', code: 1 });
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('install-mutagen'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBe(true);
+    expect(out.result.detail).toMatch(/resolve|first sync/i);
   });
 });

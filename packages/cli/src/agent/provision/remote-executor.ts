@@ -63,6 +63,13 @@ export function remoteExecutor(
         };
       }
 
+      case 'install-mutagen': {
+        const present = await runner('command -v mutagen >/dev/null 2>&1 || test -x "$HOME/.patchwire/bin/mutagen"');
+        return present.code === 0
+          ? { result: { ok: true, detail: 'mutagen present on remote' } }
+          : { result: { ok: true, degraded: true, detail: 'mutagen not present; the agent will resolve it on first sync' } };
+      }
+
       default:
         return { result: { ok: true, degraded: true, detail: `step "${step.id}" not yet implemented` } };
     }
