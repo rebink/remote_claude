@@ -50,8 +50,8 @@ const defaultAdapter: SpawnAdapter = (cmd, args, input) =>
     });
     let stdout = '';
     let stderr = '';
-    child.stdout.on('data', (c: Buffer) => { stdout += c.toString(); });
-    child.stderr.on('data', (c: Buffer) => { stderr += c.toString(); });
+    child.stdout?.on('data', (c: Buffer) => { stdout += c.toString(); });
+    child.stderr?.on('data', (c: Buffer) => { stderr += c.toString(); });
     child.on('error', (err) => {
       resolve({ code: null, stdout, stderr: stderr + `\nspawn error: ${err.message}` });
     });
