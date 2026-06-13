@@ -99,7 +99,7 @@ describe('detectRemoteServerPlatform', () => {
     const d = await detectRemoteServerPlatform(CONN, runner);
     expect(d.os).toBe('windows');
     expect(d.arch).toBe('x64');
-    expect(d.capabilities.service.type).toBe('windows-service');
+    expect(d.capabilities.service.type).toBe('schtasks');
     expect(d.capabilities.secrets.type).toBe('dpapi');
   });
 
