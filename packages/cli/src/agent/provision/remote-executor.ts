@@ -63,6 +63,23 @@ export function remoteExecutor(
         };
       }
 
+      case 'install-service': {
+        if (detected.os === 'macos') {
+          const r = await runner("bash -lc 'patchwire-agent install'");
+          if (r.code !== 0) {
+            return { result: { ok: false, detail: (r.stderr || r.stdout || 'service install failed').trim() } };
+          }
+          return {
+            result: { ok: true, detail: 'launchd service installed' },
+            compensate: async () => { await runner("bash -lc 'patchwire-agent uninstall'"); },
+          };
+        }
+        if (detected.os === 'linux') {
+          return { result: { ok: true, degraded: true, detail: 'linux service install (systemd --user) not yet wired; run the agent manually' } };
+        }
+        return { result: { ok: true, degraded: true, detail: `service install not yet supported on ${detected.os}` } };
+      }
+
       case 'install-mutagen': {
         const present = await runner('command -v mutagen >/dev/null 2>&1 || test -x "$HOME/.patchwire/bin/mutagen"');
         return present.code === 0
