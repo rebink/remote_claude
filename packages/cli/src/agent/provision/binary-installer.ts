@@ -1,6 +1,11 @@
 import type { DetectedServerPlatform } from '../server-platform/types.ts';
 import type { AgentInstaller, RemoteConn, RemoteRunner } from './installer.ts';
 import { defaultRemoteRunner } from './installer.ts';
+import {
+  buildWindowsBinaryInstallPs,
+  WINDOWS_BIN_VERSION_CMD,
+  REMOVE_WINDOWS_BIN_PS,
+} from './windows-primitives.ts';
 
 /** Absolute path where the standalone agent binary lives on the remote. */
 export const REMOTE_BIN_PATH = '$HOME/.patchwire/bin/patchwire-agent';
@@ -44,11 +49,21 @@ export function binaryInstaller(conn: RemoteConn, deps: BinaryInstallerDeps): Ag
   const runner = deps.runner ?? defaultRemoteRunner(conn);
 
   async function version(): Promise<string | null> {
+    if (deps.detected.os === 'windows') {
+      const r = await runner(WINDOWS_BIN_VERSION_CMD);
+      return r.code === 0 ? r.stdout.trim() : null;
+    }
     const r = await runner(`"${REMOTE_BIN_PATH}" --version`);
     return r.code === 0 ? r.stdout.trim() : null;
   }
 
   async function uninstall() {
+    if (deps.detected.os === 'windows') {
+      const r = await runner(REMOVE_WINDOWS_BIN_PS);
+      return r.code === 0
+        ? { ok: true as const, detail: 'removed' }
+        : { ok: false as const, detail: (r.stderr || r.stdout || 'uninstall failed').trim() };
+    }
     const r = await runner(`rm -f "${REMOTE_BIN_PATH}"`);
     return r.code === 0
       ? { ok: true as const, detail: 'removed' }
@@ -73,6 +88,27 @@ export function binaryInstaller(conn: RemoteConn, deps: BinaryInstallerDeps): Ag
       }
 
       const payload = art.bytes.toString('base64');
+
+      if (deps.detected.os === 'windows') {
+        const r = await runner(buildWindowsBinaryInstallPs(sha), payload);
+        if (r.code !== 0) {
+          return {
+            result: {
+              ok: false,
+              detail: (r.stderr || r.stdout || 'binary install failed (copy or sha256 mismatch)').trim(),
+            },
+          };
+        }
+        return {
+          result: {
+            ok: true,
+            detail: `installed standalone binary${art.version ? ` ${art.version}` : ''} (sha256 verified)`,
+          },
+          compensate: async () => {
+            await runner(REMOVE_WINDOWS_BIN_PS);
+          },
+        };
+      }
 
       const script =
         `umask 077; mkdir -p "$HOME/.patchwire/bin" ` +
