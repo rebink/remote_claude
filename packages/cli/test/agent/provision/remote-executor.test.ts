@@ -127,3 +127,34 @@ describe('remoteExecutor — install-mutagen', () => {
     expect(out.result.detail).toMatch(/resolve|first sync/i);
   });
 });
+
+describe('remoteExecutor — install-service', () => {
+  it('macOS: installs the launchd service via service-only patchwire-agent install, with compensate', async () => {
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detected('macos'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('install-service'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBeFalsy();
+    expect(calls[0]).toMatch(/patchwire-agent install/);
+    expect(calls[0]).not.toMatch(/--token/); // token lives in agent.env, not argv
+    await out.compensate!();
+    expect(calls[1]).toMatch(/patchwire-agent uninstall/);
+  });
+
+  it('macOS: reports failure (no compensate) on non-zero exit', async () => {
+    const runner = async () => ({ stdout: '', stderr: 'launchctl failed', code: 1 });
+    const exec = remoteExecutor(CONN, detected('macos'), { token: 't', installer: fakeInstaller([]), runner });
+    const out = await exec(step('install-service'));
+    expect(out.result.ok).toBe(false);
+    expect(out.compensate).toBeUndefined();
+  });
+
+  it('Linux: degraded (systemd --user not yet wired)', async () => {
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner: async () => ({ stdout: '', stderr: '', code: 0 }) });
+    const out = await exec(step('install-service'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBe(true);
+    expect(out.result.detail).toMatch(/linux|systemd/i);
+  });
+});
