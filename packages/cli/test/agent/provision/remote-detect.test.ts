@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildProbeScript, parseProbe, PROBE_TOOLS } from '../../../src/agent/provision/remote-detect.ts';
+import { buildProbeScript, parseProbe, PROBE_TOOLS, detectRemoteServerPlatform } from '../../../src/agent/provision/remote-detect.ts';
 
 describe('buildProbeScript', () => {
   it('emits a uname line then a command -v loop over the probe tools', () => {
@@ -36,5 +36,31 @@ describe('parseProbe', () => {
   it('returns null when the first line is not a recognized uname (e.g. Windows shell)', () => {
     expect(parseProbe("'uname' is not recognized as a command")).toBeNull();
     expect(parseProbe('')).toBeNull();
+  });
+});
+
+const CONN = { host: 'h', user: 'u', port: 22, keyPath: '/k' };
+
+describe('detectRemoteServerPlatform', () => {
+  it('runs the probe and maps a macOS host to real capabilities', async () => {
+    const runner = async () => ({ stdout: 'Darwin arm64\nhas:sandbox-exec\nhas:launchctl\nhas:zsh\nhas:brew\nhas:node', code: 0 });
+    const d = await detectRemoteServerPlatform(CONN, runner);
+    expect(d.os).toBe('macos');
+    expect(d.arch).toBe('arm64');
+    expect(d.capabilities.egress.type).toBe('seatbelt');
+    expect(d.capabilities.service.type).toBe('launchd');
+  });
+
+  it('is Node-independent: a host with no node still detects fine', async () => {
+    const runner = async () => ({ stdout: 'Linux x86_64\nhas:systemctl\nhas:apt-get', code: 0 });
+    const d = await detectRemoteServerPlatform(CONN, runner);
+    expect(d.os).toBe('linux');
+    expect(d.capabilities.service.type).toBe('systemd-user');
+    // (the caller treats missing node as a plan-time prerequisite, not a detection error)
+  });
+
+  it('throws an actionable error when the remote is not a recognized POSIX host', async () => {
+    const runner = async () => ({ stdout: "'uname' is not recognized", code: 1 });
+    await expect(detectRemoteServerPlatform(CONN, runner)).rejects.toThrow(/Windows remote provisioning is not yet supported/);
   });
 });
