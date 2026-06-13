@@ -12,6 +12,8 @@ export interface ProvisionPlan {
 
 export interface StepResult {
   ok: boolean;
+  /** Completed, but a non-critical capability isn't fully there (e.g. egress warn-only). Not a failure. */
+  degraded?: boolean;
   detail?: string;
 }
 
@@ -25,7 +27,7 @@ export type StepExecutor = (
 
 export type ProvisionEvent =
   | { type: 'phase'; phase: ProvisionPhase }
-  | { type: 'step'; step: string; status: 'start' | 'ok' | 'failed'; detail?: string }
+  | { type: 'step'; step: string; status: 'start' | 'ok' | 'degraded' | 'failed'; detail?: string }
   | { type: 'rollback'; step: string }
   | { type: 'done'; status: 'completed' | 'rolled-back'; failedStep?: string };
 
@@ -37,4 +39,6 @@ export interface RunProvisionDeps {
 export interface ProvisionOutcome {
   status: 'completed' | 'rolled-back';
   failedStep?: string;
+  /** Details of steps that completed in a degraded state. */
+  degraded: string[];
 }

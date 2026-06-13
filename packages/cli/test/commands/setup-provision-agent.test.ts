@@ -33,9 +33,13 @@ describe('setup --provision-agent', () => {
     expect(JSON.parse(out)).toEqual({ ok: true, healthy: true });
     const sshArgs = (cp.spawnSync as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][1] as string[];
     expect(sshArgs.join(' ')).toMatch(/bash -lc/);
-    expect(sshArgs.join(' ')).toMatch(new RegExp(`patchwire-agent install --token ${TOKEN} --host h --port 7878`));
+    // token written to the remote agent.env via stdin (not on argv)
+    expect(sshArgs.join(' ')).toMatch(/agent\.env/);
+    expect(sshArgs.join(' ')).not.toContain(TOKEN); // token rides stdin, not the command
+    expect(sshArgs.join(' ')).toMatch(/patchwire-agent install/);
+    expect(sshArgs.join(' ')).not.toMatch(/--token/);
     expect(sshArgs).toEqual(expect.arrayContaining(['-o', 'IdentitiesOnly=yes']));
-    // token written to ~/.patchwire/env
+    // token written to local ~/.patchwire/env
     expect(wf.mock.calls.some((c) => String(c[0]).endsWith('.patchwire/env') && String(c[1]).includes(`PW_TOKEN=${TOKEN}`))).toBe(true);
   });
 

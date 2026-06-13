@@ -1,10 +1,8 @@
 import * as cp from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { writeFile, mkdir, unlink, chmod } from 'node:fs/promises';
+import { writeFile, mkdir, unlink } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
-import chalk from 'chalk';
 import { log } from '../lib/log.ts';
 
 const SERVICE_LABEL = 'com.patchwire.agent';
@@ -35,12 +33,34 @@ function escape(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-interface InstallOptions {
-  projectsRoot?: string;
-  port?: number;
-  host?: string;
-  token?: string;
-  aiBin?: string;
+// InstallOptions kept minimal — env vars are no longer written by this command.
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface InstallOptions {}
+
+/**
+ * Build a plist that sources the agent env file and then exec's the agent binary.
+ * Pure function — exported for testing.
+ */
+export function buildAgentPlist(agentBin: string, env: string, outLog: string, errLog: string): string {
+  const cmd = `. ${env}; exec ${agentBin} serve`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${SERVICE_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-lc</string>
+    <string>${escape(cmd)}</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>${escape(outLog)}</string>
+  <key>StandardErrorPath</key><string>${escape(errLog)}</string>
+</dict>
+</plist>
+`;
 }
 
 /**
@@ -66,7 +86,7 @@ export function startLaunchAgent(plist: string, uid: number): { ok: boolean; met
   return { ok: false, stderr };
 }
 
-export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void> {
+export async function runDaemonInstall(_opts: InstallOptions = {}): Promise<void> {
   if (platform() !== 'darwin') {
     log.err(`launchd install is macOS-only. On Linux, run \`patchwire-agent\` under systemd or tmux.`);
     process.exitCode = 1;
@@ -80,52 +100,16 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
     return;
   }
 
-  const projectsRoot = opts.projectsRoot ?? process.env.PW_PROJECTS_ROOT ?? join(homedir(), 'workspace');
-  const port = opts.port ?? Number(process.env.PW_AGENT_PORT ?? 7878);
-  // Default to loopback; network reachability (Tailscale/LAN) must be opted into.
-  const host = opts.host ?? process.env.PW_AGENT_HOST ?? '127.0.0.1';
-  const token = opts.token ?? process.env.PW_AGENT_TOKEN ?? randomBytes(32).toString('hex');
-  const aiBin = opts.aiBin ?? process.env.PW_AI_BIN ?? 'claude';
+  if (!existsSync(envFile())) {
+    log.err(`No agent env at ${envFile()}. Provision the token first (write-secret) or create it, then re-run.`);
+    process.exitCode = 1;
+    return;
+  }
 
   await mkdir(logDir(), { recursive: true });
-  await mkdir(join(homedir(), '.patchwire'), { recursive: true });
-
-  await writeFile(
-    envFile(),
-    `# patchwire-agent environment\nexport PW_AGENT_TOKEN=${token}\nexport PW_PROJECTS_ROOT=${projectsRoot}\nexport PW_AGENT_HOST=${host}\nexport PW_AGENT_PORT=${port}\nexport PW_AI_BIN=${aiBin}\n`,
-    'utf8',
-  );
-  await chmod(envFile(), 0o600);
-
-  const path = process.env.PATH ?? '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin';
-
-  const plist = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>${SERVICE_LABEL}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${escape(agentBin)}</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>${escape(join(logDir(), 'agent.out.log'))}</string>
-  <key>StandardErrorPath</key><string>${escape(join(logDir(), 'agent.err.log'))}</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PATH</key><string>${escape(path)}</string>
-    <key>PW_AGENT_TOKEN</key><string>${escape(token)}</string>
-    <key>PW_PROJECTS_ROOT</key><string>${escape(projectsRoot)}</string>
-    <key>PW_AGENT_HOST</key><string>${escape(host)}</string>
-    <key>PW_AGENT_PORT</key><string>${escape(String(port))}</string>
-    <key>PW_AI_BIN</key><string>${escape(aiBin)}</string>
-  </dict>
-</dict>
-</plist>
-`;
-
   await mkdir(join(homedir(), 'Library', 'LaunchAgents'), { recursive: true });
+
+  const plist = buildAgentPlist(agentBin, envFile(), join(logDir(), 'agent.out.log'), join(logDir(), 'agent.err.log'));
   await writeFile(plistPath(), plist, { encoding: 'utf8', mode: 0o600 });
 
   const uid = process.getuid?.() ?? 0;
@@ -139,14 +123,8 @@ export async function runDaemonInstall(opts: InstallOptions = {}): Promise<void>
 
   log.ok(`Installed launchd service: ${SERVICE_LABEL}`);
   log.ok(`Plist: ${plistPath()}`);
-  log.ok(`Env file: ${envFile()} (chmod 600)`);
+  log.ok(`Env: ${envFile()} (sourced at launch)`);
   log.ok(`Logs: ${logDir()}/agent.{out,err}.log`);
-  console.log();
-  log.step('Token (share with the laptop):');
-  console.log(`  ${chalk.bold(token)}`);
-  console.log();
-  log.dim('On the laptop, set: export PW_TOKEN=<token-above>');
-  console.log();
   log.step('Manage the service:');
   console.log(`  launchctl unload ${plistPath()}    # stop`);
   console.log(`  launchctl load   ${plistPath()}    # start`);
