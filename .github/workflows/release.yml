@@ -86,9 +86,19 @@ jobs:
           }
           echo "$out"
 
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Build standalone agent binaries (bun --compile)
+        run: node scripts/build-agent-binaries.mjs
+
+      - name: Smoke-test the linux-x64 agent binary
+        run: ./dist-bin/patchwire-agent-linux-x64 --version
+
       - name: Create GitHub release with .vsix attached
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
             packages/extension/patchwire-vscode-*.vsix
+            dist-bin/patchwire-agent-*
+            dist-bin/manifest.json
