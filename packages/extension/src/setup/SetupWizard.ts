@@ -454,10 +454,10 @@ export class SetupWizard {
     if (stdout.trim()) this.output.appendLine(`[provision] ${stdout.trim()}`);
     if (stderr.trim()) this.output.appendLine(`[provision stderr] ${stderr.trim()}`);
 
-    let result: { ok?: boolean; code?: string; stderr?: string } = {};
+    let result: { ok?: boolean; code?: string; stderr?: string; healthy?: boolean; health?: { tailnet?: boolean; agent?: string; detail?: string } } = {};
     try { result = JSON.parse(stdout.trim() || '{}'); } catch { /* leave empty */ }
     const text = result.ok
-      ? '✓ Agent provisioned.'
+      ? `✓ Agent provisioned.${result.health ? ` (tailnet: ${result.health.tailnet ? 'up' : 'down'} · agent: ${result.health.agent ?? 'unknown'})` : ''}`
       : `Agent not provisioned (${result.code ?? 'error'}): ${result.stderr ?? 'see output channel'}. The extension still works without it.`;
     this.panel?.webview.postMessage({ type: 'provisionStatus', text });
   }
