@@ -5,7 +5,7 @@
 import { execSync } from 'node:child_process';
 import { writeFileSync, chmodSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 const BUN_TO_TRIPLE = {
   'bun-darwin-arm64': 'aarch64-apple-darwin',
   'bun-darwin-x64': 'x86_64-apple-darwin',
@@ -42,7 +42,7 @@ function stageFromRelease(dir) {
     console.log(`staged ${f} -> ${dest}`);
   }
 }
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const i = process.argv.indexOf('--from-release');
   if (i !== -1) stageFromRelease(process.argv[i + 1]); else stageDevWrapper();
 }
