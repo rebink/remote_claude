@@ -24,6 +24,14 @@ export const WINDOWS_BIN_VERSION_CMD =
 export const REMOVE_WINDOWS_BIN_PS =
   `powershell -NoProfile -Command "Remove-Item -LiteralPath (Join-Path $env:USERPROFILE '.patchwire\\bin\\patchwire-agent.exe') -ErrorAction SilentlyContinue"`;
 
+/** PowerShell that runs `patchwire-agent install` via the known absolute install path. */
+export const WINDOWS_AGENT_INSTALL_PS =
+  `powershell -NoProfile -Command "& (Join-Path $env:USERPROFILE '.patchwire\\bin\\patchwire-agent.exe') install"`;
+
+/** PowerShell that runs `patchwire-agent uninstall` via the known absolute install path. */
+export const WINDOWS_AGENT_UNINSTALL_PS =
+  `powershell -NoProfile -Command "& (Join-Path $env:USERPROFILE '.patchwire\\bin\\patchwire-agent.exe') uninstall"`;
+
 /** PowerShell that reads the agent env from stdin and writes %USERPROFILE%\.patchwire\agent.env. */
 export const WRITE_AGENT_ENV_PS =
   `powershell -NoProfile -Command "$d=Join-Path $env:USERPROFILE '.patchwire'; New-Item -ItemType Directory -Force -Path $d > $null; Set-Content -LiteralPath (Join-Path $d 'agent.env') -Value ([Console]::In.ReadToEnd()) -NoNewline -Encoding ascii; Write-Output PW_ENV_OK"`;
@@ -49,7 +57,7 @@ export function buildAgentLauncherPs1(): string {
     `    Set-Item -Path ('Env:' + $matches[1].Trim()) -Value $val`,
     `  }`,
     `}`,
-    `& patchwire-agent serve`,
+    `& (Join-Path $env:USERPROFILE '.patchwire\\bin\\patchwire-agent.exe') serve`,
     ``,
   ].join('\r\n');
 }

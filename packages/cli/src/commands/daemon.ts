@@ -143,7 +143,10 @@ export function startSystemdUser(): { ok: boolean; stderr?: string } {
 
 export async function runDaemonInstall(_opts: InstallOptions = {}): Promise<void> {
   // Platform-agnostic checks first.
-  const agentBin = platform() === 'win32' ? whichWindows('patchwire-agent') : which('patchwire-agent');
+  const knownWindowsPath = join(homedir(), '.patchwire', 'bin', 'patchwire-agent.exe');
+  const agentBin = platform() === 'win32'
+    ? (existsSync(knownWindowsPath) ? knownWindowsPath : whichWindows('patchwire-agent'))
+    : which('patchwire-agent');
   if (!agentBin) {
     log.err('`patchwire-agent` not found on PATH. Install with `pnpm add -g github:rebink/patchwire` first.');
     process.exitCode = 1;

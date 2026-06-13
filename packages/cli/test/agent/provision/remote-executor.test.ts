@@ -3,7 +3,7 @@ import { remoteExecutor } from '../../../src/agent/provision/remote-executor.ts'
 import type { AgentInstaller } from '../../../src/agent/provision/installer.ts';
 import type { DetectedServerPlatform } from '../../../src/agent/server-platform/types.ts';
 import { quoteForShell } from '../../../src/lib/ssh-runner.ts';
-import { WRITE_AGENT_ENV_PS, REMOVE_AGENT_ENV_PS } from '../../../src/agent/provision/windows-primitives.ts';
+import { WRITE_AGENT_ENV_PS, REMOVE_AGENT_ENV_PS, WINDOWS_AGENT_INSTALL_PS, WINDOWS_AGENT_UNINSTALL_PS } from '../../../src/agent/provision/windows-primitives.ts';
 import { buildAgentEnv } from '../../../src/agent/provision/primitives.ts';
 
 const CONN = { host: 'h', user: 'u', port: 22, keyPath: '/k' };
@@ -307,17 +307,24 @@ describe('remoteExecutor — write-secret (Windows)', () => {
 });
 
 describe('remoteExecutor — install-service (Windows)', () => {
-  it('runs patchwire-agent install directly (NOT bash -lc), compensate uninstalls', async () => {
+  it('runs WINDOWS_AGENT_INSTALL_PS (absolute .exe path, NOT bare name, NOT bash -lc), compensate runs WINDOWS_AGENT_UNINSTALL_PS', async () => {
     const calls: string[] = [];
     const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
     const exec = remoteExecutor(CONN, detected('windows'), { token: 't', installer: fakeInstaller([]), runner });
     const out = await exec(step('install-service'));
     expect(out.result.ok).toBe(true);
     expect(out.result.degraded).toBeFalsy();
-    expect(calls[0]).toMatch(/patchwire-agent install/);
+    // Must use the PS constant that references the absolute .exe install path
+    expect(calls[0]).toBe(WINDOWS_AGENT_INSTALL_PS);
+    expect(calls[0]).toContain('.patchwire\\bin\\patchwire-agent.exe');
+    expect(calls[0]).toContain('install');
+    // Must NOT call a bare binary name or use bash -lc
     expect(calls[0]).not.toMatch(/bash -lc/);
+    expect(calls[0]).not.toMatch(/^patchwire-agent install/);
     await out.compensate!();
-    expect(calls[1]).toMatch(/patchwire-agent uninstall/);
+    expect(calls[1]).toBe(WINDOWS_AGENT_UNINSTALL_PS);
+    expect(calls[1]).toContain('.patchwire\\bin\\patchwire-agent.exe');
+    expect(calls[1]).toContain('uninstall');
   });
 
   it('reports failure (no compensate) on non-zero exit', async () => {
