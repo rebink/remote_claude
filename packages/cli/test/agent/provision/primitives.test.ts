@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAgentEnv, WRITE_AGENT_ENV_CMD, AGENT_INSTALL_CMD, AGENT_PACKAGE } from '../../../src/agent/provision/primitives.ts';
+import { buildAgentEnv, WRITE_AGENT_ENV_CMD, AGENT_INSTALL_CMD, AGENT_PACKAGE, POSIX_PATH_PREFIX } from '../../../src/agent/provision/primitives.ts';
 import { quoteForShell } from '../../../src/lib/ssh-runner.ts';
 
 describe('buildAgentEnv', () => {
@@ -25,6 +25,12 @@ describe('install + write primitives', () => {
     expect(AGENT_INSTALL_CMD).toContain('corepack prepare pnpm@');
     expect(AGENT_INSTALL_CMD).toContain(`pnpm add -g ${AGENT_PACKAGE}`);
     expect(AGENT_INSTALL_CMD).not.toContain('npm i -g'); // converged off npm
+  });
+  it('AGENT_INSTALL_CMD is prefixed with POSIX_PATH_PREFIX so corepack/pnpm/node are found in non-interactive SSH sessions', () => {
+    expect(AGENT_INSTALL_CMD).toContain(POSIX_PATH_PREFIX);
+    expect(AGENT_INSTALL_CMD.indexOf(POSIX_PATH_PREFIX)).toBeLessThan(AGENT_INSTALL_CMD.indexOf('corepack'));
+    expect(POSIX_PATH_PREFIX).toContain('/opt/homebrew/bin');
+    expect(POSIX_PATH_PREFIX).toContain('$PATH');
   });
   it('WRITE_AGENT_ENV_CMD is an atomic temp→rename into ~/.patchwire/agent.env', () => {
     expect(WRITE_AGENT_ENV_CMD).toContain('umask 077');
