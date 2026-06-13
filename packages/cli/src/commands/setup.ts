@@ -423,27 +423,51 @@ export interface ProvisionRemoteInput {
 
 type ProvisionFn = typeof provisionRemote;
 
+/** A persistent line reader over a stream: successive calls return successive '\n'-delimited
+ *  lines, retaining any buffered remainder between calls. Resolves '' on timeout/EOF. */
+export function makeLineReader(stream: NodeJS.ReadableStream = process.stdin, timeoutMs = 600_000): () => Promise<string> {
+  let buf = '';
+  let ended = false;
+  const waiters: Array<(line: string) => void> = [];
+  let attached = false;
+  const pump = () => {
+    let nl: number;
+    while (waiters.length && (nl = buf.indexOf('\n')) !== -1) {
+      const line = buf.slice(0, nl);
+      buf = buf.slice(nl + 1);
+      waiters.shift()!(line);
+    }
+    if (ended) { while (waiters.length) waiters.shift()!(buf); buf = ''; }
+  };
+  const onData = (c: Buffer) => { buf += c.toString(); pump(); };
+  const onEnd = () => { ended = true; pump(); };
+  return function readLine(): Promise<string> {
+    return new Promise((resolve) => {
+      if (!attached) {
+        attached = true;
+        (stream as NodeJS.ReadStream).resume?.();
+        stream.on('data', onData);
+        stream.on('end', onEnd);
+      }
+      const timer = setTimeout(() => {
+        const i = waiters.indexOf(onLine);
+        if (i !== -1) waiters.splice(i, 1);
+        resolve('');
+      }, timeoutMs);
+      const onLine = (line: string) => { clearTimeout(timer); resolve(line); };
+      waiters.push(onLine);
+      pump();
+    });
+  };
+}
+
+const _readers = new WeakMap<NodeJS.ReadableStream, () => Promise<string>>();
+
 /** Read one line of stdin, resolving '' on timeout/EOF. Injected in tests. */
 export function defaultReadConsentLine(timeoutMs = 600_000, stream: NodeJS.ReadableStream = process.stdin): Promise<string> {
-  return new Promise((resolve) => {
-    let buf = '';
-    const cleanup = () => {
-      clearTimeout(timer);
-      stream.off('data', onData);
-      stream.off('end', onEnd);
-      (stream as NodeJS.ReadableStream & { pause?: () => void }).pause?.();
-    };
-    const onData = (chunk: Buffer) => {
-      buf += chunk.toString();
-      const nl = buf.indexOf('\n');
-      if (nl !== -1) { cleanup(); resolve(buf.slice(0, nl)); }
-    };
-    const onEnd = () => { cleanup(); resolve(buf); };
-    const timer = setTimeout(() => { cleanup(); resolve(''); }, timeoutMs);
-    (stream as NodeJS.ReadableStream & { resume?: () => void }).resume?.();
-    stream.on('data', onData);
-    stream.on('end', onEnd);
-  });
+  let reader = _readers.get(stream);
+  if (!reader) { reader = makeLineReader(stream, timeoutMs); _readers.set(stream, reader); }
+  return reader();
 }
 
 export async function runProvisionRemote(
@@ -476,7 +500,7 @@ export async function runProvisionRemote(
     token,
   });
   if (bad) {
-    process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: `Refusing to provision: unsafe ${bad}.` }));
+    process.stdout.write(JSON.stringify({ ok: false, code: 'invalid_input', stderr: `Refusing to provision: unsafe ${bad}.` }) + '\n');
     return;
   }
 
