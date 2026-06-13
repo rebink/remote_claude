@@ -5,7 +5,8 @@ import type { ProvisionPlan, ProvisionStep } from './types.ts';
 export function planProvision(d: DetectedServerPlatform): ProvisionPlan {
   const caps = d.capabilities;
   const steps: ProvisionStep[] = [
-    { id: 'install-claude', title: 'Install Claude Code', requiresElevation: caps.packageManager.requiresElevation },
+    { id: 'bootstrap-agent', title: 'Install Patchwire agent', requiresElevation: caps.packageManager.requiresElevation },
+    { id: 'install-claude', title: 'Install Claude Code', requiresElevation: false },
     { id: 'install-mutagen', title: 'Install Mutagen', requiresElevation: false },
     { id: 'write-secret', title: 'Store agent token', requiresElevation: caps.secrets.requiresElevation },
     { id: 'install-service', title: 'Install agent service', requiresElevation: caps.service.requiresElevation },

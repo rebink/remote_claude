@@ -23,7 +23,7 @@ describe('planProvision', () => {
   it('produces the ordered steps for a macOS host with no elevation', () => {
     const plan = planProvision(detected());
     expect(plan.steps.map((s) => s.id)).toEqual([
-      'install-claude', 'install-mutagen', 'write-secret', 'install-service', 'apply-egress', 'bind-tailnet',
+      'bootstrap-agent', 'install-claude', 'install-mutagen', 'write-secret', 'install-service', 'apply-egress', 'bind-tailnet',
     ]);
     expect(plan.steps.every((s) => s.requiresElevation === false)).toBe(true);
   });
@@ -35,7 +35,8 @@ describe('planProvision', () => {
       service: { type: 'systemd-user', requiresElevation: false },
     }));
     const byId = Object.fromEntries(plan.steps.map((s) => [s.id, s.requiresElevation]));
-    expect(byId['install-claude']).toBe(true);
+    expect(byId['bootstrap-agent']).toBe(true);
+    expect(byId['install-claude']).toBe(false);
     expect(byId['apply-egress']).toBe(true);
     expect(byId['install-service']).toBe(false);
   });

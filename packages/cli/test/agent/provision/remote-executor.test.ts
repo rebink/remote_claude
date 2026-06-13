@@ -32,6 +32,34 @@ const fakeInstaller = (calls: string[]): AgentInstaller => ({
 
 const step = (id: string) => ({ id, title: id, requiresElevation: false });
 
+describe('remoteExecutor — bootstrap-agent (binary installer)', () => {
+  it('bootstrap-agent uses the binary installer when a binarySource is provided', async () => {
+    const calls: string[] = [];
+    const runner = async (cmd: string) => { calls.push(cmd); return { stdout: '', stderr: '', code: 0 }; };
+    const source = async () => ({ bytes: Buffer.from('BIN'), sha256: 'a'.repeat(64), version: '1.0.0' });
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', binarySource: source, runner });
+    const out = await exec(step('bootstrap-agent'));
+    expect(out.result.ok).toBe(true);
+    expect(calls.some((c) => c.includes('openssl base64 -A -d'))).toBe(true);
+  });
+});
+
+describe('remoteExecutor — install-claude (probe)', () => {
+  it('ok when the claude CLI is present', async () => {
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner: async () => ({ stdout: '', stderr: '', code: 0 }) });
+    const out = await exec(step('install-claude'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBeFalsy();
+  });
+  it('degraded (non-fatal) with a login hint when claude is absent', async () => {
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner: async () => ({ stdout: '', stderr: '', code: 1 }) });
+    const out = await exec(step('install-claude'));
+    expect(out.result.ok).toBe(true);
+    expect(out.result.degraded).toBe(true);
+    expect(out.result.detail).toMatch(/Claude Code|claude \/login/);
+  });
+});
+
 describe('remoteExecutor', () => {
   it('bootstrap-agent delegates to the injected AgentInstaller', async () => {
     const calls: string[] = [];
