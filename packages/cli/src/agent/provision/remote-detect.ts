@@ -39,6 +39,38 @@ export function parseProbe(stdout: string): DetectDeps | null {
   return { platform, arch: mapArch(parts[1] ?? ''), has: (c) => present.has(c) };
 }
 
+/** Tools probed on a Windows remote (Get-Command). */
+export const WINDOWS_PROBE_TOOLS = ['node', 'corepack', 'pnpm', 'claude', 'sc', 'winget'] as const;
+
+/**
+ * PowerShell probe for a native Windows remote (OpenSSH default shell is cmd.exe, which
+ * can invoke powershell.exe). Prints `WINDOWS <OSArchitecture>` then `has:<tool>` lines.
+ * Uses RuntimeInformation.OSArchitecture (true OS arch) — not PROCESSOR_ARCHITECTURE
+ * (which reports the *process* arch).
+ */
+export function buildWindowsProbeScript(tools: readonly string[] = WINDOWS_PROBE_TOOLS): string {
+  const list = tools.map((t) => `'${t}'`).join(',');
+  return `powershell -NoProfile -Command "Write-Output ('WINDOWS ' + [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture); foreach($c in ${list}){ if(Get-Command $c -ErrorAction SilentlyContinue){ Write-Output ('has:' + $c) } }"`;
+}
+
+function mapWinArch(token: string): string {
+  const t = token.toLowerCase();
+  if (t === 'x64') return 'x64';
+  if (t === 'arm64') return 'arm64';
+  if (t === 'x86') return 'ia32';
+  return t;
+}
+
+/** Parse the Windows PowerShell probe output into DetectDeps, or null if not a Windows probe. */
+export function parseWindowsProbe(stdout: string): DetectDeps | null {
+  const lines = stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return null;
+  const m = lines[0]!.match(/^WINDOWS\s+(\S+)/i);
+  if (!m) return null;
+  const present = new Set(lines.filter((l) => l.startsWith('has:')).map((l) => l.slice(4)));
+  return { platform: 'win32', arch: mapWinArch(m[1]!), has: (c) => present.has(c) };
+}
+
 /** SSH connection params without the per-call `command`. */
 export type RemoteConn = Omit<SshOpts, 'command'>;
 
@@ -60,12 +92,16 @@ export async function detectRemoteServerPlatform(
   conn: RemoteConn,
   runner: ProbeRunner = sshProbeRunner(conn),
 ): Promise<DetectedServerPlatform> {
-  const { stdout } = await runner(buildProbeScript());
-  const deps = parseProbe(stdout);
+  const posix = await runner(buildProbeScript());
+  let deps = parseProbe(posix.stdout);
+  if (!deps) {
+    const win = await runner(buildWindowsProbeScript());
+    deps = parseWindowsProbe(win.stdout);
+  }
   if (!deps) {
     throw new Error(
-      'Could not detect the remote OS (no POSIX `uname`). ' +
-        'Windows remote provisioning is not yet supported.',
+      'Could not detect the remote OS: neither a POSIX `uname` nor a Windows PowerShell probe ' +
+        'returned a recognized result. Ensure the remote is reachable over SSH and runs a POSIX shell or Windows PowerShell.',
     );
   }
   return detectServerPlatform(deps);
