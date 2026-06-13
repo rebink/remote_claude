@@ -49,6 +49,7 @@ describe('install + write primitives', () => {
     expect(AGENT_INSTALL_CMD).toContain(POSIX_PATH_PREFIX);
     expect(AGENT_INSTALL_CMD.indexOf(POSIX_PATH_PREFIX)).toBeLessThan(AGENT_INSTALL_CMD.indexOf('command -v pnpm'));
     expect(POSIX_PATH_PREFIX).toContain('/opt/homebrew/bin');
+    expect(POSIX_PATH_PREFIX).toContain('/home/linuxbrew/.linuxbrew/bin');
     expect(POSIX_PATH_PREFIX).toContain('$PATH');
   });
   it('POSIX_PATH_PREFIX is a self-contained export statement (not a bare assignment-prefix) so it applies to the whole command line', () => {
