@@ -26,11 +26,12 @@ describe('setup --provision-agent', () => {
     vi.spyOn(fs, 'chmodSync').mockReturnValue(undefined as never);
     const { runProvisionAgent } = await import('../../src/commands/setup.ts');
 
-    const out = await captureStdout(() => runProvisionAgent({
-      host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN,
-    }));
+    const out = await captureStdout(() => runProvisionAgent(
+      { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN },
+      { verify: async () => ({ tailnet: true, agent: 'healthy' }) },
+    ));
 
-    expect(JSON.parse(out)).toEqual({ ok: true, healthy: true });
+    expect(JSON.parse(out)).toEqual({ ok: true, healthy: true, health: { tailnet: true, agent: 'healthy' } });
     const sshArgs = (cp.spawnSync as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][1] as string[];
     expect(sshArgs.join(' ')).toMatch(/bash -lc/);
     expect(sshArgs.join(' ')).toMatch(/corepack enable/);
@@ -43,6 +44,27 @@ describe('setup --provision-agent', () => {
     expect(sshArgs).toEqual(expect.arrayContaining(['-o', 'IdentitiesOnly=yes']));
     // token written to local ~/.patchwire/env
     expect(wf.mock.calls.some((c) => String(c[0]).endsWith('.patchwire/env') && String(c[1]).includes(`PW_TOKEN=${TOKEN}`))).toBe(true);
+  });
+
+  it('provision succeeds but verify returns unhealthy → emits ok:false with enriched health', async () => {
+    vi.spyOn(cp, 'spawnSync').mockReturnValue({ status: 0, stdout: '', stderr: '' } as never);
+    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    vi.spyOn(fs, 'mkdirSync').mockReturnValue(undefined as never);
+    vi.spyOn(fs, 'writeFileSync').mockReturnValue(undefined as never);
+    vi.spyOn(fs, 'chmodSync').mockReturnValue(undefined as never);
+    const { runProvisionAgent } = await import('../../src/commands/setup.ts');
+
+    const out = await captureStdout(() => runProvisionAgent(
+      { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN },
+      { verify: async () => ({ tailnet: false, agent: 'unhealthy', detail: 'no claude' }) },
+    ));
+
+    expect(JSON.parse(out)).toEqual({
+      ok: false,
+      code: 'unhealthy',
+      healthy: false,
+      health: { tailnet: false, agent: 'unhealthy', detail: 'no claude' },
+    });
   });
 
   it('maps a missing remote Node to code no_node', async () => {
