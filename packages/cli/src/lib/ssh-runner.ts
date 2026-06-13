@@ -12,6 +12,8 @@ export interface SshOpts {
    * before interpolating them into `command`. Do NOT pass raw user input.
    */
   command: string;
+  /** Optional data piped to the remote command's stdin — keeps secrets off the argv (no ps leak). */
+  input?: string;
 }
 
 export interface SpawnResult {
@@ -20,7 +22,7 @@ export interface SpawnResult {
   stderr: string;
 }
 
-export type SpawnAdapter = (cmd: string, args: string[]) => Promise<SpawnResult>;
+export type SpawnAdapter = (cmd: string, args: string[], input?: string) => Promise<SpawnResult>;
 
 /** Single-quote a value for safe interpolation into a remote shell. Rejects newlines and carriage returns. */
 export function quoteForShell(value: string): string {
@@ -41,9 +43,11 @@ export function buildSshArgv(opts: SshOpts): string[] {
   ];
 }
 
-const defaultAdapter: SpawnAdapter = (cmd, args) =>
+const defaultAdapter: SpawnAdapter = (cmd, args, input) =>
   new Promise((resolve) => {
-    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(cmd, args, {
+      stdio: [input !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
+    });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (c: Buffer) => { stdout += c.toString(); });
@@ -54,8 +58,9 @@ const defaultAdapter: SpawnAdapter = (cmd, args) =>
     child.on('close', (code) => {
       resolve({ code, stdout, stderr });
     });
+    if (input !== undefined && child.stdin) child.stdin.end(input);
   });
 
 export async function runSsh(opts: SshOpts, adapter: SpawnAdapter = defaultAdapter): Promise<SpawnResult> {
-  return adapter('ssh', buildSshArgv(opts));
+  return adapter('ssh', buildSshArgv(opts), opts.input);
 }
