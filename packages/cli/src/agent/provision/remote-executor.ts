@@ -22,6 +22,12 @@ export interface RemoteExecutorOpts {
 const WRITE_ENV_CMD =
   'umask 077; mkdir -p "$HOME/.patchwire" && cat > "$HOME/.patchwire/agent.env.tmp" && mv -f "$HOME/.patchwire/agent.env.tmp" "$HOME/.patchwire/agent.env"';
 
+/** Idempotently set PW_EGRESS=deny in the agent env (strip any prior line, append, tmp→rename). */
+const SET_EGRESS_DENY_CMD =
+  'ENV="$HOME/.patchwire/agent.env"; umask 077; { grep -v \'^export PW_EGRESS=\' "$ENV" 2>/dev/null; echo "export PW_EGRESS=deny"; } > "$ENV.tmp" && mv -f "$ENV.tmp" "$ENV"';
+const UNSET_EGRESS_CMD =
+  'ENV="$HOME/.patchwire/agent.env"; { grep -v \'^export PW_EGRESS=\' "$ENV" 2>/dev/null || true; } > "$ENV.tmp" && mv -f "$ENV.tmp" "$ENV"';
+
 /**
  * Build the StepExecutor that `runProvision` drives, dispatching each step to a remote action.
  * This slice implements `bootstrap-agent`; other steps complete as degraded until their slices land.
@@ -85,6 +91,20 @@ export function remoteExecutor(
         return present.code === 0
           ? { result: { ok: true, detail: 'mutagen present on remote' } }
           : { result: { ok: true, degraded: true, detail: 'mutagen not present; the agent will resolve it on first sync' } };
+      }
+
+      case 'apply-egress': {
+        if (detected.capabilities.egress.type === 'none') {
+          return { result: { ok: true, degraded: true, detail: `egress not enforceable on ${detected.os}; agent runs without network confinement` } };
+        }
+        const r = await runner(SET_EGRESS_DENY_CMD);
+        if (r.code !== 0) {
+          return { result: { ok: false, detail: (r.stderr || r.stdout || 'apply-egress failed').trim() } };
+        }
+        return {
+          result: { ok: true, detail: `egress: deny (enforced via ${detected.capabilities.egress.type})` },
+          compensate: async () => { await runner(UNSET_EGRESS_CMD); },
+        };
       }
 
       default:
