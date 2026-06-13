@@ -93,6 +93,13 @@ export function remoteExecutor(
           : { result: { ok: true, degraded: true, detail: 'mutagen not present; the agent will resolve it on first sync' } };
       }
 
+      case 'bind-tailnet': {
+        const r = await runner('tailscale status >/dev/null 2>&1');
+        return r.code === 0
+          ? { result: { ok: true, detail: 'tailnet: up' } }
+          : { result: { ok: true, degraded: true, detail: 'Tailscale is not up on the remote; the agent may be unreachable — run `tailscale up`' } };
+      }
+
       case 'apply-egress': {
         if (detected.capabilities.egress.type === 'none') {
           return { result: { ok: true, degraded: true, detail: `egress not enforceable on ${detected.os}; agent runs without network confinement` } };
