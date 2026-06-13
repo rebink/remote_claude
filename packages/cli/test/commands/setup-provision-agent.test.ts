@@ -33,7 +33,9 @@ describe('setup --provision-agent', () => {
     expect(JSON.parse(out)).toEqual({ ok: true, healthy: true });
     const sshArgs = (cp.spawnSync as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][1] as string[];
     expect(sshArgs.join(' ')).toMatch(/bash -lc/);
-    // token written to the remote agent.env via stdin (not on argv)
+    expect(sshArgs.join(' ')).toMatch(/corepack enable/);
+    expect(sshArgs.join(' ')).toMatch(/pnpm add -g @rebink\/patchwire/);
+    expect(sshArgs.join(' ')).not.toMatch(/npm i -g/);
     expect(sshArgs.join(' ')).toMatch(/agent\.env/);
     expect(sshArgs.join(' ')).not.toContain(TOKEN); // token rides stdin, not the command
     expect(sshArgs.join(' ')).toMatch(/patchwire-agent install/);
