@@ -45,8 +45,8 @@ export function detectServerPlatform(deps: DetectDeps): DetectedServerPlatform {
       ? { type: 'launchd', requiresElevation: false }
       : os === 'linux' && deps.has('systemctl')
         ? { type: 'systemd-user', requiresElevation: false }
-        : win && deps.has('sc')
-          ? { type: 'windows-service', requiresElevation: true }
+        : win
+          ? { type: 'schtasks', requiresElevation: false }
           : NONE;
 
   const shell: CapabilityDescriptor = win

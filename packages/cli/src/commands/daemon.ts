@@ -4,6 +4,7 @@ import { writeFile, mkdir, unlink } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import { log } from '../lib/log.ts';
+import { buildAgentLauncherPs1, buildSchtasksCreate, buildSchtasksDelete, WINDOWS_TASK_NAME } from '../agent/provision/windows-primitives.ts';
 
 const SERVICE_LABEL = 'com.patchwire.agent';
 const SYSTEMD_UNIT = 'patchwire-agent.service';
@@ -28,6 +29,16 @@ function which(bin: string): string | undefined {
   const r = cp.spawnSync('command', ['-v', bin], { encoding: 'utf8', shell: '/bin/sh' });
   if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
   return undefined;
+}
+
+function whichWindows(bin: string): string | undefined {
+  const r = cp.spawnSync('where', [bin], { encoding: 'utf8' });
+  if (r.status === 0 && r.stdout.trim()) return r.stdout.trim().split(/\r?\n/)[0];
+  return undefined;
+}
+
+function launcherPath(): string {
+  return join(homedir(), '.patchwire', 'bin', 'agent-launcher.ps1');
 }
 
 function escape(value: string): string {
@@ -132,7 +143,7 @@ export function startSystemdUser(): { ok: boolean; stderr?: string } {
 
 export async function runDaemonInstall(_opts: InstallOptions = {}): Promise<void> {
   // Platform-agnostic checks first.
-  const agentBin = which('patchwire-agent');
+  const agentBin = platform() === 'win32' ? whichWindows('patchwire-agent') : which('patchwire-agent');
   if (!agentBin) {
     log.err('`patchwire-agent` not found on PATH. Install with `pnpm add -g github:rebink/patchwire` first.');
     process.exitCode = 1;
@@ -193,6 +204,27 @@ export async function runDaemonInstall(_opts: InstallOptions = {}): Promise<void
     return;
   }
 
+  if (platform() === 'win32') {
+    await mkdir(join(homedir(), '.patchwire', 'bin'), { recursive: true });
+    await writeFile(launcherPath(), buildAgentLauncherPs1(), { encoding: 'utf8' });
+    const create = cp.spawnSync('cmd', ['/c', buildSchtasksCreate(launcherPath())], { encoding: 'utf8' });
+    if (create.status !== 0) {
+      log.err(`schtasks could not register the agent task: ${(create.stderr || create.stdout || '').trim()}`);
+      log.err(`The launcher is written at ${launcherPath()}. You can register it manually with schtasks /Create.`);
+      process.exitCode = 1;
+      return;
+    }
+    cp.spawnSync('cmd', ['/c', `schtasks /Run /TN ${WINDOWS_TASK_NAME}`], { stdio: 'ignore' });
+    log.ok(`Installed scheduled task: ${WINDOWS_TASK_NAME}`);
+    log.ok(`Launcher: ${launcherPath()}`);
+    log.ok(`Env: ${envFile()} (sourced at launch)`);
+    log.step('Manage the task:');
+    console.log(`  schtasks /End /TN ${WINDOWS_TASK_NAME}`);
+    console.log(`  schtasks /Run /TN ${WINDOWS_TASK_NAME}`);
+    console.log(`  patchwire-agent uninstall        # remove`);
+    return;
+  }
+
   log.err(`service install is not supported on ${platform()}.`);
   process.exitCode = 1;
 }
@@ -219,6 +251,14 @@ export async function runDaemonUninstall(): Promise<void> {
     await unlink(unitPath());
     cp.spawnSync('systemctl', ['--user', 'daemon-reload'], { stdio: 'ignore' });
     log.ok(`Removed ${unitPath()}`);
+    log.dim(`(env file at ${envFile()} kept — delete manually if you want a clean slate)`);
+    return;
+  }
+
+  if (platform() === 'win32') {
+    cp.spawnSync('cmd', ['/c', buildSchtasksDelete()], { stdio: 'ignore' });
+    if (existsSync(launcherPath())) await unlink(launcherPath());
+    log.ok(`Removed scheduled task: ${WINDOWS_TASK_NAME}`);
     log.dim(`(env file at ${envFile()} kept — delete manually if you want a clean slate)`);
     return;
   }
