@@ -31,7 +31,7 @@ export function reduce(state: ProvisionUiState, line: string): ProvisionUiState 
       return next;
     case 'result':
       next.phase = 'done';
-      next.result = { status: e.status as string, health: e.health as ProvisionUiState['result']['health'] };
+      next.result = { status: e.status as string, health: e.health as NonNullable<ProvisionUiState['result']>['health'] };
       return next;
     default:
       return next;
