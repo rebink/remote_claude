@@ -1,16 +1,64 @@
 import { h, clear } from './h.ts';
 import { initialState, reduce, type ProvisionUiState } from './provision-state.ts';
-import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs, saveHost } from './ipc.ts';
-import { buildHostRecord } from './host-record.ts';
+import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs, saveHost, listHosts, deleteHost } from './ipc.ts';
+import { buildHostRecord, type HostRecord } from './host-record.ts';
+import { recordToFormValues, hostBadge } from './inventory.ts';
+
 let state: ProvisionUiState = initialState();
 let lastArgs: ProvisionArgs | undefined;
+let view: 'wizard' | 'hosts' = 'wizard';
+let hosts: HostRecord[] = [];
+
 const root = document.getElementById('app')!;
+
 function field(name: string, initial: string) {
   return h('label', {}, `${name}: `, h('input', { id: `f-${name}`, value: initial }));
 }
 function val(name: string) { return (document.getElementById(`f-${name}`) as HTMLInputElement).value; }
+
+async function refreshHosts() {
+  try { hosts = await listHosts(); } catch (e) { console.error('listHosts failed', e); hosts = []; }
+  render();
+}
+
+function renderHosts() {
+  if (!hosts.length) { root.append(h('p', { className: 'empty' }, 'No hosts yet. Provision one from the Provision tab.')); return; }
+  root.append(h('ul', { className: 'hosts' },
+    ...hosts.map((r) => {
+      const b = hostBadge(r);
+      return h('li', { className: 'host-card' },
+        h('span', { className: `badge ${b.cls}` }, b.text),
+        h('span', { className: 'host-label' }, r.label),
+        h('span', { className: 'host-meta' }, `${r.lastStatus} · ${r.lastProvisionedAt}`),
+        h('button', { events: { click: () => rerun(r) } }, 'Re-run'),
+        h('button', { events: { click: () => removeHost(r.id) } }, 'Remove'),
+      );
+    })));
+}
+
+function rerun(r: HostRecord) {
+  const f = recordToFormValues(r);
+  view = 'wizard';
+  render();
+  for (const k of Object.keys(f) as (keyof typeof f)[]) {
+    const el = document.getElementById(`f-${k}`) as HTMLInputElement | null;
+    if (el) el.value = f[k];
+  }
+}
+
+async function removeHost(id: string) {
+  try { await deleteHost(id); } catch (e) { console.error('deleteHost failed', e); }
+  await refreshHosts();
+}
+
 function render() {
   clear(root);
+  const nav = h('div', { className: 'nav' },
+    h('button', { className: view === 'wizard' ? 'active' : '', events: { click: () => { view = 'wizard'; render(); } } }, 'Provision'),
+    h('button', { className: view === 'hosts' ? 'active' : '', events: { click: () => { view = 'hosts'; refreshHosts(); } } }, 'Hosts'),
+  );
+  root.append(nav);
+  if (view === 'hosts') { renderHosts(); return; }
   const nodes: (Node | string | null)[] = [
     h('h2', {}, 'Patchwire — provision a host'),
     field('host', '127.0.0.1'), field('user', 'admin'), field('port', '22'),
@@ -41,6 +89,7 @@ function render() {
   );
   root.append(...nodes.filter((n): n is Node | string => n !== null));
 }
+
 async function onStart() {
   state = initialState(); render();
   const args: ProvisionArgs = {

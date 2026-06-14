@@ -121,3 +121,14 @@ button {
 .step-failed { color: #c62828; }
 .result-completed { color: #2e7d32; font-weight: 600; }
 .result-rolled-back { color: #c62828; font-weight: 600; }
+.nav { display: flex; gap: 8px; margin-bottom: 12px; }
+.nav button.active { font-weight: 700; text-decoration: underline; }
+.hosts { list-style: none; padding: 0; }
+.host-card { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2a2a; }
+.host-label { font-weight: 600; }
+.host-meta { color: #888; font-size: 0.85em; }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+.badge-ok { background: #1b5e20; color: #fff; }
+.badge-warn { background: #b26a00; color: #fff; }
+.badge-failed { background: #b71c1c; color: #fff; }
+.empty { color: #888; }
