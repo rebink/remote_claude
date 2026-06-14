@@ -1,0 +1,60 @@
+name: Desktop Release (unsigned)
+
+# Manual only — builds unsigned installers as artifacts. Does NOT publish to npm/marketplace
+# (that is release.yml, on tag). Safe to run repeatedly.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            triple: aarch64-apple-darwin
+          - os: ubuntu-22.04
+            triple: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            triple: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux WebKitGTK deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the CLI sidecar binaries (bun --compile)
+        run: node scripts/build-cli-binaries.mjs
+
+      - name: Stage the sidecar for this platform
+        run: node packages/desktop/scripts/stage-sidecar.mjs --from-release dist-cli-bin
+
+      - name: Build the desktop app (unsigned)
+        run: pnpm --filter patchwire-desktop tauri build
+
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir -p out
+          cp -r packages/desktop/src-tauri/target/release/bundle/* out/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: patchwire-desktop-${{ matrix.triple }}
+          path: out/**
+          if-no-files-found: warn
