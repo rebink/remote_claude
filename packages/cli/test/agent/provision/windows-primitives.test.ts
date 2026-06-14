@@ -9,6 +9,8 @@ import {
   buildWindowsBinaryInstallPs,
   WINDOWS_BIN_VERSION_CMD,
   REMOVE_WINDOWS_BIN_PS,
+  WINDOWS_AGENT_INSTALL_PS,
+  WINDOWS_AGENT_UNINSTALL_PS,
 } from '../../../src/agent/provision/windows-primitives.ts';
 
 describe('WRITE_AGENT_ENV_PS', () => {
@@ -44,8 +46,14 @@ describe('buildAgentLauncherPs1', () => {
   it('handles export VAR=val lines', () => {
     expect(ps1).toContain('export');
   });
-  it('runs patchwire-agent serve', () => {
-    expect(ps1).toContain('patchwire-agent serve');
+  it('invokes serve via the absolute installed .exe path (not a bare binary name)', () => {
+    expect(ps1).toContain('.patchwire\\bin\\patchwire-agent.exe');
+    expect(ps1).toContain('serve');
+    expect(ps1).not.toContain('& patchwire-agent serve');
+  });
+  it('uses Join-Path to resolve the absolute exe path', () => {
+    expect(ps1).toContain('Join-Path');
+    expect(ps1).toContain('.patchwire\\bin\\patchwire-agent.exe');
   });
   it('references $env:USERPROFILE', () => {
     expect(ps1).toContain('$env:USERPROFILE');
@@ -55,6 +63,36 @@ describe('buildAgentLauncherPs1', () => {
   });
   it('uses CRLF line endings', () => {
     expect(ps1).toContain('\r\n');
+  });
+});
+
+describe('WINDOWS_AGENT_INSTALL_PS', () => {
+  it('references the absolute .exe path', () => {
+    expect(WINDOWS_AGENT_INSTALL_PS).toContain('.patchwire\\bin\\patchwire-agent.exe');
+  });
+  it('uses Join-Path', () => {
+    expect(WINDOWS_AGENT_INSTALL_PS).toContain('Join-Path');
+  });
+  it('passes the install verb', () => {
+    expect(WINDOWS_AGENT_INSTALL_PS).toContain('install');
+  });
+  it('does not use a bare binary name', () => {
+    expect(WINDOWS_AGENT_INSTALL_PS).not.toMatch(/& patchwire-agent(?!\.exe)/);
+  });
+});
+
+describe('WINDOWS_AGENT_UNINSTALL_PS', () => {
+  it('references the absolute .exe path', () => {
+    expect(WINDOWS_AGENT_UNINSTALL_PS).toContain('.patchwire\\bin\\patchwire-agent.exe');
+  });
+  it('uses Join-Path', () => {
+    expect(WINDOWS_AGENT_UNINSTALL_PS).toContain('Join-Path');
+  });
+  it('passes the uninstall verb', () => {
+    expect(WINDOWS_AGENT_UNINSTALL_PS).toContain('uninstall');
+  });
+  it('does not use a bare binary name', () => {
+    expect(WINDOWS_AGENT_UNINSTALL_PS).not.toMatch(/& patchwire-agent(?!\.exe)/);
   });
 });
 
