@@ -168,13 +168,66 @@ fn send_consent(state: State<'_, ProvisionState>, consent: bool) -> Result<(), S
     child.write(line.as_bytes()).map_err(|e| e.to_string())
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HostArgs {
+    host: String,
+    user: String,
+    port: u16,
+    key_path: String,
+    agent_port: u16,
+}
+
+fn validate_host(args: &HostArgs) -> Result<String, String> {
+    if args.host.is_empty() || args.host.starts_with('-')
+        || !args.host.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | ':' | '[' | ']')) {
+        return Err("invalid host".into());
+    }
+    let mut uc = args.user.chars();
+    let user_ok = matches!(uc.next(), Some(c) if c.is_ascii_alphabetic() || c == '_')
+        && args.user.len() <= 32
+        && args.user.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'));
+    if !user_ok { return Err("invalid user".into()); }
+    if args.key_path.starts_with('-') { return Err("invalid key_path".into()); }
+    let resolved = if let Some(rest) = args.key_path.strip_prefix("~/") {
+        format!("{}/{}", std::env::var("HOME").map_err(|_| "HOME not set".to_string())?, rest)
+    } else { args.key_path.clone() };
+    if !std::path::Path::new(&resolved).exists() { return Err(format!("key_path does not exist: {resolved}")); }
+    Ok(resolved)
+}
+
+async fn run_host_op(app: &tauri::AppHandle, verb: &str, args: &HostArgs) -> Result<String, String> {
+    let key = validate_host(args)?;
+    let out = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?
+        .args([
+            verb,
+            "--host", &args.host,
+            "--user", &args.user,
+            "--ssh-port", &args.port.to_string(),
+            "--key-path", &key,
+            "--agent-port", &args.agent_port.to_string(),
+        ])
+        .output().await.map_err(|e| e.to_string())?;
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+#[tauri::command]
+async fn host_health(app: tauri::AppHandle, args: HostArgs) -> Result<String, String> {
+    run_host_op(&app, "host-check", &args).await
+}
+
+#[tauri::command]
+async fn host_uninstall(app: tauri::AppHandle, args: HostArgs) -> Result<String, String> {
+    run_host_op(&app, "host-uninstall", &args).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .manage(ProvisionState::default())
-        .invoke_handler(tauri::generate_handler![start_provision, send_consent, save_host, list_hosts, delete_host])
+        .invoke_handler(tauri::generate_handler![start_provision, send_consent, save_host, list_hosts, delete_host, host_health, host_uninstall])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
