@@ -64,3 +64,22 @@ export async function runHostUninstall(input: HostOpInput, deps: { ssh?: SshRunn
     emit({ ok: false, code: 'uninstall_failed', detail: (r.stderr || r.stdout || 'uninstall failed').trim() });
   }
 }
+
+export async function runHostLogs(
+  input: HostOpInput,
+  opts: { limit?: number } = {},
+  deps: { ssh?: SshRunner } = {},
+): Promise<void> {
+  const bad = badHostField(input);
+  if (bad) { emit({ ok: false, code: 'invalid_input', detail: `unsafe ${bad}` }); return; }
+  const limit = Number.isInteger(opts.limit) && (opts.limit as number) > 0 && (opts.limit as number) <= 1000
+    ? (opts.limit as number) : 100;
+  const ssh = deps.ssh ?? runSsh;
+  const command = `bash -lc '${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}patchwire-agent log --json --limit ${limit}'`;
+  const r = await ssh({ host: input.host, user: input.user, port: input.port, keyPath: input.keyPath, command });
+  if (r.code !== 0) { emit({ ok: false, code: 'log_failed', detail: (r.stderr || r.stdout || 'log fetch failed').trim() }); return; }
+  const entries = r.stdout.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('{'))
+    .map((l) => { try { return JSON.parse(l) as unknown; } catch { return null; } })
+    .filter((e): e is unknown => e !== null);
+  emit({ ok: true, entries });
+}
