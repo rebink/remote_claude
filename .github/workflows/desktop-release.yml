@@ -13,10 +13,13 @@ jobs:
         include:
           - os: macos-latest
             triple: aarch64-apple-darwin
+            bunTarget: bun-darwin-arm64
           - os: ubuntu-22.04
             triple: x86_64-unknown-linux-gnu
+            bunTarget: bun-linux-x64
           - os: windows-latest
             triple: x86_64-pc-windows-msvc
+            bunTarget: bun-windows-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +41,8 @@ jobs:
       - name: Install workspace deps
         run: pnpm install --frozen-lockfile
 
-      - name: Build the CLI sidecar binaries (bun --compile)
-        run: node scripts/build-cli-binaries.mjs
+      - name: Build the CLI sidecar binary for this runner (bun --compile, native target only)
+        run: node scripts/build-cli-binaries.mjs --only ${{ matrix.bunTarget }}
 
       - name: Stage the sidecar for this platform
         run: node packages/desktop/scripts/stage-sidecar.mjs --from-release dist-cli-bin
