@@ -69,10 +69,16 @@ describe('remoteExecutor — bootstrap-agent (binary installer)', () => {
 
 describe('remoteExecutor — install-claude (probe)', () => {
   it('ok when the claude CLI is present', async () => {
-    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner: async () => ({ stdout: '', stderr: '', code: 0 }) });
+    const calls: string[] = [];
+    const runner = async (command: string) => { calls.push(command); return { stdout: '', stderr: '', code: 0 }; };
+    const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner });
     const out = await exec(step('install-claude'));
     expect(out.result.ok).toBe(true);
     expect(out.result.degraded).toBeFalsy();
+    // The emitted command must not contain ";;" (parse error in zsh/bash)
+    expect(calls[0]).not.toContain(';;');
+    // The command must use the export form of PATH prefix
+    expect(calls[0]).toMatch(/^export PATH=/);
   });
   it('degraded (non-fatal) with a login hint when claude is absent', async () => {
     const exec = remoteExecutor(CONN, detected('linux'), { token: 't', installer: fakeInstaller([]), runner: async () => ({ stdout: '', stderr: '', code: 1 }) });
@@ -168,6 +174,9 @@ describe('remoteExecutor — install-mutagen', () => {
     expect(out.result.ok).toBe(true);
     expect(out.result.degraded).toBeFalsy();
     expect(calls[0]).toMatch(/command -v mutagen|\.patchwire\/bin\/mutagen/);
+    // Must not contain ";;" (parse error) and must use export PATH= form
+    expect(calls[0]).not.toContain(';;');
+    expect(calls[0]).toMatch(/^export PATH=/);
   });
 
   it('is degraded (non-fatal) when mutagen is absent — the agent resolves it lazily', async () => {
@@ -190,8 +199,12 @@ describe('remoteExecutor — install-service', () => {
     expect(out.result.degraded).toBeFalsy();
     expect(calls[0]).toMatch(/patchwire-agent install/);
     expect(calls[0]).not.toMatch(/--token/); // token lives in agent.env, not argv
+    // Must set PNPM_HOME so a pnpm-global binary is found by bash
+    expect(calls[0]).toContain('PNPM_HOME');
+    expect(calls[0]).toMatch(/bash -lc/);
     await out.compensate!();
     expect(calls[1]).toMatch(/patchwire-agent uninstall/);
+    expect(calls[1]).toContain('PNPM_HOME');
   });
 
   it('macOS: reports failure (no compensate) on non-zero exit', async () => {
@@ -210,8 +223,11 @@ describe('remoteExecutor — install-service', () => {
     expect(out.result.ok).toBe(true);
     expect(out.result.degraded).toBeFalsy();
     expect(calls[0]).toMatch(/patchwire-agent install/);
+    expect(calls[0]).toContain('PNPM_HOME');
+    expect(calls[0]).toMatch(/bash -lc/);
     await out.compensate!();
     expect(calls[1]).toMatch(/patchwire-agent uninstall/);
+    expect(calls[1]).toContain('PNPM_HOME');
   });
 });
 
@@ -322,6 +338,9 @@ describe('remoteExecutor — bind-tailnet', () => {
     expect(out.result.ok).toBe(true);
     expect(out.result.degraded).toBeFalsy();
     expect(calls[0]).toMatch(/tailscale status/);
+    // Must not contain ";;" (parse error) and must use export PATH= form
+    expect(calls[0]).not.toContain(';;');
+    expect(calls[0]).toMatch(/^export PATH=/);
   });
 
   it('degrades with guidance when tailscale is not up', async () => {
