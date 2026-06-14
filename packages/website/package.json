@@ -2,7 +2,7 @@
   "name": "patchwire-docs",
   "private": true,
   "type": "module",
-  "version": "0.3.18",
+  "version": "0.4.0",
   "scripts": {
     "dev": "astro dev",
     "build": "astro check && astro build",
