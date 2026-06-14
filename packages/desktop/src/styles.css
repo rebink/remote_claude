@@ -114,3 +114,10 @@ button {
     background-color: #0f0f0f69;
   }
 }
+.steps { list-style: none; padding: 0; font-family: ui-monospace, monospace; }
+.step { padding: 2px 0; }
+.step-ok { color: #2e7d32; }
+.step-degraded { color: #b26a00; }
+.step-failed { color: #c62828; }
+.result-completed { color: #2e7d32; font-weight: 600; }
+.result-rolled-back { color: #c62828; font-weight: 600; }
