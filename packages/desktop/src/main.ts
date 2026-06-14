@@ -1,15 +1,18 @@
 import { h, clear } from './h.ts';
 import { initialState, reduce, type ProvisionUiState } from './provision-state.ts';
-import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs, saveHost, listHosts, deleteHost, hostHealth, hostUninstall, type HostArgs } from './ipc.ts';
+import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs, saveHost, listHosts, deleteHost, hostHealth, hostUninstall, hostLogs, type HostArgs } from './ipc.ts';
 import { buildHostRecord, type HostRecord } from './host-record.ts';
 import { recordToFormValues, hostBadge } from './inventory.ts';
 import { parseHostHealth } from './host-health.ts';
+import { parseHostLogs, formatLogEntry, type LogEntry } from './host-logs.ts';
 
 let state: ProvisionUiState = initialState();
 let lastArgs: ProvisionArgs | undefined;
-let view: 'wizard' | 'hosts' = 'wizard';
+let view: 'wizard' | 'hosts' | 'logs' = 'wizard';
 let hosts: HostRecord[] = [];
 const liveHealth: Record<string, { text: string; cls: string }> = {};
+let logHost: HostRecord | undefined;
+let logState: { loading: boolean; error?: string; entries: LogEntry[] } = { loading: false, entries: [] };
 
 function hostArgsOf(r: HostRecord): HostArgs {
   return { host: r.host, user: r.user, port: r.port, keyPath: r.keyPath, agentPort: r.agentPort };
@@ -57,11 +60,37 @@ function renderHosts() {
         h('span', { className: 'host-label' }, r.label),
         h('span', { className: 'host-meta' }, `${r.lastStatus} · ${r.lastProvisionedAt}`),
         h('button', { events: { click: () => checkHost(r) } }, 'Check'),
+        h('button', { events: { click: () => openLogs(r) } }, 'Logs'),
         h('button', { events: { click: () => rerun(r) } }, 'Re-run'),
         h('button', { events: { click: () => removeHost(r.id) } }, 'Remove'),
         h('button', { className: 'danger', events: { click: () => uninstallHost(r) } }, 'Uninstall'),
       );
     })));
+}
+
+async function openLogs(r: HostRecord) {
+  logHost = r;
+  logState = { loading: true, entries: [] };
+  view = 'logs';
+  render();
+  try {
+    const res = parseHostLogs(await hostLogs(hostArgsOf(r), 100));
+    logState = res.ok ? { loading: false, entries: res.entries } : { loading: false, error: res.detail ?? 'failed to fetch logs', entries: [] };
+  } catch (e) {
+    logState = { loading: false, error: String(e), entries: [] };
+  }
+  render();
+}
+function renderLogs() {
+  const nodes: (Node | string)[] = [
+    h('button', { events: { click: () => { view = 'hosts'; render(); } } }, '← Back to hosts'),
+    h('h3', {}, `Logs — ${logHost?.label ?? ''}`),
+  ];
+  if (logState.loading) nodes.push(h('p', {}, 'Loading…'));
+  if (logState.error) nodes.push(h('p', { className: 'result-rolled-back' }, logState.error));
+  if (!logState.loading && !logState.error && !logState.entries.length) nodes.push(h('p', { className: 'empty' }, 'No log entries.'));
+  if (logState.entries.length) nodes.push(h('pre', { className: 'logview' }, logState.entries.map(formatLogEntry).join('\n')));
+  root.append(...nodes);
 }
 
 function rerun(r: HostRecord) {
@@ -86,6 +115,7 @@ function render() {
     h('button', { className: view === 'hosts' ? 'active' : '', events: { click: () => { view = 'hosts'; refreshHosts(); } } }, 'Hosts'),
   );
   root.append(nav);
+  if (view === 'logs') { renderLogs(); return; }
   if (view === 'hosts') { renderHosts(); return; }
   const nodes: (Node | string | null)[] = [
     h('h2', {}, 'Patchwire — provision a host'),

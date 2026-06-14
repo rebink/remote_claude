@@ -221,13 +221,30 @@ async fn host_uninstall(app: tauri::AppHandle, args: HostArgs) -> Result<String,
     run_host_op(&app, "host-uninstall", &args).await
 }
 
+#[tauri::command]
+async fn host_logs(app: tauri::AppHandle, args: HostArgs, limit: u32) -> Result<String, String> {
+    let key = validate_host(&args)?;
+    let out = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?
+        .args([
+            "host-logs",
+            "--host", &args.host,
+            "--user", &args.user,
+            "--ssh-port", &args.port.to_string(),
+            "--key-path", &key,
+            "--agent-port", &args.agent_port.to_string(),
+            "--limit", &limit.to_string(),
+        ])
+        .output().await.map_err(|e| e.to_string())?;
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .manage(ProvisionState::default())
-        .invoke_handler(tauri::generate_handler![start_provision, send_consent, save_host, list_hosts, delete_host, host_health, host_uninstall])
+        .invoke_handler(tauri::generate_handler![start_provision, send_consent, save_host, list_hosts, delete_host, host_health, host_uninstall, host_logs])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
