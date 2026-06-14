@@ -5,6 +5,34 @@ All notable changes to **Patchwire** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-06-14
+
+### Added
+- **Patchwire Desktop (beta).** A new desktop app — the second client alongside the VS Code
+  extension — that acts as a provisioning + fleet console: a guided **provision wizard**
+  (live detect → plan → consent → install → verify) and a **host inventory** with per-host
+  **live health**, **agent logs**, **re-run**, **remove**, and **remote uninstall** — all over
+  SSH, with the agent kept loopback-bound (never network-exposed). Built on Tauri; drives the
+  bundled CLI as a sidecar. Unsigned cross-OS installers (macOS/Linux/Windows) ship from CI.
+- **Cross-platform remote provisioning.** The `setup --provision-remote` orchestrator is
+  validated end-to-end on real macOS hardware and statically hardened for Linux (systemd) and
+  Windows (schtasks/PowerShell). New machine-driven CLI surface: `setup --provision-remote
+  --stream` (NDJSON event stream + stdin consent), `--token-stdin` (agent token off argv), and
+  `host-check` / `host-logs` / `host-uninstall` SSH host operations.
+
+### Fixed
+- **Remote agent bootstrap on real hosts.** Non-interactive SSH PATH (Homebrew/pnpm tools
+  invisible to detection), the unbundled-`corepack` assumption, the `PATH=…` assignment-prefix
+  shell error, `pnpm add -g` needing `PNPM_HOME`, and the service referencing an off-PATH agent
+  binary — all fixed (found via real-host validation). Windows install/launcher now resolve the
+  agent by absolute path.
+
+### Changed
+- Monorepo package versions synced to a single product version; the website footer version now
+  derives from the extension package (no more hand-edited drift).
+- The marketing site is reframed as a platform (extension + desktop + CLI) with app-style,
+  OS-detected download buttons.
+
 ## [0.3.17] — 2026-06-10
 
 ### Added
