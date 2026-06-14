@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TARGETS } from './build-cli-binaries.mjs';
+import { TARGETS, selectTargets } from './build-cli-binaries.mjs';
 
 describe('CLI binary targets', () => {
   it('covers the 5 supported os/arch with bun targets + asset names', () => {
@@ -13,5 +13,17 @@ describe('CLI binary targets', () => {
       if (t.key.startsWith('windows')) expect(t.asset.endsWith('.exe')).toBe(true);
       else expect(t.asset.endsWith('.exe')).toBe(false);
     }
+  });
+});
+
+describe('selectTargets', () => {
+  it('no filter → all targets', () => {
+    expect(selectTargets(null)).toHaveLength(TARGETS.length);
+  });
+  it('--only builds just the named native target', () => {
+    expect(selectTargets('bun-windows-x64').map((t) => t.target)).toEqual(['bun-windows-x64']);
+  });
+  it('unknown target throws', () => {
+    expect(() => selectTargets('bun-solaris')).toThrow(/unknown --only target/);
   });
 });
