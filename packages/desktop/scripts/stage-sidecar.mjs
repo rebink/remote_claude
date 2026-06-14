@@ -7,11 +7,11 @@ import { writeFileSync, chmodSync, mkdirSync, copyFileSync, readdirSync } from '
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 const BUN_TO_TRIPLE = {
-  'bun-darwin-arm64': 'aarch64-apple-darwin',
-  'bun-darwin-x64': 'x86_64-apple-darwin',
-  'bun-linux-x64': 'x86_64-unknown-linux-gnu',
-  'bun-linux-arm64': 'aarch64-unknown-linux-gnu',
-  'bun-windows-x64': 'x86_64-pc-windows-msvc',
+  'darwin-arm64': 'aarch64-apple-darwin',
+  'darwin-x64': 'x86_64-apple-darwin',
+  'linux-arm64': 'aarch64-unknown-linux-gnu',
+  'linux-x64': 'x86_64-unknown-linux-gnu',
+  'windows-x64': 'x86_64-pc-windows-msvc',
 };
 export function bunTargetToTriple(name) {
   const key = Object.keys(BUN_TO_TRIPLE).find((k) => name.includes(k));
