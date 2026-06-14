@@ -292,6 +292,23 @@ program
     await runHostUninstall({ host: o.host, user: o.user, port: o.sshPort, keyPath: o.keyPath, agentPort: o.agentPort });
   });
 
+program
+  .command('host-logs')
+  .description('SSH to a provisioned host and fetch the agent audit log as JSON {ok,entries}')
+  .requiredOption('--host <host>')
+  .requiredOption('--user <user>')
+  .option('--ssh-port <n>', 'SSH port', (v: string) => Number(v), 22)
+  .requiredOption('--key-path <path>')
+  .option('--agent-port <n>', 'agent HTTP port', (v: string) => Number(v), 7878)
+  .option('--limit <n>', 'last N log entries', (v: string) => Number(v), 100)
+  .action(async (o: { host: string; user: string; sshPort: number; keyPath: string; agentPort: number; limit: number }) => {
+    const { runHostLogs } = await import('./commands/host-ops.ts');
+    await runHostLogs(
+      { host: o.host, user: o.user, port: o.sshPort, keyPath: o.keyPath, agentPort: o.agentPort },
+      { limit: o.limit },
+    );
+  });
+
 program.parseAsync(process.argv).catch((err: Error) => {
   log.err(err.message);
   if (process.env.PW_VERBOSE === '1') console.error(err.stack);
