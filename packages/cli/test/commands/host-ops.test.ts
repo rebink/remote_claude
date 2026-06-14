@@ -57,3 +57,42 @@ describe('runHostUninstall', () => {
     expect(called).toBe(false);
   });
 });
+describe('runHostLogs', () => {
+  it('parses NDJSON entries → {ok:true, entries}', async () => {
+    const stdout = '{"ts":"2026-06-14T00:00:00Z","user":"admin","project":"demo","route":"/ask"}\n{"ts":"2026-06-14T00:01:00Z","user":"admin","project":"demo","route":"/chat"}';
+    let cmd = '';
+    const ssh = async (o: { command: string }) => { cmd = o.command; return { code: 0, stdout, stderr: '' }; };
+    const { runHostLogs } = await import('../../src/commands/host-ops.ts');
+    const out = await captureStdout(() => runHostLogs(INPUT, { limit: 50 }, { ssh }));
+    const parsed = JSON.parse(out) as { ok: boolean; entries: unknown[] };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.entries).toHaveLength(2);
+    expect(cmd).toContain('patchwire-agent log --json --limit 50');
+  });
+  it('empty log ("(no entries)") → ok with []', async () => {
+    const ssh = async () => ({ code: 0, stdout: '(no entries)', stderr: '' });
+    const { runHostLogs } = await import('../../src/commands/host-ops.ts');
+    const out = await captureStdout(() => runHostLogs(INPUT, {}, { ssh }));
+    expect(JSON.parse(out)).toEqual({ ok: true, entries: [] });
+  });
+  it('ssh failure → {ok:false, code:log_failed}', async () => {
+    const ssh = async () => ({ code: 255, stdout: '', stderr: 'Connection refused' });
+    const { runHostLogs } = await import('../../src/commands/host-ops.ts');
+    const out = await captureStdout(() => runHostLogs(INPUT, {}, { ssh }));
+    expect(JSON.parse(out)).toMatchObject({ ok: false, code: 'log_failed' });
+  });
+  it('defaults limit to 100 and rejects non-positive', async () => {
+    let cmd = '';
+    const ssh = async (o: { command: string }) => { cmd = o.command; return { code: 0, stdout: '(no entries)', stderr: '' }; };
+    const { runHostLogs } = await import('../../src/commands/host-ops.ts');
+    await captureStdout(() => runHostLogs(INPUT, { limit: -5 }, { ssh }));
+    expect(cmd).toContain('--limit 100');
+  });
+  it('rejects bad input before ssh', async () => {
+    let called = false;
+    const ssh = async () => { called = true; return { code: 0, stdout: '', stderr: '' }; };
+    const { runHostLogs } = await import('../../src/commands/host-ops.ts');
+    await captureStdout(() => runHostLogs({ ...INPUT, host: '-x' }, {}, { ssh }));
+    expect(called).toBe(false);
+  });
+});
