@@ -1,7 +1,9 @@
 import { h, clear } from './h.ts';
 import { initialState, reduce, type ProvisionUiState } from './provision-state.ts';
-import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs } from './ipc.ts';
+import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs, saveHost } from './ipc.ts';
+import { buildHostRecord } from './host-record.ts';
 let state: ProvisionUiState = initialState();
+let lastArgs: ProvisionArgs | undefined;
 const root = document.getElementById('app')!;
 function field(name: string, initial: string) {
   return h('label', {}, `${name}: `, h('input', { id: `f-${name}`, value: initial }));
@@ -9,7 +11,7 @@ function field(name: string, initial: string) {
 function val(name: string) { return (document.getElementById(`f-${name}`) as HTMLInputElement).value; }
 function render() {
   clear(root);
-  const nodes: (Node | string)[] = [
+  const nodes: (Node | string | null)[] = [
     h('h2', {}, 'Patchwire — provision a host'),
     field('host', '127.0.0.1'), field('user', 'admin'), field('port', '22'),
     field('keyPath', '~/.ssh/pw_validate'), field('agentPort', '7878'),
@@ -21,11 +23,23 @@ function render() {
       h('button', { events: { click: () => sendConsent(true) } }, 'Approve'),
       h('button', { events: { click: () => sendConsent(false) } }, 'Cancel')));
   }
-  nodes.push(h('pre', { className: 'log' }, state.events.map((e) => JSON.stringify(e)).join('\n')));
-  if (state.phase === 'done') {
-    nodes.push(h('p', {}, `Result: ${state.result?.status} · agent ${state.result?.health?.agent ?? '?'}`));
-  }
-  root.append(...nodes);
+  nodes.push(
+    state.steps.length
+      ? h('ul', { className: 'steps' },
+          ...state.steps.map((s) => {
+            const st = state.stepStatus[s.id];
+            const icon = !st ? '·' : st.status === 'ok' ? '✓' : st.status === 'degraded' ? '⚠' : st.status === 'failed' ? '✗' : '…';
+            return h('li', { className: `step step-${st?.status ?? 'pending'}` }, `${icon} ${s.id}${st?.detail ? ` — ${st.detail}` : ''}`);
+          }))
+      : null,
+    state.phase === 'done'
+      ? h('p', { className: `result result-${state.result?.status}` },
+          `Result: ${state.result?.status}` +
+          (state.result?.failedStep ? ` (failed at ${state.result.failedStep})` : '') +
+          (state.result?.health ? ` · agent ${state.result.health.agent}` : ''))
+      : null,
+  );
+  root.append(...nodes.filter((n): n is Node | string => n !== null));
 }
 async function onStart() {
   state = initialState(); render();
@@ -34,11 +48,16 @@ async function onStart() {
     keyPath: val('keyPath'), agentPort: Number(val('agentPort')),
     token: crypto.randomUUID().replace(/-/g, ''),
   };
+  lastArgs = args;
   await startProvision(args);
 }
-onProvEvent((line) => { state = reduce(state, line); render(); });
-onProvEnd((code) => {
-  if (state.phase !== 'done') { state.phase = 'done'; render(); }
-  console.log('provision sidecar exited with code', code);
+onProvEvent(async (line) => {
+  state = reduce(state, line);
+  render();
+  if (state.phase === 'done' && state.result?.status === 'completed' && lastArgs) {
+    const rec = buildHostRecord(lastArgs, state.result, crypto.randomUUID(), new Date().toISOString());
+    try { await saveHost(rec); } catch (e) { console.error('saveHost failed', e); }
+  }
 });
+onProvEnd(() => { if (state.phase !== 'done') { state.phase = 'done'; render(); } });
 render();
