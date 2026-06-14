@@ -48,3 +48,19 @@ export async function runHostCheck(input: HostOpInput, deps: { ssh?: SshRunner }
     emit({ ok: false, code: 'bad_response', detail: out.slice(0, 120) });
   }
 }
+
+export async function runHostUninstall(input: HostOpInput, deps: { ssh?: SshRunner } = {}): Promise<void> {
+  const bad = badHostField(input);
+  if (bad) {
+    emit({ ok: false, code: 'invalid_input', detail: `unsafe ${bad}` });
+    return;
+  }
+  const ssh = deps.ssh ?? runSsh;
+  const command = `bash -lc '${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}patchwire-agent uninstall'`;
+  const r = await ssh({ host: input.host, user: input.user, port: input.port, keyPath: input.keyPath, command });
+  if (r.code === 0) {
+    emit({ ok: true });
+  } else {
+    emit({ ok: false, code: 'uninstall_failed', detail: (r.stderr || r.stdout || 'uninstall failed').trim() });
+  }
+}

@@ -34,3 +34,26 @@ describe('runHostCheck', () => {
     expect(JSON.parse(out)).toMatchObject({ ok: false, code: 'invalid_input' });
   });
 });
+describe('runHostUninstall', () => {
+  it('ssh ok → {ok:true} and runs patchwire-agent uninstall', async () => {
+    let cmd = '';
+    const ssh = async (o: { command: string }) => { cmd = o.command; return { code: 0, stdout: 'removed', stderr: '' }; };
+    const { runHostUninstall } = await import('../../src/commands/host-ops.ts');
+    const out = await captureStdout(() => runHostUninstall(INPUT, { ssh }));
+    expect(JSON.parse(out)).toMatchObject({ ok: true });
+    expect(cmd).toContain('patchwire-agent uninstall');
+  });
+  it('ssh nonzero → {ok:false, code:uninstall_failed}', async () => {
+    const ssh = async () => ({ code: 1, stdout: '', stderr: 'no service' });
+    const { runHostUninstall } = await import('../../src/commands/host-ops.ts');
+    const out = await captureStdout(() => runHostUninstall(INPUT, { ssh }));
+    expect(JSON.parse(out)).toMatchObject({ ok: false, code: 'uninstall_failed', detail: 'no service' });
+  });
+  it('rejects bad input', async () => {
+    let called = false;
+    const ssh = async () => { called = true; return { code: 0, stdout: '', stderr: '' }; };
+    const { runHostUninstall } = await import('../../src/commands/host-ops.ts');
+    await captureStdout(() => runHostUninstall({ ...INPUT, keyPath: '-x' }, { ssh }));
+    expect(called).toBe(false);
+  });
+});
