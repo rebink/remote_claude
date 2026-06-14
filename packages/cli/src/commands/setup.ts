@@ -415,13 +415,38 @@ export interface ProvisionRemoteInput {
   aiBin?: string;
   yes?: boolean;
   json?: boolean;
+  /** Machine event-stream mode: NDJSON events to stdout, consent via a stdin line. */
+  stream?: boolean;
 }
 
 type ProvisionFn = typeof provisionRemote;
 
+/** Read one line of stdin, resolving '' on timeout/EOF. Injected in tests. */
+export function defaultReadConsentLine(timeoutMs = 600_000, stream: NodeJS.ReadableStream = process.stdin): Promise<string> {
+  return new Promise((resolve) => {
+    let buf = '';
+    const cleanup = () => {
+      clearTimeout(timer);
+      stream.off('data', onData);
+      stream.off('end', onEnd);
+      (stream as NodeJS.ReadableStream & { pause?: () => void }).pause?.();
+    };
+    const onData = (chunk: Buffer) => {
+      buf += chunk.toString();
+      const nl = buf.indexOf('\n');
+      if (nl !== -1) { cleanup(); resolve(buf.slice(0, nl)); }
+    };
+    const onEnd = () => { cleanup(); resolve(buf); };
+    const timer = setTimeout(() => { cleanup(); resolve(''); }, timeoutMs);
+    (stream as NodeJS.ReadableStream & { resume?: () => void }).resume?.();
+    stream.on('data', onData);
+    stream.on('end', onEnd);
+  });
+}
+
 export async function runProvisionRemote(
   input: ProvisionRemoteInput,
-  deps: { provision?: ProvisionFn } = {},
+  deps: { provision?: ProvisionFn; readConsentLine?: () => Promise<string> } = {},
 ): Promise<void> {
   // Reuse the existing injection guard (same fields as ProvisionAgentInput)
   const bad = unsafeProvisionField({
@@ -438,12 +463,18 @@ export async function runProvisionRemote(
   }
 
   const provision = deps.provision ?? provisionRemote;
+  const stream = !!input.stream;
+  const readConsentLine = deps.readConsentLine ?? defaultReadConsentLine;
   const conn: RemoteConn = { host: input.host, user: input.user, port: input.port, keyPath: input.keyPath };
   const execOpts: RemoteExecutorOpts = { token: input.token, port: input.agentPort, aiBin: input.aiBin };
 
   // Consent gate
   const confirm = async (plan: ProvisionPlan, elevation: ProvisionStep[]): Promise<boolean> => {
     if (input.yes) return true;
+    if (stream) {
+      try { return !!(JSON.parse(await readConsentLine()) as { consent?: boolean }).consent; }
+      catch { return false; }
+    }
     if (input.json || !process.stdout.isTTY) return false; // cannot prompt
     const { proceed } = await prompts({
       type: 'confirm',
@@ -455,8 +486,9 @@ export async function runProvisionRemote(
   };
 
   // Progress rendering (human mode only)
-  const human = !input.json;
+  const human = !input.json && !stream;
   const onEvent = (e: ProvisionEvent | PreviewEvent) => {
+    if (stream) { process.stdout.write(JSON.stringify(e) + '\n'); return; }
     if (!human) return;
     if (e.type === 'preview') {
       log.info(`Plan (${e.plan.steps.length} steps): ${e.plan.steps.map((s) => s.id).join(', ')}`);
@@ -474,6 +506,18 @@ export async function runProvisionRemote(
   const verify = makeVerify(conn, { agentHealth: async () => ({ ok: await pollAgentHealth(input.host, input.agentPort) }) });
 
   const result: ProvisionRemoteResult = await provision(conn, execOpts, { confirm, onEvent, verify });
+
+  if (stream) {
+    process.stdout.write(JSON.stringify({
+      type: 'result',
+      status: result.status,
+      detected: result.detected,
+      plan: result.plan,
+      outcome: result.outcome,
+      health: result.health,
+    }) + '\n');
+    return;
+  }
 
   if (input.json) {
     process.stdout.write(JSON.stringify({ status: result.status, detected: result.detected, plan: result.plan, outcome: result.outcome, health: result.health }));

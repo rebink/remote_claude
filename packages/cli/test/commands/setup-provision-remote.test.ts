@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Readable } from 'node:stream';
 
 // No real SSH, fs, or network calls needed — provision is fully injected.
 vi.mock('undici', () => ({ fetch: vi.fn(async () => ({ ok: true })) }));
@@ -16,6 +17,43 @@ const TOKEN = 'a1b2c3d4e5f60718293a4b5c'; // valid: hex-ish, ≥16 chars
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fakeProvision(impl: (conn: any, opts: any, deps: any) => Promise<any>) { return impl as any; }
+
+function fakeStream(): Readable { return new Readable({ read() {} }); }
+
+describe('defaultReadConsentLine', () => {
+  it('single chunk with newline resolves the line without trailing newline', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(600_000, s);
+    s.push('{"consent":true}\n');
+    expect(await promise).toBe('{"consent":true}');
+  });
+
+  it('partial chunks across two data events resolves the full line', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(600_000, s);
+    s.push('{"con');
+    s.push('sent":true}\n');
+    expect(await promise).toBe('{"consent":true}');
+  });
+
+  it('EOF with no newline resolves the accumulated buffer', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(600_000, s);
+    s.push('abc');
+    s.push(null); // EOF
+    expect(await promise).toBe('abc');
+  });
+
+  it('timeout resolves empty string when stream never emits', async () => {
+    const { defaultReadConsentLine } = await import('../../src/commands/setup.ts');
+    const s = fakeStream();
+    const promise = defaultReadConsentLine(10, s);
+    expect(await promise).toBe('');
+  });
+});
 
 describe('setup --provision-remote', () => {
   it('json + yes → completed result emitted to stdout', async () => {
@@ -98,6 +136,91 @@ describe('setup --provision-remote', () => {
       stderr: 'Refusing to provision: unsafe host.',
     });
     expect(provisionSpy).not.toHaveBeenCalled();
+  });
+
+  it('stream → emits one NDJSON line per orchestrator event, then a result line', async () => {
+    const completedResult = {
+      status: 'completed' as const,
+      detected: { os: 'linux' },
+      plan: { steps: [] },
+      outcome: { status: 'completed', degraded: [] },
+      health: { tailnet: true, agent: 'healthy' as const },
+    };
+    const provision = fakeProvision(async (_conn, _opts, deps) => {
+      deps.onEvent({ type: 'preview', plan: { steps: [{ id: 'bootstrap-agent' }] }, elevation: [] });
+      deps.onEvent({ type: 'step', step: 'bootstrap-agent', status: 'start' });
+      deps.onEvent({ type: 'step', step: 'bootstrap-agent', status: 'ok', detail: 'installed' });
+      deps.onEvent({ type: 'done', status: 'completed' });
+      return completedResult;
+    });
+    const { runProvisionRemote } = await import('../../src/commands/setup.ts');
+    const out = await captureStdout(() =>
+      runProvisionRemote(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN, stream: true },
+        { provision, readConsentLine: async () => '{"consent":true}' },
+      ),
+    );
+    const lines = out.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+    expect(lines[0]).toMatchObject({ type: 'preview' });
+    expect(lines.some((l) => l.type === 'step' && l.status === 'start')).toBe(true);
+    expect(lines.find((l) => l.type === 'done')).toMatchObject({ status: 'completed' });
+    expect(lines.at(-1)).toMatchObject({ type: 'result', status: 'completed', health: { agent: 'healthy' } });
+  });
+
+  it.each([
+    ['{"consent":true}', true],
+    ['{"consent":false}', false],
+    ['not json', false],
+    ['', false],
+  ])('stream → consent line %j gates execution to %s', async (line, expected) => {
+    let confirmed: boolean | undefined;
+    const provision = fakeProvision(async (_conn, _opts, deps) => {
+      confirmed = await deps.confirm({ steps: [] }, []);
+      return { status: confirmed ? 'completed' : 'cancelled', detected: {}, plan: { steps: [] }, outcome: { status: 'completed', degraded: [] } };
+    });
+    const { runProvisionRemote } = await import('../../src/commands/setup.ts');
+    await captureStdout(() =>
+      runProvisionRemote(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN, stream: true },
+        { provision, readConsentLine: async () => line },
+      ),
+    );
+    expect(confirmed).toBe(expected);
+  });
+
+  it('stream + yes → consent auto-approved without reading stdin', async () => {
+    let readCalled = false;
+    let confirmed: boolean | undefined;
+    const provision = fakeProvision(async (_conn, _opts, deps) => {
+      confirmed = await deps.confirm({ steps: [] }, []);
+      return { status: 'completed', detected: {}, plan: { steps: [] }, outcome: { status: 'completed', degraded: [] } };
+    });
+    const { runProvisionRemote } = await import('../../src/commands/setup.ts');
+    await captureStdout(() =>
+      runProvisionRemote(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN, stream: true, yes: true },
+        { provision, readConsentLine: async () => { readCalled = true; return '{"consent":false}'; } },
+      ),
+    );
+    expect(confirmed).toBe(true);
+    expect(readCalled).toBe(false);
+  });
+
+  it('json (no stream) → single final blob, no per-event NDJSON lines', async () => {
+    const provision = fakeProvision(async (_conn, _opts, deps) => {
+      deps.onEvent({ type: 'step', step: 'bootstrap-agent', status: 'start' });
+      return { status: 'completed', detected: { os: 'linux' }, plan: { steps: [] }, outcome: { status: 'completed', degraded: [] }, health: { tailnet: true, agent: 'healthy' } };
+    });
+    const { runProvisionRemote } = await import('../../src/commands/setup.ts');
+    const out = await captureStdout(() =>
+      runProvisionRemote(
+        { host: 'h', user: 'u', port: 22, keyPath: '/k', agentPort: 7878, token: TOKEN, json: true, yes: true },
+        { provision },
+      ),
+    );
+    const lines = out.trim().split('\n').filter(Boolean);
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0])).toMatchObject({ status: 'completed', health: { agent: 'healthy' } });
   });
 
   it('human progress: onEvent calls are invoked and function completes', async () => {
