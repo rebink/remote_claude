@@ -1,13 +1,36 @@
 import { describe, it, expect } from 'vitest';
 import { buildProbeScript, parseProbe, PROBE_TOOLS, detectRemoteServerPlatform, buildWindowsProbeScript, parseWindowsProbe, WINDOWS_PROBE_TOOLS } from '../../../src/agent/provision/remote-detect.ts';
+import { POSIX_PATH_PREFIX } from '../../../src/agent/provision/primitives.ts';
 
 describe('buildProbeScript', () => {
   it('emits a uname line then a command -v loop over the probe tools', () => {
     const s = buildProbeScript();
-    expect(s).toMatch(/^uname -sm;/);
+    expect(s).toContain('uname -sm;');
     expect(s).toContain('for c in node corepack pnpm');
     expect(s).toContain('command -v "$c"');
     for (const t of PROBE_TOOLS) expect(s).toContain(t);
+  });
+
+  it('prepends the POSIX PATH prefix so Homebrew tools are found in non-interactive SSH sessions', () => {
+    const s = buildProbeScript();
+    // The prefix must appear before uname so the PATH is set for the entire script
+    expect(s).toContain(POSIX_PATH_PREFIX);
+    expect(s.indexOf(POSIX_PATH_PREFIX)).toBeLessThan(s.indexOf('uname -sm'));
+    // The prefix must contain /opt/homebrew/bin (for macOS Homebrew tools)
+    expect(s).toContain('/opt/homebrew/bin');
+    // $PATH must be preserved — not replaced
+    expect(s).toContain('$PATH"');
+  });
+
+  it('probe script does not contain ";;" (which would be a case-terminator parse error)', () => {
+    const s = buildProbeScript();
+    expect(s).not.toContain(';;');
+  });
+
+  it('does not modify the Windows probe script (buildWindowsProbeScript)', () => {
+    const w = buildWindowsProbeScript();
+    expect(w).not.toContain('/opt/homebrew/bin');
+    expect(w).not.toContain(POSIX_PATH_PREFIX);
   });
 });
 

@@ -1,7 +1,7 @@
 import type { DetectedServerPlatform } from '../server-platform/types.ts';
 import type { StepExecutor } from './types.ts';
 import { corepackPnpmInstaller, defaultRemoteRunner, type AgentInstaller, type RemoteConn, type RemoteRunner } from './installer.ts';
-import { buildAgentEnv, WRITE_AGENT_ENV_CMD } from './primitives.ts';
+import { buildAgentEnv, WRITE_AGENT_ENV_CMD, POSIX_PATH_PREFIX, POSIX_PNPM_ENV } from './primitives.ts';
 import { WRITE_AGENT_ENV_PS, REMOVE_AGENT_ENV_PS } from './windows-primitives.ts';
 import { binaryInstaller } from './binary-installer.ts';
 import type { BinaryArtifactSource } from './binary-installer.ts';
@@ -71,14 +71,14 @@ export function remoteExecutor(
 
       case 'install-service': {
         if (detected.os === 'macos' || detected.os === 'linux') {
-          const r = await runner("bash -lc 'patchwire-agent install'");
+          const r = await runner(`bash -lc '${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}patchwire-agent install'`);
           if (r.code !== 0) {
             return { result: { ok: false, detail: (r.stderr || r.stdout || 'service install failed').trim() } };
           }
           const detail = detected.os === 'macos' ? 'launchd service installed' : 'systemd --user service installed';
           return {
             result: { ok: true, detail },
-            compensate: async () => { await runner("bash -lc 'patchwire-agent uninstall'"); },
+            compensate: async () => { await runner(`bash -lc '${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}patchwire-agent uninstall'`); },
           };
         }
         if (detected.os === 'windows') {
@@ -93,14 +93,14 @@ export function remoteExecutor(
       }
 
       case 'install-mutagen': {
-        const present = await runner('command -v mutagen >/dev/null 2>&1 || test -x "$HOME/.patchwire/bin/mutagen"');
+        const present = await runner(`${POSIX_PATH_PREFIX}command -v mutagen >/dev/null 2>&1 || test -x "$HOME/.patchwire/bin/mutagen"`);
         return present.code === 0
           ? { result: { ok: true, detail: 'mutagen present on remote' } }
           : { result: { ok: true, degraded: true, detail: 'mutagen not present; the agent will resolve it on first sync' } };
       }
 
       case 'bind-tailnet': {
-        const r = await runner('tailscale status >/dev/null 2>&1');
+        const r = await runner(`${POSIX_PATH_PREFIX}tailscale status >/dev/null 2>&1`);
         return r.code === 0
           ? { result: { ok: true, detail: 'tailnet: up' } }
           : { result: { ok: true, degraded: true, detail: 'Tailscale is not up on the remote; the agent may be unreachable — run `tailscale up`' } };
@@ -121,7 +121,7 @@ export function remoteExecutor(
       }
 
       case 'install-claude': {
-        const r = await runner('command -v claude >/dev/null 2>&1');
+        const r = await runner(`${POSIX_PATH_PREFIX}command -v claude >/dev/null 2>&1`);
         return r.code === 0
           ? { result: { ok: true, detail: 'claude CLI present' } }
           : { result: { ok: true, degraded: true, detail: 'Claude Code CLI not found — install it and run `claude /login` on the remote (the agent needs it to run tasks)' } };
