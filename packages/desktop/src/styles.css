@@ -133,3 +133,4 @@ button {
 .badge-failed { background: #b71c1c; color: #fff; }
 .empty { color: #888; }
 .host-card button.danger { color: #ff6b6b; }
+.logview { font-family: ui-monospace, monospace; font-size: 0.8em; white-space: pre-wrap; max-height: 60vh; overflow: auto; background: #111; padding: 8px; border-radius: 6px; }
