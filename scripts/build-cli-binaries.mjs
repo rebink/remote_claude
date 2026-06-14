@@ -15,15 +15,30 @@ export const TARGETS = [
   { target: 'bun-windows-x64',  asset: 'patchwire-cli-windows-x64.exe',  key: 'windows-x64'  },
 ];
 
+/**
+ * Pick which targets to build. With no `--only`, build all (cross-compile, e.g. local/macOS).
+ * With `--only <bun-target>`, build just that one — each CI runner builds its NATIVE target,
+ * since cross-compiling from some hosts (Windows) fails to fetch/extract other runtimes.
+ * @param {string | null} only
+ */
+export function selectTargets(only) {
+  if (!only) return TARGETS;
+  const sel = TARGETS.filter((t) => t.target === only);
+  if (sel.length === 0) throw new Error(`unknown --only target: ${only} (expected one of ${TARGETS.map((t) => t.target).join(', ')})`);
+  return sel;
+}
+
 // CLI entry point + output dir, relative to repo root (this file is in scripts/).
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const entry = join(root, 'packages', 'cli', 'src', 'cli.ts');
 const outDir = join(root, 'dist-cli-bin');
 
 function main() {
+  const i = process.argv.indexOf('--only');
+  const targets = selectTargets(i !== -1 ? process.argv[i + 1] : null);
   mkdirSync(outDir, { recursive: true });
   const built = [];
-  for (const { target, asset, key } of TARGETS) {
+  for (const { target, asset, key } of targets) {
     const outfile = join(outDir, asset);
     console.log(`Building ${asset} (${target}) …`);
     const r = spawnSync('bun', ['build', '--compile', `--target=${target}`, '--outfile', outfile, entry], { stdio: 'inherit' });
@@ -32,7 +47,7 @@ function main() {
   }
   const version = JSON.parse(readFileSync(join(root, 'packages', 'cli', 'package.json'), 'utf8')).version;
   writeFileSync(join(outDir, 'manifest.json'), JSON.stringify({ version, binaries: built }, null, 2) + '\n');
-  console.log(`Wrote dist-cli-bin/manifest.json (version ${version}, ${TARGETS.length} CLI binaries)`);
+  console.log(`Wrote dist-cli-bin/manifest.json (version ${version}, ${built.length} CLI binaries)`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) main();
