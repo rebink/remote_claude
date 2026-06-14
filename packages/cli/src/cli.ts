@@ -266,6 +266,32 @@ program
     await runWhoami(process.cwd());
   });
 
+program
+  .command('host-check')
+  .description('Probe the patchwire agent /health on an already-provisioned host via SSH')
+  .requiredOption('--host <host>', 'remote hostname or IP')
+  .requiredOption('--user <user>', 'remote SSH user')
+  .option('--ssh-port <n>', 'SSH port', (v: string) => Number(v), 22)
+  .requiredOption('--key-path <path>', 'path to SSH private key')
+  .option('--agent-port <n>', 'agent HTTP port', (v: string) => Number(v), 7878)
+  .action(async (o: { host: string; user: string; sshPort: number; keyPath: string; agentPort: number }) => {
+    const { runHostCheck } = await import('./commands/host-ops.ts');
+    await runHostCheck({ host: o.host, user: o.user, port: o.sshPort, keyPath: o.keyPath, agentPort: o.agentPort });
+  });
+
+program
+  .command('host-uninstall')
+  .description('Uninstall the patchwire agent from an already-provisioned host via SSH')
+  .requiredOption('--host <host>', 'remote hostname or IP')
+  .requiredOption('--user <user>', 'remote SSH user')
+  .option('--ssh-port <n>', 'SSH port', (v: string) => Number(v), 22)
+  .requiredOption('--key-path <path>', 'path to SSH private key')
+  .option('--agent-port <n>', 'agent HTTP port', (v: string) => Number(v), 7878)
+  .action(async (o: { host: string; user: string; sshPort: number; keyPath: string; agentPort: number }) => {
+    const { runHostUninstall } = await import('./commands/host-ops.ts');
+    await runHostUninstall({ host: o.host, user: o.user, port: o.sshPort, keyPath: o.keyPath, agentPort: o.agentPort });
+  });
+
 program.parseAsync(process.argv).catch((err: Error) => {
   log.err(err.message);
   if (process.env.PW_VERBOSE === '1') console.error(err.stack);

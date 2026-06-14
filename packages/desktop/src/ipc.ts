@@ -9,3 +9,6 @@ export const onProvEnd = (cb: (code: number | null) => void) => listen<number | 
 export const saveHost = (record: HostRecord) => invoke('save_host', { record });
 export const listHosts = () => invoke<HostRecord[]>('list_hosts');
 export const deleteHost = (id: string) => invoke<void>('delete_host', { id });
+export interface HostArgs { host: string; user: string; port: number; keyPath: string; agentPort: number; }
+export const hostHealth = (args: HostArgs) => invoke<string>('host_health', { args });
+export const hostUninstall = (args: HostArgs) => invoke<string>('host_uninstall', { args });

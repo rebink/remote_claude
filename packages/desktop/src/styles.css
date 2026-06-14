@@ -132,3 +132,4 @@ button {
 .badge-warn { background: #b26a00; color: #fff; }
 .badge-failed { background: #b71c1c; color: #fff; }
 .empty { color: #888; }
+.host-card button.danger { color: #ff6b6b; }
