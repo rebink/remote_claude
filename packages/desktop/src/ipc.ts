@@ -7,3 +7,5 @@ export const sendConsent = (consent: boolean) => invoke('send_consent', { consen
 export const onProvEvent = (cb: (line: string) => void) => listen<string>('pw://prov', (e) => cb(e.payload));
 export const onProvEnd = (cb: (code: number | null) => void) => listen<number | null>('pw://prov-end', (e) => cb(e.payload));
 export const saveHost = (record: HostRecord) => invoke('save_host', { record });
+export const listHosts = () => invoke<HostRecord[]>('list_hosts');
+export const deleteHost = (id: string) => invoke<void>('delete_host', { id });

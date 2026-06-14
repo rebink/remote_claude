@@ -140,6 +140,27 @@ fn save_host(app: tauri::AppHandle, record: serde_json::Value) -> Result<(), Str
 }
 
 #[tauri::command]
+fn list_hosts(app: tauri::AppHandle) -> Result<Vec<serde_json::Value>, String> {
+    let path = app.path().app_data_dir().map_err(|e| e.to_string())?.join("hosts.json");
+    match std::fs::read_to_string(&path) {
+        Ok(s) => Ok(serde_json::from_str(&s).unwrap_or_default()),
+        Err(_) => Ok(Vec::new()),
+    }
+}
+
+#[tauri::command]
+fn delete_host(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let path = app.path().app_data_dir().map_err(|e| e.to_string())?.join("hosts.json");
+    let mut hosts: Vec<serde_json::Value> = match std::fs::read_to_string(&path) {
+        Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+        Err(_) => Vec::new(),
+    };
+    hosts.retain(|h| h.get("id").and_then(|v| v.as_str()) != Some(id.as_str()));
+    let json = serde_json::to_string_pretty(&hosts).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn send_consent(state: State<'_, ProvisionState>, consent: bool) -> Result<(), String> {
     let mut guard = state.child.lock().unwrap();
     let child = guard.as_mut().ok_or("no active provision")?;
@@ -153,7 +174,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .manage(ProvisionState::default())
-        .invoke_handler(tauri::generate_handler![start_provision, send_consent, save_host])
+        .invoke_handler(tauri::generate_handler![start_provision, send_consent, save_host, list_hosts, delete_host])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
