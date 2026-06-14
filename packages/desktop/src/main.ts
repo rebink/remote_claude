@@ -1,13 +1,38 @@
 import { h, clear } from './h.ts';
 import { initialState, reduce, type ProvisionUiState } from './provision-state.ts';
-import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs, saveHost, listHosts, deleteHost } from './ipc.ts';
+import { startProvision, sendConsent, onProvEvent, onProvEnd, type ProvisionArgs, saveHost, listHosts, deleteHost, hostHealth, hostUninstall, type HostArgs } from './ipc.ts';
 import { buildHostRecord, type HostRecord } from './host-record.ts';
 import { recordToFormValues, hostBadge } from './inventory.ts';
+import { parseHostHealth } from './host-health.ts';
 
 let state: ProvisionUiState = initialState();
 let lastArgs: ProvisionArgs | undefined;
 let view: 'wizard' | 'hosts' = 'wizard';
 let hosts: HostRecord[] = [];
+const liveHealth: Record<string, { text: string; cls: string }> = {};
+
+function hostArgsOf(r: HostRecord): HostArgs {
+  return { host: r.host, user: r.user, port: r.port, keyPath: r.keyPath, agentPort: r.agentPort };
+}
+
+async function checkHost(r: HostRecord) {
+  liveHealth[r.id] = { text: 'checking…', cls: 'badge-warn' };
+  render();
+  try { liveHealth[r.id] = parseHostHealth(await hostHealth(hostArgsOf(r))); }
+  catch (e) { liveHealth[r.id] = { text: 'error', cls: 'badge-failed' }; console.error('hostHealth failed', e); }
+  render();
+}
+
+async function uninstallHost(r: HostRecord) {
+  if (!confirm(`Uninstall the agent on ${r.label}? This stops + removes it on the remote.`)) return;
+  liveHealth[r.id] = { text: 'uninstalling…', cls: 'badge-warn' };
+  render();
+  try {
+    const res = JSON.parse(await hostUninstall(hostArgsOf(r))) as { ok?: boolean; detail?: string };
+    liveHealth[r.id] = res.ok ? { text: 'uninstalled', cls: 'badge-failed' } : { text: 'uninstall failed', cls: 'badge-failed' };
+  } catch (e) { liveHealth[r.id] = { text: 'error', cls: 'badge-failed' }; console.error('hostUninstall failed', e); }
+  render();
+}
 
 const root = document.getElementById('app')!;
 
@@ -25,13 +50,16 @@ function renderHosts() {
   if (!hosts.length) { root.append(h('p', { className: 'empty' }, 'No hosts yet. Provision one from the Provision tab.')); return; }
   root.append(h('ul', { className: 'hosts' },
     ...hosts.map((r) => {
-      const b = hostBadge(r);
+      const live = liveHealth[r.id];
+      const b = live ?? hostBadge(r);
       return h('li', { className: 'host-card' },
         h('span', { className: `badge ${b.cls}` }, b.text),
         h('span', { className: 'host-label' }, r.label),
         h('span', { className: 'host-meta' }, `${r.lastStatus} · ${r.lastProvisionedAt}`),
+        h('button', { events: { click: () => checkHost(r) } }, 'Check'),
         h('button', { events: { click: () => rerun(r) } }, 'Re-run'),
         h('button', { events: { click: () => removeHost(r.id) } }, 'Remove'),
+        h('button', { className: 'danger', events: { click: () => uninstallHost(r) } }, 'Uninstall'),
       );
     })));
 }
