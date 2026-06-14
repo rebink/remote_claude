@@ -2,7 +2,7 @@ import type { DetectedServerPlatform } from '../server-platform/types.ts';
 import type { StepExecutor } from './types.ts';
 import { corepackPnpmInstaller, defaultRemoteRunner, type AgentInstaller, type RemoteConn, type RemoteRunner } from './installer.ts';
 import { buildAgentEnv, WRITE_AGENT_ENV_CMD, POSIX_PATH_PREFIX, POSIX_PNPM_ENV } from './primitives.ts';
-import { WRITE_AGENT_ENV_PS, REMOVE_AGENT_ENV_PS } from './windows-primitives.ts';
+import { WRITE_AGENT_ENV_PS, REMOVE_AGENT_ENV_PS, WINDOWS_AGENT_INSTALL_PS, WINDOWS_AGENT_UNINSTALL_PS } from './windows-primitives.ts';
 import { binaryInstaller } from './binary-installer.ts';
 import type { BinaryArtifactSource } from './binary-installer.ts';
 
@@ -82,11 +82,11 @@ export function remoteExecutor(
           };
         }
         if (detected.os === 'windows') {
-          const r = await runner('patchwire-agent install');
+          const r = await runner(WINDOWS_AGENT_INSTALL_PS);
           if (r.code !== 0) return { result: { ok: false, detail: (r.stderr || r.stdout || 'service install failed').trim() } };
           return {
             result: { ok: true, detail: 'scheduled task installed' },
-            compensate: async () => { await runner('patchwire-agent uninstall'); },
+            compensate: async () => { await runner(WINDOWS_AGENT_UNINSTALL_PS); },
           };
         }
         return { result: { ok: true, degraded: true, detail: `service install not yet supported on ${detected.os}` } };

@@ -5,10 +5,11 @@ export const PNPM_VERSION = '10.26.1';
 
 /**
  * PATH prefix prepended to every POSIX SSH command so that Homebrew (/opt/homebrew/bin),
- * the classic /usr/local/bin prefix, and user-local binaries (~/.local/bin) are found even
- * in a non-interactive SSH session whose default PATH is only /usr/bin:/bin:/usr/sbin:/sbin.
+ * Linux Homebrew (/home/linuxbrew/.linuxbrew/bin), the classic /usr/local/bin prefix,
+ * and user-local binaries (~/.local/bin) are found even in a non-interactive SSH session
+ * whose default PATH is only /usr/bin:/bin:/usr/sbin:/sbin.
  */
-export const POSIX_PATH_PREFIX = 'export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"; ';
+export const POSIX_PATH_PREFIX = 'export PATH="/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"; ';
 
 /**
  * Sets PNPM_HOME (defaulting to $HOME/.local/share/pnpm if unset) and prepends it to PATH
