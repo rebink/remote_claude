@@ -33,6 +33,9 @@ struct ProvisionArgs {
     key_path: String,
     agent_port: u16,
     token: String,
+    project_dir: String,   // local folder where patchwire.yml lands (current_dir)
+    project: String,       // project name passed as --project
+    remote_path: String,   // remote path passed as --path
 }
 
 fn validate_and_resolve(args: &ProvisionArgs) -> Result<String, String> {
@@ -79,6 +82,9 @@ async fn start_provision(
 ) -> Result<(), String> {
     // Validate inputs BEFORE claiming busy — a validation error must NOT leave busy set.
     let key_path = validate_and_resolve(&args)?;
+    if !std::path::Path::new(&args.project_dir).is_dir() {
+        return Err("project_dir does not exist or is not a directory".into());
+    }
 
     // Get sidecar handle BEFORE claiming busy — so only .spawn() is inside the claimed region.
     let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
@@ -90,14 +96,16 @@ async fn start_provision(
 
     // Spawn the sidecar. On failure, reset busy before returning.
     let (mut rx, mut child) = match sidecar
+        .current_dir(std::path::PathBuf::from(&args.project_dir))
         .args([
-            "setup", "--provision-remote", "--stream",
-            "--token-stdin",
+            "setup", "--provision-remote", "--stream", "--token-stdin",
             "--host", &args.host,
             "--user", &args.user,
             "--ssh-port", &args.port.to_string(),
             "--key-path", &key_path,
             "--agent-port", &args.agent_port.to_string(),
+            "--project", &args.project,
+            "--path", &args.remote_path,
         ])
         .spawn()
     {
