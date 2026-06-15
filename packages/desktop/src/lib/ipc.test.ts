@@ -19,6 +19,10 @@ import {
   applyPatch,
   onChatEvent,
   onChatEnd,
+  syncCommand,
+  startSyncWatch,
+  stopSyncWatch,
+  onSyncEvent,
 } from "./ipc";
 import type { Connection } from "./types";
 
@@ -156,5 +160,37 @@ describe("onChatEnd", () => {
     captured!({ payload: null });
     expect(codes).toEqual([1, null]);
     expect(stop).toBe(unlisten);
+  });
+});
+
+describe("syncCommand", () => {
+  it("invokes sync_command and parses a status line", async () => {
+    invokeMock.mockResolvedValue('{"type":"sync_status","kind":"watching","conflicts":[]}');
+    const r = await syncCommand("/p", "status");
+    expect(invokeMock).toHaveBeenCalledWith("sync_command", { projectDir: "/p", sub: "status" });
+    expect(r).toEqual({ type: "status", status: { kind: "watching", conflicts: [] } });
+  });
+});
+
+describe("startSyncWatch / stopSyncWatch", () => {
+  it("invoke the right commands", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    await startSyncWatch("/p");
+    expect(invokeMock).toHaveBeenCalledWith("start_sync_watch", { projectDir: "/p" });
+    await stopSyncWatch();
+    expect(invokeMock).toHaveBeenCalledWith("stop_sync_watch");
+  });
+});
+
+describe("onSyncEvent", () => {
+  it("subscribes to pw://sync and forwards parsed status events", async () => {
+    let cb: ((e: { payload: string }) => void) | null = null;
+    listenMock.mockImplementation((name: string, fn: any) => { if (name === "pw://sync") cb = fn; return Promise.resolve(() => {}); });
+    const seen: unknown[] = [];
+    await onSyncEvent((l) => seen.push(l));
+    expect(listenMock).toHaveBeenCalledWith("pw://sync", expect.any(Function));
+    cb!({ payload: '{"type":"sync_status","kind":"syncing","conflicts":[]}' });
+    cb!({ payload: "garbage" });
+    expect(seen).toEqual([{ type: "status", status: { kind: "syncing", conflicts: [] } }]);
   });
 });
