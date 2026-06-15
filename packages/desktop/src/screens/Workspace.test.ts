@@ -1,4 +1,4 @@
-import { render, fireEvent } from "@testing-library/svelte";
+import { render, fireEvent, waitFor } from "@testing-library/svelte";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const invokeMock = vi.hoisted(() => vi.fn());
@@ -44,5 +44,20 @@ describe("Workspace", () => {
   it("subscribes to chat events on mount", () => {
     render(Workspace, { props: { project } });
     expect(listenMock).toHaveBeenCalledWith("pw://chat", expect.any(Function));
+  });
+
+  it("starts a sync watch on mount and subscribes to pw://sync", async () => {
+    render(Workspace, { props: { project } });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("start_sync_watch", { projectDir: project.localPath });
+    });
+    expect(listenMock).toHaveBeenCalledWith("pw://sync", expect.any(Function));
+  });
+
+  it("pause button issues sync_command pause", async () => {
+    invokeMock.mockResolvedValue('{"type":"sync_action","action":"pause","ok":true}');
+    const { getByTestId } = render(Workspace, { props: { project } });
+    await fireEvent.click(getByTestId("sync-pause"));
+    expect(invokeMock).toHaveBeenCalledWith("sync_command", { projectDir: project.localPath, sub: "pause" });
   });
 });
