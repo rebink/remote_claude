@@ -4,8 +4,26 @@ import {
   buildCreateArgs,
   parseStatusLine,
   extractConflictPaths,
+  getStatus,
+  ensureSession,
+  pauseSession,
+  resumeSession,
+  flushSession,
+  stopSession,
   type MutagenTarget,
 } from "../src/lib/mutagen.ts";
+
+function fakeRunner(responses: Record<string, { status?: number; stdout?: string; stderr?: string }>) {
+  const calls: string[][] = [];
+  const run = (args: string[]) => {
+    calls.push(args);
+    // key by the mutagen subcommand (args[1]) for simplicity
+    const key = args[1];
+    const r = responses[key] ?? {};
+    return { status: r.status ?? 0, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+  };
+  return { run, calls };
+}
 
 const target: MutagenTarget = {
   project: "api-server",
@@ -80,5 +98,56 @@ describe("extractConflictPaths", () => {
   });
   it("returns [] when no conflicts section", () => {
     expect(extractConflictPaths("Name: x\nStatus: Watching\n")).toEqual([]);
+  });
+});
+
+describe("getStatus", () => {
+  it("returns no_session when list exits non-zero", () => {
+    const { run } = fakeRunner({ list: { status: 1 } });
+    expect(getStatus(run, "rc-x").kind).toBe("no_session");
+  });
+  it("parses a watching status", () => {
+    const { run } = fakeRunner({ list: { status: 0, stdout: "Watching|false|0" } });
+    expect(getStatus(run, "rc-x").kind).toBe("watching");
+  });
+  it("on conflict, fetches --long and fills files", () => {
+    const longOut = "Conflicts:\n  α (a.ts)\n\n";
+    let n = 0;
+    const run = (args: string[]) => {
+      // first list = template (conflict count 1), second list = --long
+      if (args.includes("--long")) return { status: 0, stdout: longOut, stderr: "" };
+      n++;
+      return { status: 0, stdout: "Watching|false|1", stderr: "" };
+    };
+    const s = getStatus(run, "rc-x");
+    expect(s.kind).toBe("conflict");
+    if (s.kind === "conflict") expect(s.files).toContain("a.ts");
+  });
+});
+
+describe("ensureSession", () => {
+  it("creates the session when it does not exist", () => {
+    // existence check (template Name) returns empty → create
+    const calls: string[][] = [];
+    const run = (args: string[]) => {
+      calls.push(args);
+      if (args.includes("create")) return { status: 0, stdout: "", stderr: "" };
+      return { status: 0, stdout: "", stderr: "" }; // list returns empty name
+    };
+    ensureSession(run, { project: "api", host: "h", user: "u", localPath: "/l", remotePath: "/r" });
+    expect(calls.some((a) => a.includes("create"))).toBe(true);
+  });
+});
+
+describe("pause/resume/flush/stop", () => {
+  it("issue the right mutagen subcommands", () => {
+    const { run, calls } = fakeRunner({});
+    pauseSession(run, "rc-x"); resumeSession(run, "rc-x"); flushSession(run, "rc-x"); stopSession(run, "rc-x");
+    expect(calls).toEqual([
+      ["sync", "pause", "rc-x"],
+      ["sync", "resume", "rc-x"],
+      ["sync", "flush", "rc-x"],
+      ["sync", "terminate", "rc-x"],
+    ]);
   });
 });

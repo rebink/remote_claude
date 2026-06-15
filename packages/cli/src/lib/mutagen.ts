@@ -109,3 +109,33 @@ export function extractConflictPaths(longOut: string): string[] {
 
 export const MUTAGEN_STATUS_TEMPLATE =
   "{{ range . }}{{ .Status }}|{{ .Paused }}|{{ len .Conflicts }}{{ end }}";
+
+// ---------------------------------------------------------------------------
+// Runner-based session ops
+// ---------------------------------------------------------------------------
+
+export interface RunResult { status: number; stdout: string; stderr: string }
+export type MutagenRunner = (args: string[]) => RunResult;
+
+export function getStatus(run: MutagenRunner, name: string): MutagenStatus {
+  const r = run(["sync", "list", name, "--template", MUTAGEN_STATUS_TEMPLATE]);
+  if (r.status !== 0) return { kind: "no_session" };
+  const status = parseStatusLine(r.stdout);
+  if (status.kind === "conflict") {
+    const long = run(["sync", "list", name, "--long"]);
+    return { kind: "conflict", files: extractConflictPaths(long.stdout) };
+  }
+  return status;
+}
+
+export function ensureSession(run: MutagenRunner, target: MutagenTarget): void {
+  const name = sessionName(target.project, target.host);
+  const exists = run(["sync", "list", name, "--template", "{{ range . }}{{ .Name }}{{ end }}"]);
+  if (exists.status === 0 && exists.stdout.trim() !== "") return; // already exists
+  run(buildCreateArgs(name, target));
+}
+
+export function pauseSession(run: MutagenRunner, name: string): void { run(["sync", "pause", name]); }
+export function resumeSession(run: MutagenRunner, name: string): void { run(["sync", "resume", name]); }
+export function flushSession(run: MutagenRunner, name: string): void { run(["sync", "flush", name]); }
+export function stopSession(run: MutagenRunner, name: string): void { run(["sync", "terminate", name]); }
