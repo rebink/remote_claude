@@ -1,19 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { Connection, HealthResult, Project } from "./types";
-import { connectionToHostArgs, parseHealth, parseProjects } from "./model";
+import type { Project, ProjectConfig } from "./types";
+import { parseProjects } from "./model";
 import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
 
-export async function readConnection(): Promise<Connection | null> {
-  const raw = await invoke<Connection | null>("read_connection");
-  return raw ?? null;
-}
-
-export async function saveConnection(connection: Connection): Promise<void> {
-  await invoke("save_connection", { connection });
+export async function readProjectConfig(projectDir: string): Promise<ProjectConfig | null> {
+  const line = await invoke<string>("read_project_config", { projectDir });
+  try {
+    const o = JSON.parse(line);
+    return o && o.type === "config" ? (o as ProjectConfig) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function listProjects(): Promise<Project[]> {
@@ -23,13 +24,6 @@ export async function listProjects(): Promise<Project[]> {
 
 export async function saveProject(project: Project): Promise<void> {
   await invoke("save_project", { project });
-}
-
-export async function checkHealth(connection: Connection): Promise<HealthResult> {
-  const json = await invoke<string>("host_health", {
-    args: connectionToHostArgs(connection),
-  });
-  return parseHealth(json);
 }
 
 export async function pickFolder(): Promise<string | null> {
