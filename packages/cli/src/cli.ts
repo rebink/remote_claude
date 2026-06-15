@@ -287,6 +287,15 @@ program
   });
 
 program
+  .command('config-show')
+  .description('Print a safe subset of the current project config as JSON (no token or agentUrl)')
+  .option('--json', 'output as JSON (default: true)', true)
+  .action(async () => {
+    const { runConfigShow } = await import('./commands/config-show.ts');
+    await runConfigShow(process.cwd());
+  });
+
+program
   .command('host-uninstall')
   .description('Uninstall the patchwire agent from an already-provisioned host via SSH')
   .requiredOption('--host <host>', 'remote hostname or IP')
