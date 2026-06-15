@@ -18,6 +18,7 @@ import {
   cancelChat,
   applyPatch,
   onChatEvent,
+  onChatEnd,
 } from "./ipc";
 import type { Connection } from "./types";
 
@@ -138,5 +139,22 @@ describe("onChatEvent", () => {
     captured!({ payload: "blank-ignored-not-json" });
     expect(seen).toEqual([{ type: "chat_text", chunk: "hi" }]); // unparseable line dropped
     expect(typeof stop).toBe("function");
+  });
+});
+
+describe("onChatEnd", () => {
+  it("subscribes to pw://chat-end, forwards the exit code payload, and returns the unlisten handle", async () => {
+    const unlisten = vi.fn();
+    let captured: ((e: { payload: number | null }) => void) | null = null;
+    listenMock.mockImplementation((name: string, cb: (e: { payload: number | null }) => void) => {
+      if (name === "pw://chat-end") captured = cb;
+      return Promise.resolve(unlisten);
+    });
+    const codes: (number | null)[] = [];
+    const stop = await onChatEnd((code) => codes.push(code));
+    captured!({ payload: 1 });
+    captured!({ payload: null });
+    expect(codes).toEqual([1, null]);
+    expect(stop).toBe(unlisten);
   });
 });

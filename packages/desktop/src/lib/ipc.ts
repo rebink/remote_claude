@@ -55,3 +55,7 @@ export async function onChatEvent(handler: (ev: ChatEvent) => void): Promise<Unl
     if (ev) handler(ev);
   });
 }
+
+export async function onChatEnd(handler: (code: number | null) => void): Promise<UnlistenFn> {
+  return listen<number | null>("pw://chat-end", (e) => handler(e.payload));
+}

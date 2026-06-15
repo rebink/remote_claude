@@ -69,6 +69,10 @@ export function applyChatEvent(state: ChatState, ev: ChatEvent): ChatState {
   }
 }
 
+export function endStream(state: ChatState): ChatState {
+  return { ...state, streaming: false, syncing: false };
+}
+
 export function parseApplyResult(line: string): ApplyResult {
   try {
     const o = JSON.parse(line.trim());

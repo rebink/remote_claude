@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initChatState, startTurn, applyChatEvent, parseApplyResult } from "./chat-session";
+import { initChatState, startTurn, applyChatEvent, parseApplyResult, endStream } from "./chat-session";
 
 const uuid = "test-uuid-1234";
 
@@ -74,6 +74,31 @@ describe("chat session reducer", () => {
     expect(initial.messages).toEqual([]);
     expect(initial.streaming).toBe(false);
     expect(after).not.toBe(initial);
+  });
+});
+
+describe("endStream", () => {
+  it("clears streaming and syncing", () => {
+    const s = { ...startTurn(initChatState(uuid), "x"), syncing: true };
+    const after = endStream(s);
+    expect(after.streaming).toBe(false);
+    expect(after.syncing).toBe(false);
+  });
+
+  it("preserves an existing error and the diff", () => {
+    const base = initChatState(uuid);
+    const withError: typeof base = {
+      ...base,
+      streaming: true,
+      syncing: true,
+      error: "sidecar crashed",
+      diff: { patch: "PATCH", files: [{ path: "a.ts", status: "M", additions: 1, deletions: 0 }] },
+    };
+    const after = endStream(withError);
+    expect(after.streaming).toBe(false);
+    expect(after.syncing).toBe(false);
+    expect(after.error).toBe("sidecar crashed");
+    expect(after.diff).toEqual(withError.diff);
   });
 });
 

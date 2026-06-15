@@ -2,9 +2,9 @@
   import { onMount, onDestroy } from "svelte";
   import type { Project } from "../lib/types";
   import {
-    initChatState, startTurn, applyChatEvent, type ChatState,
+    initChatState, startTurn, applyChatEvent, endStream, type ChatState,
   } from "../lib/chat-session";
-  import { startChat, cancelChat, applyPatch, onChatEvent } from "../lib/ipc";
+  import { startChat, cancelChat, applyPatch, onChatEvent, onChatEnd } from "../lib/ipc";
   import ChatPane from "../components/ChatPane.svelte";
   import ChangesPanel from "../components/ChangesPanel.svelte";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -14,13 +14,20 @@
   let chat = $state<ChatState>(initChatState(crypto.randomUUID()));
   let applying = $state(false);
   let unlisten: UnlistenFn | null = null;
+  let unlistenEnd: UnlistenFn | null = null;
 
   onMount(async () => {
     unlisten = await onChatEvent((ev) => {
       chat = applyChatEvent(chat, ev);
     });
+    unlistenEnd = await onChatEnd(() => {
+      chat = endStream(chat);
+    });
   });
-  onDestroy(() => unlisten?.());
+  onDestroy(() => {
+    unlisten?.();
+    unlistenEnd?.();
+  });
 
   async function send(text: string) {
     chat = startTurn(chat, text);
