@@ -509,6 +509,61 @@ async fn sync_command(
     Ok(line)
 }
 
+fn safe_token(v: &str) -> bool {
+    !v.is_empty() && v.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
+}
+
+// Generate the per-project SSH key if missing; return the public key path.
+#[tauri::command]
+fn ensure_ssh_key(host: String, user: String) -> Result<String, String> {
+    if !safe_token(&host) || !safe_token(&user) { return Err("invalid host/user".into()); }
+    let home = std::env::var("HOME").map_err(|_| "HOME not set".to_string())?;
+    let keys = std::path::Path::new(&home).join(".patchwire").join("keys");
+    std::fs::create_dir_all(&keys).map_err(|e| e.to_string())?;
+    let key = keys.join(format!("{host}-{user}"));
+    let pubkey = keys.join(format!("{host}-{user}.pub"));
+    if !key.exists() {
+        let out = std::process::Command::new("ssh-keygen")
+            .args(["-t", "ed25519", "-f", &key.to_string_lossy(), "-N", "", "-C", "patchwire"])
+            .output().map_err(|e| e.to_string())?;
+        if !out.status.success() {
+            return Err(format!("ssh-keygen failed: {}", String::from_utf8_lossy(&out.stderr)));
+        }
+    }
+    Ok(pubkey.to_string_lossy().to_string())
+}
+
+// Verify a key-only SSH connection works (reuses the CLI setup --verify-key).
+#[tauri::command]
+async fn verify_key(app: tauri::AppHandle, host: String, user: String, ssh_port: u16, key_path: String) -> Result<bool, String> {
+    use tauri_plugin_shell::ShellExt;
+    if !safe_token(&host) || !safe_token(&user) { return Err("invalid host/user".into()); }
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    let out = sidecar.args([
+        "setup", "--verify-key",
+        "--host", &host, "--user", &user,
+        "--ssh-port", &ssh_port.to_string(), "--key-path", &key_path,
+    ]).output().await.map_err(|e| e.to_string())?;
+    let line = String::from_utf8_lossy(&out.stdout).lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
+    match serde_json::from_str::<serde_json::Value>(&line) {
+        Ok(v) => Ok(v.get("ok").and_then(|b| b.as_bool()).unwrap_or(false)),
+        Err(_) => Ok(false),
+    }
+}
+
+// Open Terminal.app and run a command (macOS). The command is built by the caller from validated host/user.
+#[tauri::command]
+fn open_terminal(command: String) -> Result<(), String> {
+    // Reject control chars / quotes that could break out of the AppleScript string.
+    if command.contains('"') || command.contains('\n') || command.contains('\r') {
+        return Err("invalid command".into());
+    }
+    let script = format!("tell application \"Terminal\" to do script \"{command}\"");
+    let out = std::process::Command::new("osascript").args(["-e", &script]).output().map_err(|e| e.to_string())?;
+    if !out.status.success() { return Err(String::from_utf8_lossy(&out.stderr).to_string()); }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -535,7 +590,10 @@ pub fn run() {
             apply_patch,
             start_sync_watch,
             stop_sync_watch,
-            sync_command
+            sync_command,
+            ensure_ssh_key,
+            verify_key,
+            open_terminal
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
