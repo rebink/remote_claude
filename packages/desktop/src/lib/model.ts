@@ -73,6 +73,7 @@ function isStatus(v: unknown): v is ProjectStatus {
     v === "working" ||
     v === "paused" ||
     v === "error" ||
+    v === "conflict" ||
     v === "unknown"
   );
 }
@@ -105,6 +106,8 @@ export function projectStatusLabel(
       return { text: "Sync paused", kind: "muted" };
     case "error":
       return { text: "Error", kind: "error" };
+    case "conflict":
+      return { text: "Conflict", kind: "error" };
     default:
       return { text: "—", kind: "muted" };
   }

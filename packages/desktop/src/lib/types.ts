@@ -27,6 +27,7 @@ export type ProjectStatus =
   | "working"
   | "paused"
   | "error"
+  | "conflict"
   | "unknown";
 
 export interface Project {
