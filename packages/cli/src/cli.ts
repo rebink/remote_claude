@@ -190,8 +190,10 @@ program
   .command('apply')
   .description('Apply a previously saved patch (default: .patchwire/last.patch)')
   .argument('[patch]', 'path to a patch file')
-  .action(async (patch?: string) => {
-    await runApply(process.cwd(), patch);
+  .option('--yes', 'apply without prompting (non-interactive)')
+  .option('--json', 'emit a JSON result line')
+  .action(async (patch: string | undefined, opts: { yes?: boolean; json?: boolean }) => {
+    await runApply(process.cwd(), patch, { yes: opts.yes, json: opts.json });
   });
 
 program

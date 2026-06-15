@@ -351,3 +351,12 @@ function gitApply(diff: string, cwd: string): Promise<void> {
     child.stdin.end(diff);
   });
 }
+
+/**
+ * Apply a patch non-interactively (no prompts). Equivalent to the "apply all"
+ * path that `applyPatchInteractive` takes when the user says yes to every file.
+ * Throws if `git apply` exits non-zero.
+ */
+export async function applyPatch(diff: string, cwd: string): Promise<void> {
+  await gitApply(diff, cwd);
+}
