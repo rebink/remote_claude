@@ -321,14 +321,13 @@ async fn start_chat(
     if session_uuid.trim().is_empty() { return Err("session_uuid is required".into()); }
     if prompt.trim().is_empty() { return Err("prompt is required".into()); }
 
+    // Get sidecar handle BEFORE claiming busy — so only .spawn() is inside the claimed region.
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+
+    // Atomic in-progress claim: compare_exchange false→true; fail if already true.
     if state.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
         return Err("a chat turn is already in progress".into());
     }
-
-    let sidecar = match app.shell().sidecar("patchwire") {
-        Ok(c) => c,
-        Err(e) => { state.busy.store(false, Ordering::SeqCst); return Err(e.to_string()); }
-    };
 
     let (mut rx, child) = match sidecar
         .current_dir(std::path::PathBuf::from(&project_dir))
