@@ -1,78 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
-  isConnectionComplete,
-  connectionToHostArgs,
-  parseHealth,
   parseProjects,
   buildProject,
+  projectFromConfig,
   projectStatusLabel,
 } from "./model";
-import type { Connection } from "./types";
-
-const conn: Connection = {
-  host: "studio-mini",
-  user: "rebin",
-  sshPort: 22,
-  keyPath: "/home/rebin/.ssh/id_ed25519",
-  agentPort: 7878,
-};
-
-describe("isConnectionComplete", () => {
-  it("is true when all required fields are present and ports positive", () => {
-    expect(isConnectionComplete(conn)).toBe(true);
-  });
-  it("is false when host is empty", () => {
-    expect(isConnectionComplete({ ...conn, host: "" })).toBe(false);
-  });
-  it("is false when agentPort is 0", () => {
-    expect(isConnectionComplete({ ...conn, agentPort: 0 })).toBe(false);
-  });
-});
-
-describe("connectionToHostArgs", () => {
-  it("maps connection fields to the sidecar HostArgs shape", () => {
-    expect(connectionToHostArgs(conn)).toEqual({
-      host: "studio-mini",
-      user: "rebin",
-      sshPort: 22,
-      keyPath: "/home/rebin/.ssh/id_ed25519",
-      agentPort: 7878,
-    });
-  });
-});
-
-describe("parseHealth", () => {
-  it("parses a healthy JSON string", () => {
-    const r = parseHealth('{"ok":true,"version":"0.4.0","user":"rebin"}');
-    expect(r).toEqual({ ok: true, version: "0.4.0", user: "rebin" });
-  });
-  it("returns ok:false on malformed input", () => {
-    expect(parseHealth("not json")).toEqual({ ok: false });
-  });
-});
-
-describe("parseProjects", () => {
-  it("returns [] for non-array input", () => {
-    expect(parseProjects(null)).toEqual([]);
-    expect(parseProjects({})).toEqual([]);
-  });
-  it("coerces records and drops ones missing id/localPath/remotePath", () => {
-    const raw = [
-      { id: "a", name: "api", branch: "main", localPath: "/l/a", remotePath: "/r/a" },
-      { id: "b", localPath: "/l/b", remotePath: "/r/b" },
-      { name: "broken" },
-    ];
-    const out = parseProjects(raw);
-    expect(out).toHaveLength(2);
-    expect(out[0]).toEqual({
-      id: "a", name: "api", branch: "main",
-      localPath: "/l/a", remotePath: "/r/a",
-      lastStatus: "unknown", syncPaused: false,
-    });
-    expect(out[1].name).toBe("b");      // falls back to id when name missing
-    expect(out[1].branch).toBe("main"); // default branch
-  });
-});
 
 describe("buildProject", () => {
   it("builds a project with defaults and a non-empty id", () => {
@@ -92,6 +24,63 @@ describe("buildProject", () => {
   it("derives the name from a Windows-style path basename", () => {
     const p = buildProject("C:\\Users\\rebin\\code\\api-server", "/remote/api-server");
     expect(p.name).toBe("api-server");
+  });
+});
+
+describe("buildProject with host/user", () => {
+  it("includes host and user", () => {
+    const p = buildProject("/l/api", "/r/api", "api", "studio-mini", "rebin");
+    expect(p.host).toBe("studio-mini");
+    expect(p.user).toBe("rebin");
+    expect(p.remotePath).toBe("/r/api");
+  });
+  it("defaults host/user to empty when omitted", () => {
+    const p = buildProject("/l/api", "/r/api");
+    expect(p.host).toBe("");
+    expect(p.user).toBe("");
+  });
+});
+
+describe("projectFromConfig", () => {
+  it("builds a Project from a config-show JSON object", () => {
+    const cfg = { type: "config" as const, project: "api", host: "h", user: "u", remotePath: "/r/api", sshPort: 22 };
+    const p = projectFromConfig("/l/api", cfg);
+    expect(p).toMatchObject({ name: "api", host: "h", user: "u", localPath: "/l/api", remotePath: "/r/api", branch: "main", lastStatus: "unknown", syncPaused: false });
+    expect(p.id.length).toBeGreaterThan(0);
+  });
+});
+
+describe("parseProjects", () => {
+  it("returns [] for non-array input", () => {
+    expect(parseProjects(null)).toEqual([]);
+    expect(parseProjects({})).toEqual([]);
+  });
+  it("coerces records and drops ones missing id/localPath/remotePath", () => {
+    const raw = [
+      { id: "a", name: "api", branch: "main", localPath: "/l/a", remotePath: "/r/a" },
+      { id: "b", localPath: "/l/b", remotePath: "/r/b" },
+      { name: "broken" },
+    ];
+    const out = parseProjects(raw);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({
+      id: "a", name: "api", branch: "main",
+      localPath: "/l/a", remotePath: "/r/a",
+      lastStatus: "unknown", syncPaused: false,
+    });
+    expect(out[1].name).toBe("b");      // falls back to id when name missing
+    expect(out[1].branch).toBe("main"); // default branch
+  });
+});
+
+describe("parseProjects carries host/user", () => {
+  it("preserves host/user, defaults to empty", () => {
+    const out = parseProjects([
+      { id: "a", name: "api", localPath: "/l", remotePath: "/r", host: "h", user: "u" },
+      { id: "b", name: "web", localPath: "/l2", remotePath: "/r2" },
+    ]);
+    expect(out[0].host).toBe("h"); expect(out[0].user).toBe("u");
+    expect(out[1].host).toBe(""); expect(out[1].user).toBe("");
   });
 });
 

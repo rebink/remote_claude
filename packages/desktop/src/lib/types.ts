@@ -1,27 +1,3 @@
-export interface Connection {
-  host: string;
-  user: string;
-  sshPort: number;
-  keyPath: string;
-  agentPort: number;
-  tailnetAddr?: string;
-  agentVersion?: string;
-}
-
-export interface HostArgs {
-  host: string;
-  user: string;
-  sshPort: number;
-  keyPath: string;
-  agentPort: number;
-}
-
-export interface HealthResult {
-  ok: boolean;
-  version?: string;
-  user?: string;
-}
-
 export type ProjectStatus =
   | "in-sync"
   | "working"
@@ -36,6 +12,17 @@ export interface Project {
   branch: string;
   localPath: string;
   remotePath: string;
+  host: string;
+  user: string;
   lastStatus: ProjectStatus;
   syncPaused: boolean;
+}
+
+export interface ProjectConfig {
+  type: "config";
+  project: string;
+  host: string;
+  user: string;
+  remotePath: string;
+  sshPort: number;
 }
