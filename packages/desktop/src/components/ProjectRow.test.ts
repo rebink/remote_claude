@@ -28,6 +28,11 @@ describe("ProjectRow", () => {
     const { getByTestId } = render(ProjectRow, { props: { project: { ...project, host: "studio-mini", user: "rebin" } } });
     expect(getByTestId("row-remote").textContent).toBe("rebin@studio-mini");
   });
+  it("hides row-remote when both host and user are empty", () => {
+    const { queryByTestId } = render(ProjectRow, { props: { project: { ...project, host: "", user: "" } } });
+    expect(queryByTestId("row-remote")).toBeNull();
+  });
+
   it("fires onopen with the project when clicked", async () => {
     const onopen = vi.fn();
     const { getByTestId } = render(ProjectRow, { props: { project, onopen } });

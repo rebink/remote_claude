@@ -16,7 +16,7 @@ export async function runConfigShow(cwd: string, opts: ConfigShowOpts = {}): Pro
         host: cfg.remote.host,
         user: cfg.remote.user,
         remotePath: cfg.remote.path,
-        sshPort: cfg.remote.sshPort ?? null,
+        sshPort: cfg.remote.sshPort ?? 22,
       }),
     );
   } catch (err) {

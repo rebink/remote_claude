@@ -42,6 +42,22 @@ describe('runConfigShow --json', () => {
     expect(lines.at(-1)).not.toContain('agentUrl');
   });
 
+  it('defaults sshPort to 22 when not set in patchwire.yml', async () => {
+    const ymlWithoutPort = `project: api-server
+remote:
+  host: studio-mini
+  user: rebin
+  path: ~/workspace/api-server
+  agentUrl: http://100.100.100.100:7878
+  token: SECRET_TOKEN
+`;
+    await writeFile(join(dir, 'patchwire.yml'), ymlWithoutPort, 'utf8');
+    const lines: string[] = [];
+    await runConfigShow(dir, { json: true, print: (s) => lines.push(s) });
+    const out = JSON.parse(lines.at(-1)!);
+    expect(out.sshPort).toBe(22);
+  });
+
   it('emits a JSON error line when no patchwire.yml', async () => {
     await rm(join(dir, 'patchwire.yml'));
     const lines: string[] = [];

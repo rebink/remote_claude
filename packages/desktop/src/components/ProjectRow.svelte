@@ -18,7 +18,7 @@
       <span class="name" data-testid="row-name">{project.name}</span>
       <span class="branch" data-testid="row-branch">{project.branch}</span>
     </div>
-    <div class="remote" data-testid="row-remote">{project.user}@{project.host}</div>
+    {#if project.host || project.user}<div class="remote" data-testid="row-remote">{project.user}@{project.host}</div>{/if}
     <div class="path mono" data-testid="row-path">{project.localPath} ⇄ {project.remotePath}</div>
   </div>
   <span class="pill {label.kind}" data-testid="row-status">{label.text}</span>
