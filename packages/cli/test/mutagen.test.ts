@@ -151,3 +151,38 @@ describe("pause/resume/flush/stop", () => {
     ]);
   });
 });
+
+describe("getStatus — error kind + conflict cap (P3b)", () => {
+  it("returns { kind: 'error' } when the runner throws", () => {
+    const run = (): never => { throw new Error("spawn failed"); };
+    const s = getStatus(run, "rc-x");
+    expect(s.kind).toBe("error");
+    if (s.kind === "error") expect(s.message).toMatch(/spawn failed/);
+  });
+
+  it("caps conflict files at 10 when runner returns >10 entries", () => {
+    // 15 conflict lines → getStatus must slice to 10
+    const many = Array.from({ length: 15 }, (_, i) => `  α (f${i}.ts)`).join("\n");
+    const longOut = `Conflicts:\n${many}\n\n`;
+    const run = (args: string[]) => {
+      if (args.includes("--long")) return { status: 0, stdout: longOut, stderr: "" };
+      // template call returns conflict count 15
+      return { status: 0, stdout: "Watching|false|15", stderr: "" };
+    };
+    const s = getStatus(run, "rc-x");
+    expect(s.kind).toBe("conflict");
+    if (s.kind === "conflict") expect(s.files.length).toBe(10);
+  });
+
+  it("regression: conflict files ≤10 are returned unchanged", () => {
+    const few = Array.from({ length: 3 }, (_, i) => `  α (g${i}.ts)`).join("\n");
+    const longOut = `Conflicts:\n${few}\n\n`;
+    const run = (args: string[]) => {
+      if (args.includes("--long")) return { status: 0, stdout: longOut, stderr: "" };
+      return { status: 0, stdout: "Watching|false|3", stderr: "" };
+    };
+    const s = getStatus(run, "rc-x");
+    expect(s.kind).toBe("conflict");
+    if (s.kind === "conflict") expect(s.files.length).toBe(3);
+  });
+});

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, beforeEach } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadConfig } from '../src/lib/config.ts';
+import { loadConfig, ConfigSchema } from '../src/lib/config.ts';
 
 let dir: string;
 beforeEach(async () => {
@@ -30,6 +30,51 @@ ai:
     - --print
   timeoutSec: 600
 `;
+
+// Minimal valid config object for direct ConfigSchema.parse() tests
+const baseConfig = {
+  project: 'my_app',
+  remote: {
+    host: '10.0.0.1',
+    user: 'rebin',
+    path: '~/workspace/my_app',
+    agentUrl: 'http://10.0.0.1:7878',
+    token: 'secret',
+  },
+};
+
+describe('ConfigSchema host/user hardening', () => {
+  it('rejects a host containing a newline', () => {
+    expect(() =>
+      ConfigSchema.parse({ ...baseConfig, remote: { ...baseConfig.remote, host: 'h\nProxyCommand evil' } }),
+    ).toThrow();
+  });
+  it('rejects a host containing a hash (#)', () => {
+    expect(() =>
+      ConfigSchema.parse({ ...baseConfig, remote: { ...baseConfig.remote, host: 'host#bad' } }),
+    ).toThrow();
+  });
+  it('rejects a user containing whitespace', () => {
+    expect(() =>
+      ConfigSchema.parse({ ...baseConfig, remote: { ...baseConfig.remote, user: 'a b' } }),
+    ).toThrow();
+  });
+  it('rejects a user containing a newline', () => {
+    expect(() =>
+      ConfigSchema.parse({ ...baseConfig, remote: { ...baseConfig.remote, user: 'u\nEvil' } }),
+    ).toThrow();
+  });
+  it('accepts a normal dotted IP host and plain username', () => {
+    expect(() =>
+      ConfigSchema.parse({ ...baseConfig, remote: { ...baseConfig.remote, host: '10.0.0.1', user: 'rebin' } }),
+    ).not.toThrow();
+  });
+  it('accepts a hostname with dots and dashes', () => {
+    expect(() =>
+      ConfigSchema.parse({ ...baseConfig, remote: { ...baseConfig.remote, host: 'studio-mini.local', user: 'rebin_dev' } }),
+    ).not.toThrow();
+  });
+});
 
 describe('loadConfig', () => {
   it('loads and validates a complete config', async () => {
