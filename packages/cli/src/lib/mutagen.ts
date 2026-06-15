@@ -118,14 +118,18 @@ export interface RunResult { status: number; stdout: string; stderr: string }
 export type MutagenRunner = (args: string[]) => RunResult;
 
 export function getStatus(run: MutagenRunner, name: string): MutagenStatus {
-  const r = run(["sync", "list", name, "--template", MUTAGEN_STATUS_TEMPLATE]);
-  if (r.status !== 0) return { kind: "no_session" };
-  const status = parseStatusLine(r.stdout);
-  if (status.kind === "conflict") {
-    const long = run(["sync", "list", name, "--long"]);
-    return { kind: "conflict", files: extractConflictPaths(long.stdout) };
+  try {
+    const r = run(["sync", "list", name, "--template", MUTAGEN_STATUS_TEMPLATE]);
+    if (r.status !== 0) return { kind: "no_session" };
+    const status = parseStatusLine(r.stdout);
+    if (status.kind === "conflict") {
+      const long = run(["sync", "list", name, "--long"]);
+      return { kind: "conflict", files: extractConflictPaths(long.stdout || "").slice(0, 10) };
+    }
+    return status;
+  } catch (e) {
+    return { kind: "error", message: String(e) };
   }
-  return status;
 }
 
 export function ensureSession(run: MutagenRunner, target: MutagenTarget): void {

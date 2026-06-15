@@ -5,6 +5,7 @@ import type { Connection, HealthResult, Project } from "./types";
 import { connectionToHostArgs, parseHealth, parseProjects } from "./model";
 import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
+import { parseSyncLine, type SyncLine } from "./sync-events";
 
 export async function readConnection(): Promise<Connection | null> {
   const raw = await invoke<Connection | null>("read_connection");
@@ -58,4 +59,24 @@ export async function onChatEvent(handler: (ev: ChatEvent) => void): Promise<Unl
 
 export async function onChatEnd(handler: (code: number | null) => void): Promise<UnlistenFn> {
   return listen<number | null>("pw://chat-end", (e) => handler(e.payload));
+}
+
+export async function syncCommand(projectDir: string, sub: "status" | "start" | "pause" | "resume" | "flush" | "stop"): Promise<SyncLine | null> {
+  const line = await invoke<string>("sync_command", { projectDir, sub });
+  return parseSyncLine(line);
+}
+
+export async function startSyncWatch(projectDir: string): Promise<void> {
+  await invoke("start_sync_watch", { projectDir });
+}
+
+export async function stopSyncWatch(): Promise<void> {
+  await invoke("stop_sync_watch");
+}
+
+export async function onSyncEvent(handler: (line: SyncLine) => void): Promise<UnlistenFn> {
+  return listen<string>("pw://sync", (e) => {
+    const l = parseSyncLine(e.payload);
+    if (l) handler(l);
+  });
 }

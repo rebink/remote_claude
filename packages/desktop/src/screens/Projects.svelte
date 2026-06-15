@@ -1,19 +1,45 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { connection, projects } from "../lib/stores";
+  import { checkHealth, syncCommand } from "../lib/ipc";
+  import { syncKindToProjectStatus } from "../lib/sync-events";
   import ConnectionBar from "../components/ConnectionBar.svelte";
   import ProjectRow from "../components/ProjectRow.svelte";
   import type { Project } from "../lib/types";
 
   let { onopen, onadd }: { onopen?: (p: Project) => void; onadd?: () => void } = $props();
   let query = $state("");
+  let healthy = $state(true);
 
   let filtered = $derived(
     $projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
   );
+
+  onMount(async () => {
+    const conn = $connection;
+    if (conn) {
+      try {
+        healthy = (await checkHealth(conn)).ok;
+      } catch {
+        healthy = false;
+      }
+    }
+    for (const p of $projects) {
+      try {
+        const line = await syncCommand(p.localPath, "status");
+        if (line && line.type === "status") {
+          const next = syncKindToProjectStatus(line.status.kind);
+          projects.update((list) => list.map((x) => (x.id === p.id ? { ...x, lastStatus: next } : x)));
+        }
+      } catch {
+        // best-effort: leave lastStatus unchanged
+      }
+    }
+  });
 </script>
 
 {#if $connection}
-  <ConnectionBar connection={$connection} healthy={true} />
+  <ConnectionBar connection={$connection} {healthy} />
 {/if}
 
 <div class="bar">

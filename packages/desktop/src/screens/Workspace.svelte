@@ -4,17 +4,21 @@
   import {
     initChatState, startTurn, applyChatEvent, endStream, type ChatState,
   } from "../lib/chat-session";
-  import { startChat, cancelChat, applyPatch, onChatEvent, onChatEnd } from "../lib/ipc";
+  import { startChat, cancelChat, applyPatch, onChatEvent, onChatEnd, startSyncWatch, stopSyncWatch, onSyncEvent, syncCommand } from "../lib/ipc";
   import ChatPane from "../components/ChatPane.svelte";
   import ChangesPanel from "../components/ChangesPanel.svelte";
+  import SyncPill from "../components/SyncPill.svelte";
+  import type { SyncStatus } from "../lib/sync-events";
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
   let { project, onback }: { project: Project; onback?: () => void } = $props();
 
   let chat = $state<ChatState>(initChatState(crypto.randomUUID()));
   let applying = $state(false);
+  let sync = $state<SyncStatus>({ kind: "no_session", conflicts: [] });
   let unlisten: UnlistenFn | null = null;
   let unlistenEnd: UnlistenFn | null = null;
+  let unlistenSync: UnlistenFn | null = null;
 
   onMount(async () => {
     unlisten = await onChatEvent((ev) => {
@@ -23,11 +27,24 @@
     unlistenEnd = await onChatEnd(() => {
       chat = endStream(chat);
     });
+    unlistenSync = await onSyncEvent((l) => {
+      if (l.type === "status") sync = l.status;
+    });
+    try { await startSyncWatch(project.localPath); } catch { /* surfaced via pill */ }
   });
   onDestroy(() => {
     unlisten?.();
     unlistenEnd?.();
+    unlistenSync?.();
+    stopSyncWatch();
   });
+
+  async function toggleSync() {
+    const sub = sync.kind === "paused" ? "resume" : "pause";
+    await syncCommand(project.localPath, sub);
+    const line = await syncCommand(project.localPath, "status");
+    if (line && line.type === "status") sync = line.status;
+  }
 
   async function send(text: string) {
     chat = startTurn(chat, text);
@@ -64,7 +81,19 @@
   <header class="ws-head">
     <button class="back" data-testid="ws-back" onclick={() => onback?.()}>←</button>
     <span class="title" data-testid="ws-title">{project.name} <span class="branch">{project.branch}</span></span>
+    <span class="ws-sync">
+      <SyncPill status={sync} />
+      <button class="ghost" data-testid="sync-pause" onclick={toggleSync}>
+        {sync.kind === "paused" ? "Resume" : "Pause"}
+      </button>
+    </span>
   </header>
+
+  {#if sync.kind === "conflict" && sync.conflicts.length}
+    <div class="conflicts" data-testid="sync-conflicts">
+      Conflicts: {sync.conflicts.join(", ")}
+    </div>
+  {/if}
 
   {#if chat.error}
     <div class="error" role="alert" data-testid="ws-error">{chat.error}</div>
@@ -86,7 +115,10 @@
   .back { background: var(--surface-raised); color: var(--text); padding: 4px 10px; }
   .title { font-weight: 600; }
   .branch { color: var(--text-muted); font-weight: 400; font-size: 12px; margin-left: 6px; }
+  .ws-sync { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .ghost { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 12px; }
   .error { color: var(--error); padding: 8px 16px; font-size: 13px; }
+  .conflicts { color: var(--error); padding: 4px 16px; font-size: 12px; border-bottom: 1px solid var(--border); }
   .split { flex: 1; display: flex; min-height: 0; }
   .left { width: 50%; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-height: 0; }
   .right { width: 50%; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }

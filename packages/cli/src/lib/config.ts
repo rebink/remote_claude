@@ -5,11 +5,22 @@ import { join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
+/**
+ * Strict token schema for SSH host and user fields.
+ * Rejects whitespace, newlines, hash (#), and any character that could
+ * be used for SSH config injection (defense-in-depth; complements the
+ * sink-level fix in mutagen-ssh.ts).
+ */
+const sshToken = z
+  .string()
+  .min(1)
+  .regex(/^[A-Za-z0-9._-]+$/, 'must be a safe SSH token (only A-Za-z0-9, dot, underscore, hyphen)');
+
 export const ConfigSchema = z.object({
   project: z.string().min(1),
   remote: z.object({
-    host: z.string().min(1),
-    user: z.string().min(1),
+    host: sshToken,
+    user: sshToken,
     path: z.string().min(1),
     agentUrl: z.string().url(),
     token: z.string().min(1),

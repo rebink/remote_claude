@@ -103,4 +103,7 @@ describe("projectStatusLabel", () => {
     expect(projectStatusLabel("error")).toEqual({ text: "Error", kind: "error" });
     expect(projectStatusLabel("unknown")).toEqual({ text: "—", kind: "muted" });
   });
+  it("projectStatusLabel maps conflict", () => {
+    expect(projectStatusLabel("conflict")).toEqual({ text: "Conflict", kind: "error" });
+  });
 });
