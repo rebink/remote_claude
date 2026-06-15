@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { Connection, HealthResult, Project } from "./types";
 import { connectionToHostArgs, parseHealth, parseProjects } from "./model";
 
@@ -25,4 +26,9 @@ export async function checkHealth(connection: Connection): Promise<HealthResult>
     args: connectionToHostArgs(connection),
   });
   return parseHealth(json);
+}
+
+export async function pickFolder(): Promise<string | null> {
+  const result = await open({ directory: true, multiple: false });
+  return typeof result === "string" ? result : null;
 }

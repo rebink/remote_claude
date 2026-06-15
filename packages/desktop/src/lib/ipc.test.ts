@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const invokeMock = vi.hoisted(() => vi.fn());
+const openMock = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: openMock }));
 
 import {
   readConnection,
@@ -9,6 +11,7 @@ import {
   listProjects,
   saveProject,
   checkHealth,
+  pickFolder,
 } from "./ipc";
 import type { Connection } from "./types";
 
@@ -70,5 +73,18 @@ describe("checkHealth", () => {
       args: { host: "studio-mini", user: "rebin", sshPort: 22, keyPath: "/k", agentPort: 7878 },
     });
     expect(r).toEqual({ ok: true, version: "0.4.0", user: undefined });
+  });
+});
+
+describe("pickFolder", () => {
+  beforeEach(() => openMock.mockReset());
+  it("returns the chosen directory path", async () => {
+    openMock.mockResolvedValue("/home/rebin/code/api");
+    expect(await pickFolder()).toBe("/home/rebin/code/api");
+    expect(openMock).toHaveBeenCalledWith({ directory: true, multiple: false });
+  });
+  it("returns null when the dialog is cancelled", async () => {
+    openMock.mockResolvedValue(null);
+    expect(await pickFolder()).toBeNull();
   });
 });
