@@ -1,17 +1,46 @@
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { applyPatchInteractive } from '../lib/patch.ts';
+import { applyPatchInteractive, applyPatch, splitDiffByFile } from '../lib/patch.ts';
 import { log } from '../lib/log.ts';
 
-export async function runApply(cwd: string, patchPath?: string): Promise<void> {
+export interface ApplyOpts {
+  yes?: boolean;
+  json?: boolean;
+  print?: (line: string) => void;
+}
+
+export async function runApply(cwd: string, patchPath?: string, opts: ApplyOpts = {}): Promise<void> {
+  const print = opts.print ?? ((l: string) => console.log(l));
   const target = patchPath ? resolve(cwd, patchPath) : join(cwd, '.patchwire', 'last.patch');
-  if (!existsSync(target)) {
+
+  let diff: string;
+  try {
+    diff = await readFile(target, 'utf8');
+  } catch (e) {
+    if (opts.json) {
+      print(JSON.stringify({ type: 'error', applied: false, message: String(e) }));
+      return;
+    }
     log.err(`Patch file not found: ${target}`);
     process.exitCode = 1;
     return;
   }
-  const diff = await readFile(target, 'utf8');
-  log.step(`Reviewing patch ${target}`);
-  await applyPatchInteractive(diff, cwd);
+
+  if (!opts.yes) {
+    log.step(`Reviewing patch ${target}`);
+    await applyPatchInteractive(diff, cwd);
+    return;
+  }
+
+  try {
+    await applyPatch(diff, cwd);
+    const files = splitDiffByFile(diff).map((c) => c.path);
+    if (opts.json) print(JSON.stringify({ type: 'result', applied: true, files }));
+  } catch (e) {
+    if (opts.json) {
+      print(JSON.stringify({ type: 'error', applied: false, message: String(e) }));
+    } else {
+      throw e;
+    }
+  }
 }

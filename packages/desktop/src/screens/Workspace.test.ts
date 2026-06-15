@@ -1,0 +1,48 @@
+import { render, fireEvent } from "@testing-library/svelte";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const invokeMock = vi.hoisted(() => vi.fn());
+const listenMock = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
+vi.mock("@tauri-apps/api/event", () => ({ listen: listenMock }));
+
+import Workspace from "./Workspace.svelte";
+import type { Project } from "../lib/types";
+
+const project: Project = {
+  id: "a", name: "api-server", branch: "main",
+  localPath: "/home/r/api", remotePath: "/remote/api",
+  lastStatus: "in-sync", syncPaused: false,
+};
+
+beforeEach(() => {
+  invokeMock.mockReset();
+  listenMock.mockReset();
+  listenMock.mockResolvedValue(() => {});
+});
+
+describe("Workspace", () => {
+  it("renders the project header and a back control", () => {
+    const onback = vi.fn();
+    const { getByTestId } = render(Workspace, { props: { project, onback } });
+    expect(getByTestId("ws-title").textContent).toContain("api-server");
+  });
+
+  it("sending a prompt starts a chat turn via IPC with the project dir", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    const { getByTestId } = render(Workspace, { props: { project } });
+    await fireEvent.input(getByTestId("composer"), { target: { value: "add retry" } });
+    await fireEvent.click(getByTestId("send-btn"));
+    expect(invokeMock).toHaveBeenCalledWith("start_chat", expect.objectContaining({
+      projectDir: "/home/r/api",
+      prompt: "add retry",
+    }));
+    // user + assistant bubbles appear
+    expect(getByTestId("messages").textContent).toContain("add retry");
+  });
+
+  it("subscribes to chat events on mount", () => {
+    render(Workspace, { props: { project } });
+    expect(listenMock).toHaveBeenCalledWith("pw://chat", expect.any(Function));
+  });
+});

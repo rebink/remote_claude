@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const invokeMock = vi.hoisted(() => vi.fn());
 const openMock = vi.hoisted(() => vi.fn());
+const listenMock = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: openMock }));
+vi.mock("@tauri-apps/api/event", () => ({ listen: listenMock }));
 
 import {
   readConnection,
@@ -12,6 +14,11 @@ import {
   saveProject,
   checkHealth,
   pickFolder,
+  startChat,
+  cancelChat,
+  applyPatch,
+  onChatEvent,
+  onChatEnd,
 } from "./ipc";
 import type { Connection } from "./types";
 
@@ -86,5 +93,68 @@ describe("pickFolder", () => {
   it("returns null when the dialog is cancelled", async () => {
     openMock.mockResolvedValue(null);
     expect(await pickFolder()).toBeNull();
+  });
+});
+
+describe("startChat", () => {
+  it("invokes start_chat with project dir, session uuid, and prompt", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    await startChat("/home/r/api", "uuid-1", "add retry");
+    expect(invokeMock).toHaveBeenCalledWith("start_chat", {
+      projectDir: "/home/r/api",
+      sessionUuid: "uuid-1",
+      prompt: "add retry",
+    });
+  });
+});
+
+describe("cancelChat", () => {
+  it("invokes cancel_chat", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    await cancelChat();
+    expect(invokeMock).toHaveBeenCalledWith("cancel_chat");
+  });
+});
+
+describe("applyPatch", () => {
+  it("invokes apply_patch and parses the JSON result line", async () => {
+    invokeMock.mockResolvedValue('{"type":"result","applied":true,"files":["a.ts"]}');
+    const r = await applyPatch("/home/r/api", "PATCH");
+    expect(invokeMock).toHaveBeenCalledWith("apply_patch", { projectDir: "/home/r/api", patch: "PATCH" });
+    expect(r).toEqual({ applied: true, files: ["a.ts"] });
+  });
+});
+
+describe("onChatEvent", () => {
+  it("subscribes to pw://chat, forwards parsed events, and returns the unlisten handle", async () => {
+    const unlisten = vi.fn();
+    let captured: ((e: { payload: string }) => void) | null = null;
+    listenMock.mockImplementation((name: string, cb: (e: { payload: string }) => void) => {
+      if (name === "pw://chat") captured = cb;
+      return Promise.resolve(unlisten);
+    });
+    const seen: unknown[] = [];
+    const stop = await onChatEvent((ev) => seen.push(ev));
+    captured!({ payload: '{"type":"chat_text","chunk":"hi"}' });
+    captured!({ payload: "blank-ignored-not-json" });
+    expect(seen).toEqual([{ type: "chat_text", chunk: "hi" }]); // unparseable line dropped
+    expect(typeof stop).toBe("function");
+  });
+});
+
+describe("onChatEnd", () => {
+  it("subscribes to pw://chat-end, forwards the exit code payload, and returns the unlisten handle", async () => {
+    const unlisten = vi.fn();
+    let captured: ((e: { payload: number | null }) => void) | null = null;
+    listenMock.mockImplementation((name: string, cb: (e: { payload: number | null }) => void) => {
+      if (name === "pw://chat-end") captured = cb;
+      return Promise.resolve(unlisten);
+    });
+    const codes: (number | null)[] = [];
+    const stop = await onChatEnd((code) => codes.push(code));
+    captured!({ payload: 1 });
+    captured!({ payload: null });
+    expect(codes).toEqual([1, null]);
+    expect(stop).toBe(unlisten);
   });
 });
