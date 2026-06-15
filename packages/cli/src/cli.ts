@@ -1,4 +1,7 @@
 import { Command } from 'commander';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import { runInit } from './commands/init.ts';
 import { runSetup } from './commands/setup.ts';
 import { runSync } from './commands/sync.ts';
@@ -8,6 +11,8 @@ import { runPush } from './commands/push.ts';
 import { runDoctor } from './commands/doctor.ts';
 import { log } from './lib/log.ts';
 import { VERSION } from './version.ts';
+import { ConfigSchema } from './lib/config.ts';
+import type { MutagenTarget } from './lib/mutagen.ts';
 
 const program = new Command();
 program
@@ -309,6 +314,107 @@ program
       { host: o.host, user: o.user, port: o.sshPort, keyPath: o.keyPath, agentPort: o.agentPort },
       { limit: o.limit },
     );
+  });
+
+// ---------------------------------------------------------------------------
+// loadMutagenTarget — sync config loader for mutagen session commands
+// ---------------------------------------------------------------------------
+
+function loadMutagenTarget(cwd: string): MutagenTarget {
+  const full = resolve(cwd, 'patchwire.yml');
+  const raw = readFileSync(full, 'utf8');
+  const parsed = parseYaml(raw);
+  const cfg = ConfigSchema.parse(parsed);
+  return {
+    project: cfg.project,
+    host: cfg.remote.host,
+    user: cfg.remote.user,
+    sshPort: cfg.remote.sshPort,
+    localPath: cwd,
+    remotePath: cfg.remote.path,
+    ignore: cfg.sync.exclude,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Continuous mutagen sync session commands
+// ---------------------------------------------------------------------------
+
+program
+  .command('sync-start')
+  .description('Start/ensure a continuous mutagen sync session for this project')
+  .option('--json', 'JSON output', true)
+  .action(async () => {
+    const { runSyncStart, realDeps } = await import('./commands/sync-session.ts');
+    const base = await realDeps(loadMutagenTarget);
+    const bin = await base.resolveBin();
+    await runSyncStart(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
+  });
+
+program
+  .command('sync-status')
+  .description('Print current mutagen sync session status as JSON')
+  .option('--json', 'JSON output', true)
+  .action(async () => {
+    const { runSyncStatus, realDeps } = await import('./commands/sync-session.ts');
+    const base = await realDeps(loadMutagenTarget);
+    const bin = await base.resolveBin();
+    await runSyncStatus(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
+  });
+
+program
+  .command('sync-watch')
+  .description('Stream sync status (NDJSON) until killed')
+  .option('--json', 'JSON output', true)
+  .action(async () => {
+    const { runSyncWatch, realDeps } = await import('./commands/sync-session.ts');
+    const base = await realDeps(loadMutagenTarget);
+    const bin = await base.resolveBin();
+    await runSyncWatch(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
+  });
+
+program
+  .command('sync-pause')
+  .description('Pause the mutagen sync session for this project')
+  .option('--json', 'JSON output', true)
+  .action(async () => {
+    const { runSyncPause, realDeps } = await import('./commands/sync-session.ts');
+    const base = await realDeps(loadMutagenTarget);
+    const bin = await base.resolveBin();
+    await runSyncPause(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
+  });
+
+program
+  .command('sync-resume')
+  .description('Resume a paused mutagen sync session for this project')
+  .option('--json', 'JSON output', true)
+  .action(async () => {
+    const { runSyncResume, realDeps } = await import('./commands/sync-session.ts');
+    const base = await realDeps(loadMutagenTarget);
+    const bin = await base.resolveBin();
+    await runSyncResume(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
+  });
+
+program
+  .command('sync-flush')
+  .description('Flush the mutagen sync session (wait for full propagation)')
+  .option('--json', 'JSON output', true)
+  .action(async () => {
+    const { runSyncFlush, realDeps } = await import('./commands/sync-session.ts');
+    const base = await realDeps(loadMutagenTarget);
+    const bin = await base.resolveBin();
+    await runSyncFlush(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
+  });
+
+program
+  .command('sync-stop')
+  .description('Stop (terminate) the mutagen sync session for this project')
+  .option('--json', 'JSON output', true)
+  .action(async () => {
+    const { runSyncStop, realDeps } = await import('./commands/sync-session.ts');
+    const base = await realDeps(loadMutagenTarget);
+    const bin = await base.resolveBin();
+    await runSyncStop(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
   });
 
 program.parseAsync(process.argv).catch((err: Error) => {
