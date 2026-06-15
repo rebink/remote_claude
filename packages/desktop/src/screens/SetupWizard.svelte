@@ -1,6 +1,10 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import { isSafeToken, defaultRemotePath, sshCopyIdCommand, genToken, wizardCanProvision } from "../lib/wizard";
-  import { ensureSshKey, verifyKey, openTerminal } from "../lib/ipc";
+  import { ensureSshKey, verifyKey, openTerminal, startProvision, sendConsent, onProvEvent, saveProject } from "../lib/ipc";
+  import { initialState, reduce, type ProvisionUiState } from "../provision-state";
+  import { buildProject } from "../lib/model";
+  import type { UnlistenFn } from "@tauri-apps/api/event";
 
   let { localPath, onfinish, onback }: { localPath: string; onfinish?: () => void; onback?: () => void } = $props();
 
@@ -14,6 +18,10 @@
   let pubKeyPath = $state("");
   let keyVerified = $state(false);
   let verifyError = $state("");
+
+  let prov = $state<ProvisionUiState>(initialState());
+  let unlistenProv: UnlistenFn | null = null;
+  let saved = $state(false);
 
   let keyPath = $derived(`~/.patchwire/keys/${host}-${user}`);
   let copyCmd = $derived(pubKeyPath ? sshCopyIdCommand(pubKeyPath, user, host, sshPort) : "");
@@ -31,7 +39,24 @@
     if (!keyVerified) verifyError = "Key not working yet — run the command in Terminal, then retry.";
   }
 
-  // Task 5 adds provision() for Step 4.
+  onMount(async () => {
+    unlistenProv = await onProvEvent((line) => {
+      prov = reduce(prov, line);
+      if (!saved && prov.phase === "done" && prov.result?.status === "completed") {
+        saved = true;
+        const p = buildProject(localPath, remotePath, project, host, user);
+        saveProject(p).then(() => onfinish?.());
+      }
+    });
+  });
+
+  onDestroy(() => unlistenProv?.());
+
+  async function provision() {
+    prov = initialState();
+    saved = false;
+    await startProvision({ host, user, port: sshPort, keyPath, agentPort, token: genToken(), projectDir: localPath, project, remotePath });
+  }
 </script>
 
 <div class="wiz" data-testid="setup-wizard">
@@ -70,9 +95,23 @@
       <li class="mono">{localPath} ⇄ {remotePath}</li>
       <li class="mono">{user}@{host}:{sshPort}</li>
     </ul>
-    <button class="primary" data-testid="wiz-next" onclick={() => (step = 4)}>Provision</button>
+    <button class="primary" data-testid="wiz-next" onclick={() => { step = 4; provision(); }}>Provision</button>
   {:else}
-    <!-- Task 5: Step 4 provision UI -->
+    <h3>4 · Provision</h3>
+    <ul class="steps" data-testid="prov-steps">
+      {#each prov.steps as s (s.id)}
+        <li>{prov.stepStatus[s.id]?.status === "ok" ? "✓" : prov.stepStatus[s.id]?.status === "failed" ? "✗" : prov.stepStatus[s.id]?.status === "degraded" ? "⚠" : "…"} {s.id}</li>
+      {/each}
+    </ul>
+    {#if prov.awaitingConsent}
+      <p>Review the plan above. Proceed?</p>
+      <button class="primary" data-testid="prov-confirm" onclick={() => sendConsent(true)}>Confirm & provision</button>
+    {/if}
+    {#if prov.phase === "done"}
+      <div class={prov.result?.status === "completed" ? "ok" : "error"} data-testid="prov-result">
+        {prov.result?.status === "completed" ? "Provisioned ✓ — finishing…" : `Failed: ${prov.result?.failedStep ?? "unknown"}`}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -92,4 +131,5 @@
   .error { color: var(--error); font-size: 12px; }
   .ok { color: var(--ok); font-size: 12px; }
   .review { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .steps { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-family: monospace; }
 </style>

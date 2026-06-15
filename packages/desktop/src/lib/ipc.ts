@@ -7,7 +7,7 @@ import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
 export type { ProvisionArgs } from "../ipc";
-export { startProvision } from "../ipc";
+export { startProvision, sendConsent, onProvEvent } from "../ipc";
 
 export async function readProjectConfig(projectDir: string): Promise<ProjectConfig | null> {
   const line = await invoke<string>("read_project_config", { projectDir });
