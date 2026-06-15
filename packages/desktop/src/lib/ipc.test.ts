@@ -8,11 +8,8 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ open: openMock }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: listenMock }));
 
 import {
-  readConnection,
-  saveConnection,
   listProjects,
   saveProject,
-  checkHealth,
   pickFolder,
   startChat,
   cancelChat,
@@ -23,36 +20,21 @@ import {
   startSyncWatch,
   stopSyncWatch,
   onSyncEvent,
+  readProjectConfig,
 } from "./ipc";
-import type { Connection } from "./types";
-
-const conn: Connection = {
-  host: "studio-mini",
-  user: "rebin",
-  sshPort: 22,
-  keyPath: "/k",
-  agentPort: 7878,
-};
 
 beforeEach(() => invokeMock.mockReset());
 
-describe("readConnection", () => {
-  it("returns null when no connection persisted", async () => {
-    invokeMock.mockResolvedValue(null);
-    expect(await readConnection()).toBeNull();
-    expect(invokeMock).toHaveBeenCalledWith("read_connection");
+describe("readProjectConfig", () => {
+  it("invokes read_project_config and parses the config JSON line", async () => {
+    invokeMock.mockResolvedValue('{"type":"config","project":"api","host":"h","user":"u","remotePath":"/r","sshPort":22}');
+    const cfg = await readProjectConfig("/l/api");
+    expect(invokeMock).toHaveBeenCalledWith("read_project_config", { projectDir: "/l/api" });
+    expect(cfg).toEqual({ type: "config", project: "api", host: "h", user: "u", remotePath: "/r", sshPort: 22 });
   });
-  it("returns the connection object when present", async () => {
-    invokeMock.mockResolvedValue(conn);
-    expect(await readConnection()).toEqual(conn);
-  });
-});
-
-describe("saveConnection", () => {
-  it("invokes save_connection with the connection payload", async () => {
-    invokeMock.mockResolvedValue(undefined);
-    await saveConnection(conn);
-    expect(invokeMock).toHaveBeenCalledWith("save_connection", { connection: conn });
+  it("returns null on an error line or unparseable output", async () => {
+    invokeMock.mockResolvedValue('{"type":"error","message":"no config"}');
+    expect(await readProjectConfig("/l/api")).toBeNull();
   });
 });
 
@@ -73,17 +55,6 @@ describe("saveProject", () => {
     const p = { id: "x", name: "n", branch: "main", localPath: "/l", remotePath: "/r", lastStatus: "unknown", syncPaused: false } as const;
     await saveProject(p);
     expect(invokeMock).toHaveBeenCalledWith("save_project", { project: p });
-  });
-});
-
-describe("checkHealth", () => {
-  it("invokes host_health with mapped args and parses the JSON string result", async () => {
-    invokeMock.mockResolvedValue('{"ok":true,"version":"0.4.0"}');
-    const r = await checkHealth(conn);
-    expect(invokeMock).toHaveBeenCalledWith("host_health", {
-      args: { host: "studio-mini", user: "rebin", sshPort: 22, keyPath: "/k", agentPort: 7878 },
-    });
-    expect(r).toEqual({ ok: true, version: "0.4.0", user: undefined });
   });
 });
 

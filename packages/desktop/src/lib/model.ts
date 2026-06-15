@@ -1,43 +1,4 @@
-import type {
-  Connection,
-  HostArgs,
-  HealthResult,
-  Project,
-  ProjectStatus,
-} from "./types";
-
-export function isConnectionComplete(c: Connection): boolean {
-  return (
-    c.host.trim() !== "" &&
-    c.user.trim() !== "" &&
-    c.keyPath.trim() !== "" &&
-    c.sshPort > 0 &&
-    c.agentPort > 0
-  );
-}
-
-export function connectionToHostArgs(c: Connection): HostArgs {
-  return {
-    host: c.host,
-    user: c.user,
-    sshPort: c.sshPort,
-    keyPath: c.keyPath,
-    agentPort: c.agentPort,
-  };
-}
-
-export function parseHealth(json: string): HealthResult {
-  try {
-    const o = JSON.parse(json);
-    return {
-      ok: o.ok === true,
-      version: typeof o.version === "string" ? o.version : undefined,
-      user: typeof o.user === "string" ? o.user : undefined,
-    };
-  } catch {
-    return { ok: false };
-  }
-}
+import type { Project, ProjectConfig, ProjectStatus } from "./types";
 
 function basename(p: string): string {
   const parts = p.replace(/[/\\]+$/, "").split(/[/\\]/);
@@ -60,6 +21,8 @@ export function parseProjects(raw: unknown): Project[] {
       branch: typeof o.branch === "string" && o.branch ? o.branch : "main",
       localPath,
       remotePath,
+      host: typeof o.host === "string" ? o.host : "",
+      user: typeof o.user === "string" ? o.user : "",
       lastStatus: isStatus(o.lastStatus) ? o.lastStatus : "unknown",
       syncPaused: o.syncPaused === true,
     });
@@ -82,6 +45,8 @@ export function buildProject(
   localPath: string,
   remotePath: string,
   name?: string,
+  host = "",
+  user = "",
 ): Project {
   return {
     id: crypto.randomUUID(),
@@ -89,6 +54,22 @@ export function buildProject(
     branch: "main",
     localPath,
     remotePath,
+    host,
+    user,
+    lastStatus: "unknown",
+    syncPaused: false,
+  };
+}
+
+export function projectFromConfig(localPath: string, cfg: ProjectConfig): Project {
+  return {
+    id: crypto.randomUUID(),
+    name: cfg.project,
+    branch: "main",
+    localPath,
+    remotePath: cfg.remotePath,
+    host: cfg.host,
+    user: cfg.user,
     lastStatus: "unknown",
     syncPaused: false,
   };

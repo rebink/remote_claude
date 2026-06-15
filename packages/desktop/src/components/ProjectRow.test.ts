@@ -7,6 +7,8 @@ const project: Project = {
   id: "a",
   name: "api-server",
   branch: "main",
+  host: "studio-mini",
+  user: "rebin",
   localPath: "/home/rebin/code/api-server",
   remotePath: "/remote/api-server",
   lastStatus: "in-sync",
@@ -22,6 +24,15 @@ describe("ProjectRow", () => {
     expect(getByTestId("row-path").textContent).toContain("/remote/api-server");
     expect(getByTestId("row-status").textContent).toContain("In sync");
   });
+  it("shows the project's own user@host", () => {
+    const { getByTestId } = render(ProjectRow, { props: { project: { ...project, host: "studio-mini", user: "rebin" } } });
+    expect(getByTestId("row-remote").textContent).toBe("rebin@studio-mini");
+  });
+  it("hides row-remote when both host and user are empty", () => {
+    const { queryByTestId } = render(ProjectRow, { props: { project: { ...project, host: "", user: "" } } });
+    expect(queryByTestId("row-remote")).toBeNull();
+  });
+
   it("fires onopen with the project when clicked", async () => {
     const onopen = vi.fn();
     const { getByTestId } = render(ProjectRow, { props: { project, onopen } });

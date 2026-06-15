@@ -1,29 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { connection, projects } from "../lib/stores";
-  import { checkHealth, syncCommand } from "../lib/ipc";
+  import { projects } from "../lib/stores";
+  import { syncCommand } from "../lib/ipc";
   import { syncKindToProjectStatus } from "../lib/sync-events";
-  import ConnectionBar from "../components/ConnectionBar.svelte";
   import ProjectRow from "../components/ProjectRow.svelte";
   import type { Project } from "../lib/types";
 
   let { onopen, onadd }: { onopen?: (p: Project) => void; onadd?: () => void } = $props();
   let query = $state("");
-  let healthy = $state(true);
-
-  let filtered = $derived(
-    $projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
-  );
+  let filtered = $derived($projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())));
 
   onMount(async () => {
-    const conn = $connection;
-    if (conn) {
-      try {
-        healthy = (await checkHealth(conn)).ok;
-      } catch {
-        healthy = false;
-      }
-    }
     for (const p of $projects) {
       try {
         const line = await syncCommand(p.localPath, "status");
@@ -31,40 +18,35 @@
           const next = syncKindToProjectStatus(line.status.kind);
           projects.update((list) => list.map((x) => (x.id === p.id ? { ...x, lastStatus: next } : x)));
         }
-      } catch {
-        // best-effort: leave lastStatus unchanged
-      }
+      } catch { /* best-effort */ }
     }
   });
 </script>
 
-{#if $connection}
-  <ConnectionBar connection={$connection} {healthy} />
-{/if}
-
 <div class="bar">
   <h2>Projects</h2>
-  <button class="new" data-testid="new-project" onclick={() => onadd?.()}>＋ New project</button>
+  <button class="new" data-testid="new-project" onclick={() => onadd?.()}>＋ New</button>
+  <input class="search" type="text" placeholder="Search…" bind:value={query} />
 </div>
 
-{#if $projects.length > 0}
-  <input class="search" placeholder="Search projects…" bind:value={query} />
-  {#each filtered as project (project.id)}
-    <ProjectRow {project} {onopen} />
-  {/each}
-{:else}
+{#if filtered.length === 0}
   <div class="empty" data-testid="projects-empty">
     <p>No projects yet</p>
-    <p class="sub">Add a local folder to sync it with your remote and start working.</p>
+    <p class="sub">Add a folder to set up your first project.</p>
+  </div>
+{:else}
+  <div class="list">
+    {#each filtered as p (p.id)}
+      <ProjectRow project={p} onopen={(proj) => onopen?.(proj)} />
+    {/each}
   </div>
 {/if}
 
 <style>
-  .bar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 10px; }
-  .bar h2 { font-size: 15px; margin: 0; }
+  .bar { display: flex; align-items: center; gap: 12px; padding: 16px 20px 10px; }
+  .bar h2 { font-size: 15px; margin: 0; flex: none; }
   .new { background: var(--accent-strong); color: #fff; font-size: 12px; padding: 7px 13px; font-weight: 600; }
-  .search { margin: 0 20px 10px; display: block; width: calc(100% - 40px); }
+  .search { flex: 1; }
   .empty { text-align: center; color: var(--text-muted); padding: 48px 20px; }
-  .empty p { margin: 4px 0; }
   .empty .sub { font-size: 13px; }
 </style>

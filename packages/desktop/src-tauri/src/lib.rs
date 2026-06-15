@@ -262,24 +262,6 @@ fn data_file(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-fn read_connection(app: tauri::AppHandle) -> Result<Option<serde_json::Value>, String> {
-    let path = data_file(&app, "connection.json")?;
-    if !path.exists() {
-        return Ok(None);
-    }
-    let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    let value: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-    Ok(Some(value))
-}
-
-#[tauri::command]
-fn save_connection(app: tauri::AppHandle, connection: serde_json::Value) -> Result<(), String> {
-    let path = data_file(&app, "connection.json")?;
-    let text = serde_json::to_string_pretty(&connection).map_err(|e| e.to_string())?;
-    fs::write(&path, text).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 fn list_projects(app: tauri::AppHandle) -> Result<Vec<serde_json::Value>, String> {
     let path = data_file(&app, "projects.json")?;
     if !path.exists() {
@@ -307,6 +289,26 @@ fn save_project(app: tauri::AppHandle, project: serde_json::Value) -> Result<(),
     list.push(project);
     let text = serde_json::to_string_pretty(&list).map_err(|e| e.to_string())?;
     fs::write(&path, text).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn read_project_config(app: tauri::AppHandle, project_dir: String) -> Result<String, String> {
+    use tauri_plugin_shell::ShellExt;
+    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
+    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    let output = sidecar
+        .current_dir(std::path::PathBuf::from(&project_dir))
+        .args(["config-show", "--json"])
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
+    if line.is_empty() {
+        return Err(format!("config-show produced no output: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+    Ok(line)
 }
 
 #[tauri::command]
@@ -517,10 +519,9 @@ pub fn run() {
             host_health,
             host_uninstall,
             host_logs,
-            read_connection,
-            save_connection,
             list_projects,
             save_project,
+            read_project_config,
             start_chat,
             cancel_chat,
             apply_patch,
