@@ -12,6 +12,12 @@ struct ProvisionState {
     busy: AtomicBool,
 }
 
+#[derive(Default)]
+struct ChatState {
+    busy: std::sync::atomic::AtomicBool,
+    child: std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
+}
+
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ProvisionArgs {
@@ -297,6 +303,110 @@ fn save_project(app: tauri::AppHandle, project: serde_json::Value) -> Result<(),
     fs::write(&path, text).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn start_chat(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ChatState>,
+    project_dir: String,
+    session_uuid: String,
+    prompt: String,
+) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    use tauri_plugin_shell::ShellExt;
+    use tauri_plugin_shell::process::CommandEvent;
+    use tauri::Emitter;
+
+    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
+    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
+    if session_uuid.trim().is_empty() { return Err("session_uuid is required".into()); }
+    if prompt.trim().is_empty() { return Err("prompt is required".into()); }
+
+    if state.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+        return Err("a chat turn is already in progress".into());
+    }
+
+    let sidecar = match app.shell().sidecar("patchwire") {
+        Ok(c) => c,
+        Err(e) => { state.busy.store(false, Ordering::SeqCst); return Err(e.to_string()); }
+    };
+
+    let (mut rx, child) = match sidecar
+        .current_dir(std::path::PathBuf::from(&project_dir))
+        .args(["chat", "--session", &session_uuid, "--json", &prompt])
+        .spawn()
+    {
+        Ok(v) => v,
+        Err(e) => { state.busy.store(false, Ordering::SeqCst); return Err(e.to_string()); }
+    };
+
+    *state.child.lock().unwrap() = Some(child);
+
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(bytes) => {
+                    let line = String::from_utf8_lossy(&bytes).trim_end().to_string();
+                    if !line.is_empty() {
+                        let _ = app.emit("pw://chat", line);
+                    }
+                }
+                CommandEvent::Terminated(p) => {
+                    if let Some(st) = app.try_state::<ChatState>() {
+                        *st.child.lock().unwrap() = None;
+                        st.busy.store(false, Ordering::SeqCst);
+                    }
+                    let _ = app.emit("pw://chat-end", p.code);
+                }
+                _ => {}
+            }
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn cancel_chat(state: tauri::State<'_, ChatState>) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    if let Some(child) = state.child.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+    state.busy.store(false, Ordering::SeqCst);
+    Ok(())
+}
+
+#[tauri::command]
+async fn apply_patch(
+    app: tauri::AppHandle,
+    project_dir: String,
+    patch: String,
+) -> Result<String, String> {
+    use tauri_plugin_shell::ShellExt;
+    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
+    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
+
+    let pw_dir = std::path::Path::new(&project_dir).join(".patchwire");
+    std::fs::create_dir_all(&pw_dir).map_err(|e| e.to_string())?;
+    let patch_path = pw_dir.join("desktop.patch");
+    std::fs::write(&patch_path, &patch).map_err(|e| e.to_string())?;
+
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    let output = sidecar
+        .current_dir(std::path::PathBuf::from(&project_dir))
+        .args(["apply", "--yes", "--json", &patch_path.to_string_lossy()])
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // Return the last non-empty line (the JSON result line).
+    let line = stdout.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
+    if line.is_empty() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("apply produced no result: {stderr}"));
+    }
+    Ok(line)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -304,6 +414,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(ProvisionState::default())
+        .manage(ChatState::default())
         .invoke_handler(tauri::generate_handler![
             start_provision,
             send_consent,
@@ -316,7 +427,10 @@ pub fn run() {
             read_connection,
             save_connection,
             list_projects,
-            save_project
+            save_project,
+            start_chat,
+            cancel_chat,
+            apply_patch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
