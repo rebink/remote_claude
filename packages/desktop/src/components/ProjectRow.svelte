@@ -18,6 +18,7 @@
       <span class="name" data-testid="row-name">{project.name}</span>
       <span class="branch" data-testid="row-branch">{project.branch}</span>
     </div>
+    <div class="remote" data-testid="row-remote">{project.user}@{project.host}</div>
     <div class="path mono" data-testid="row-path">{project.localPath} ⇄ {project.remotePath}</div>
   </div>
   <span class="pill {label.kind}" data-testid="row-status">{label.text}</span>
@@ -35,6 +36,7 @@
   .branch { font-size: 11px; color: var(--text-muted); background: var(--surface-raised);
     border-radius: 4px; padding: 1px 5px; }
   .body { flex: 1; min-width: 0; }
+  .remote { color: var(--text-muted); font-size: 11px; }
   .path { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; }
   .pill { font-size: 11px; padding: 3px 8px; border-radius: 99px;
