@@ -15,7 +15,7 @@
     const dir = await pickFolder();
     if (dir) {
       localPath = dir;
-      if (!name) name = dir.replace(/\/+$/, "").split("/").pop() ?? "";
+      if (!name) name = dir.replace(/[/\\]+$/, "").split(/[/\\]/).pop() ?? "";
     }
   }
 

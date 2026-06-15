@@ -89,6 +89,10 @@ describe("buildProject", () => {
     const p = buildProject("/home/rebin/code/web-app", "/remote/web-app");
     expect(p.name).toBe("web-app");
   });
+  it("derives the name from a Windows-style path basename", () => {
+    const p = buildProject("C:\\Users\\rebin\\code\\api-server", "/remote/api-server");
+    expect(p.name).toBe("api-server");
+  });
 });
 
 describe("projectStatusLabel", () => {

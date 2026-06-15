@@ -40,7 +40,7 @@ export function parseHealth(json: string): HealthResult {
 }
 
 function basename(p: string): string {
-  const parts = p.replace(/\/+$/, "").split("/");
+  const parts = p.replace(/[/\\]+$/, "").split(/[/\\]/);
   return parts[parts.length - 1] || p;
 }
 
