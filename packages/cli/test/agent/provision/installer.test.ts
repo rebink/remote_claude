@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { corepackPnpmInstaller } from '../../../src/agent/provision/installer.ts';
 import type { RemoteRunner } from '../../../src/agent/provision/installer.ts';
+import { POSIX_PATH_PREFIX, POSIX_PNPM_ENV } from '../../../src/agent/provision/primitives.ts';
+
+const EXPECTED_ENV_PREFIX = `${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}`;
 
 const CONN = { host: 'h', user: 'u', port: 22, keyPath: '/k' };
 
@@ -21,8 +24,12 @@ function fakeRunner(results: Array<{ stdout?: string; stderr?: string; code: num
 
 describe('corepackPnpmInstaller.version / check', () => {
   it('version returns the trimmed CLI version, or null on non-zero exit', async () => {
-    const ok = corepackPnpmInstaller(CONN, fakeRunner([{ stdout: '0.3.18\n', code: 0 }]).runner);
+    const f = fakeRunner([{ stdout: '0.3.18\n', code: 0 }]);
+    const ok = corepackPnpmInstaller(CONN, f.runner);
     expect(await ok.version()).toBe('0.3.18');
+    // command must be prefixed with the PNPM env exports
+    expect(f.commands[0]).toContain(EXPECTED_ENV_PREFIX);
+    expect(f.commands[0]).toContain('patchwire --version');
 
     const missing = corepackPnpmInstaller(CONN, fakeRunner([{ code: 127 }]).runner);
     expect(await missing.version()).toBeNull();
@@ -49,7 +56,8 @@ describe('corepackPnpmInstaller.install / uninstall', () => {
     expect(typeof compensate).toBe('function');
 
     await compensate!();
-    expect(f.commands[1]).toBe('pnpm remove -g @rebink/patchwire');
+    expect(f.commands[1]).toContain(EXPECTED_ENV_PREFIX);
+    expect(f.commands[1]).toContain('pnpm remove -g @rebink/patchwire');
   });
 
   it('install reports failure (no compensate) on non-zero exit', async () => {
@@ -61,7 +69,11 @@ describe('corepackPnpmInstaller.install / uninstall', () => {
   });
 
   it('uninstall runs pnpm remove and reports ok', async () => {
-    const inst = corepackPnpmInstaller(CONN, fakeRunner([{ code: 0 }]).runner);
+    const f = fakeRunner([{ code: 0 }]);
+    const inst = corepackPnpmInstaller(CONN, f.runner);
     expect(await inst.uninstall()).toEqual({ ok: true, detail: 'removed' });
+    // command must be prefixed with the PNPM env exports
+    expect(f.commands[0]).toContain(EXPECTED_ENV_PREFIX);
+    expect(f.commands[0]).toContain('pnpm remove -g @rebink/patchwire');
   });
 });

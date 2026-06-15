@@ -21,6 +21,47 @@ function fillStep1(getByLabelText: (t: string) => HTMLElement) {
 }
 
 describe("SetupWizard Step 4 (provision)", () => {
+  it("shows failed-step detail when a step fails and result is rolled-back", async () => {
+    let provCb: ((e: { payload: string }) => void) | null = null;
+    listenMock.mockImplementation((name: string, cb: any) => {
+      if (name === "pw://prov") provCb = cb;
+      return Promise.resolve(() => {});
+    });
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "ensure_ssh_key") return Promise.resolve("/k/studio-mini-rebin.pub");
+      if (cmd === "verify_key") return Promise.resolve(true);
+      return Promise.resolve(undefined);
+    });
+    const { getByTestId, getByLabelText } = render(SetupWizard, { props: { localPath: "/l/api" } });
+    // walk to step 4
+    await fireEvent.input(getByLabelText("Host"), { target: { value: "studio-mini" } });
+    await fireEvent.input(getByLabelText("User"), { target: { value: "rebin" } });
+    await fireEvent.input(getByLabelText("Project name"), { target: { value: "api" } });
+    await fireEvent.click(getByTestId("wiz-next")); await Promise.resolve(); await Promise.resolve();
+    await fireEvent.click(getByTestId("verify-key")); await Promise.resolve(); await Promise.resolve();
+    await fireEvent.click(getByTestId("wiz-next")); // → step 3
+    await fireEvent.click(getByTestId("wiz-next")); // → step 4 → starts provision
+    await Promise.resolve(); await Promise.resolve();
+    // preview event so steps are registered
+    provCb!({ payload: '{"type":"preview","plan":{"steps":[{"id":"bootstrap-agent"}]},"elevation":[]}' });
+    await Promise.resolve();
+    await fireEvent.click(getByTestId("prov-confirm"));
+    // step fails with detail
+    provCb!({ payload: '{"type":"step","step":"bootstrap-agent","status":"failed","detail":"boom"}' });
+    await Promise.resolve();
+    // result rolled-back
+    provCb!({ payload: '{"type":"result","status":"rolled-back","outcome":{"failedStep":"bootstrap-agent"}}' });
+    await Promise.resolve();
+    // prov-detail should contain the error message (may appear in both the step row and result banner)
+    const { getAllByTestId } = await import("@testing-library/svelte");
+    const details = document.querySelectorAll('[data-testid="prov-detail"]');
+    expect(details.length).toBeGreaterThan(0);
+    const detailTexts = Array.from(details).map((el) => el.textContent ?? "");
+    expect(detailTexts.some((t) => t.includes("boom"))).toBe(true);
+    // prov-result should mention the failed step
+    expect(getByTestId("prov-result").textContent).toContain("bootstrap-agent");
+  });
+
   it("starts provisioning and shows the consent gate on preview, then completes + saves", async () => {
     let provCb: ((e: { payload: string }) => void) | null = null;
     listenMock.mockImplementation((name: string, cb: any) => {
