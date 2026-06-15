@@ -19,6 +19,20 @@ function escapeRegex(s: string): string {
 }
 
 /**
+ * Allowlist for SSH config token fields (host, user).
+ * Only alphanumerics, dots, underscores, and hyphens are permitted.
+ * This excludes whitespace, newlines, `#`, and all SSH metacharacters,
+ * preventing SSH config injection (e.g. ProxyCommand RCE via patchwire.yml).
+ */
+const SSH_TOKEN = /^[A-Za-z0-9._-]+$/;
+
+function assertSafeSshToken(value: string, field: string): void {
+  if (!SSH_TOKEN.test(value)) {
+    throw new Error(`invalid ${field} for ssh config: ${JSON.stringify(value)}`);
+  }
+}
+
+/**
  * Ensure ~/.ssh/config (or <home>/.ssh/config) has a managed Host stanza for
  * the given target, pointing at the per-project key
  * `<home>/.patchwire/keys/<host>-<user>`.
@@ -33,6 +47,13 @@ export function ensureSshConfigStanza(
   target: SshTarget,
   home: string = homedir(),
 ): void {
+  // Validate inputs BEFORE any filesystem work to prevent SSH config injection.
+  // host/user come from an untrusted patchwire.yml; a newline could inject
+  // arbitrary directives (e.g. ProxyCommand → RCE). Strict allowlist rejects all
+  // whitespace, control chars, '#', and SSH metacharacters.
+  assertSafeSshToken(target.host, "host");
+  assertSafeSshToken(target.user, "user");
+
   const keyPath = join(home, ".patchwire", "keys", `${target.host}-${target.user}`);
   if (!existsSync(keyPath)) return;
 
