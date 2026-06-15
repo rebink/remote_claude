@@ -6,6 +6,8 @@ import { parseProjects } from "./model";
 import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
+export type { ProvisionArgs } from "../ipc";
+export { startProvision } from "../ipc";
 
 export async function readProjectConfig(projectDir: string): Promise<ProjectConfig | null> {
   const line = await invoke<string>("read_project_config", { projectDir });
@@ -73,4 +75,16 @@ export async function onSyncEvent(handler: (line: SyncLine) => void): Promise<Un
     const l = parseSyncLine(e.payload);
     if (l) handler(l);
   });
+}
+
+export async function ensureSshKey(host: string, user: string): Promise<string> {
+  return invoke<string>("ensure_ssh_key", { host, user });
+}
+
+export async function verifyKey(a: { host: string; user: string; sshPort: number; keyPath: string }): Promise<boolean> {
+  return invoke<boolean>("verify_key", a);
+}
+
+export async function openTerminal(command: string): Promise<void> {
+  await invoke("open_terminal", { command });
 }

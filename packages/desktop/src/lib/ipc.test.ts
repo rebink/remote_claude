@@ -21,6 +21,10 @@ import {
   stopSyncWatch,
   onSyncEvent,
   readProjectConfig,
+  ensureSshKey,
+  verifyKey,
+  openTerminal,
+  startProvision,
 } from "./ipc";
 
 beforeEach(() => invokeMock.mockReset());
@@ -163,5 +167,29 @@ describe("onSyncEvent", () => {
     cb!({ payload: '{"type":"sync_status","kind":"syncing","conflicts":[]}' });
     cb!({ payload: "garbage" });
     expect(seen).toEqual([{ type: "status", status: { kind: "syncing", conflicts: [] } }]);
+  });
+});
+
+describe("wizard ipc", () => {
+  it("ensureSshKey invokes ensure_ssh_key", async () => {
+    invokeMock.mockResolvedValue("/k/h-u.pub");
+    expect(await ensureSshKey("h", "u")).toBe("/k/h-u.pub");
+    expect(invokeMock).toHaveBeenCalledWith("ensure_ssh_key", { host: "h", user: "u" });
+  });
+  it("verifyKey invokes verify_key and returns the bool", async () => {
+    invokeMock.mockResolvedValue(true);
+    expect(await verifyKey({ host: "h", user: "u", sshPort: 22, keyPath: "/k" })).toBe(true);
+    expect(invokeMock).toHaveBeenCalledWith("verify_key", { host: "h", user: "u", sshPort: 22, keyPath: "/k" });
+  });
+  it("openTerminal invokes open_terminal", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    await openTerminal("ssh-copy-id ...");
+    expect(invokeMock).toHaveBeenCalledWith("open_terminal", { command: "ssh-copy-id ..." });
+  });
+  it("startProvision passes the full args incl. projectDir/project/remotePath", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    const args = { host: "h", user: "u", port: 22, keyPath: "/k", agentPort: 7878, token: "T", projectDir: "/l", project: "p", remotePath: "/r" };
+    await startProvision(args);
+    expect(invokeMock).toHaveBeenCalledWith("start_provision", { args });
   });
 });
