@@ -1,3 +1,5 @@
+use std::fs;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{Emitter, Manager, State};
@@ -238,13 +240,84 @@ async fn host_logs(app: tauri::AppHandle, args: HostArgs, limit: u32) -> Result<
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+fn data_file(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("no app data dir: {e}"))?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join(name))
+}
+
+#[tauri::command]
+fn read_connection(app: tauri::AppHandle) -> Result<Option<serde_json::Value>, String> {
+    let path = data_file(&app, "connection.json")?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let value: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(Some(value))
+}
+
+#[tauri::command]
+fn save_connection(app: tauri::AppHandle, connection: serde_json::Value) -> Result<(), String> {
+    let path = data_file(&app, "connection.json")?;
+    let text = serde_json::to_string_pretty(&connection).map_err(|e| e.to_string())?;
+    fs::write(&path, text).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_projects(app: tauri::AppHandle) -> Result<Vec<serde_json::Value>, String> {
+    let path = data_file(&app, "projects.json")?;
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let value: Vec<serde_json::Value> = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(value)
+}
+
+#[tauri::command]
+fn save_project(app: tauri::AppHandle, project: serde_json::Value) -> Result<(), String> {
+    let path = data_file(&app, "projects.json")?;
+    let mut list: Vec<serde_json::Value> = if path.exists() {
+        let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&text).map_err(|e| e.to_string())?
+    } else {
+        vec![]
+    };
+    let new_id = project.get("id").and_then(|v| v.as_str()).unwrap_or("");
+    if new_id.is_empty() {
+        return Err("project.id is required".into());
+    }
+    list.retain(|p| p.get("id").and_then(|v| v.as_str()) != Some(new_id));
+    list.push(project);
+    let text = serde_json::to_string_pretty(&list).map_err(|e| e.to_string())?;
+    fs::write(&path, text).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(ProvisionState::default())
-        .invoke_handler(tauri::generate_handler![start_provision, send_consent, save_host, list_hosts, delete_host, host_health, host_uninstall, host_logs])
+        .invoke_handler(tauri::generate_handler![
+            start_provision,
+            send_consent,
+            save_host,
+            list_hosts,
+            delete_host,
+            host_health,
+            host_uninstall,
+            host_logs,
+            read_connection,
+            save_connection,
+            list_projects,
+            save_project
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
