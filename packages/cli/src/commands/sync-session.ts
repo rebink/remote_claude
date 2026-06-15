@@ -86,6 +86,35 @@ export const runSyncResume = actionRunner("resume", resumeSession);
 export const runSyncFlush = actionRunner("flush", flushSession);
 export const runSyncStop = actionRunner("stop", stopSession);
 
+export interface WatchOpts {
+  /** Delay in ms between ticks. 0 in tests; defaults to 2000 in production. */
+  intervalMs?: number;
+  /** Cap the loop for testing. Undefined = unbounded (loop until process killed). */
+  maxTicks?: number;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function runSyncWatch(cwd: string, deps: SyncDeps, opts: WatchOpts = {}): Promise<void> {
+  const bin = await deps.resolveBin();
+  if (!bin) { emitStatus(deps.print, { kind: "not_installed" }); return; }
+  const t = deps.loadTarget(cwd);
+  deps.ensureSsh({ host: t.host, user: t.user, sshPort: t.sshPort });
+  ensureSession(deps.run, t);
+  const name = sessionName(t.project, t.host);
+  const interval = opts.intervalMs ?? 2000;
+  let tick = 0;
+  // Unbounded in production (maxTicks undefined → loop until process killed).
+  while (opts.maxTicks === undefined || tick < opts.maxTicks) {
+    emitStatus(deps.print, getStatus(deps.run, name));
+    tick++;
+    if (opts.maxTicks !== undefined && tick >= opts.maxTicks) break;
+    if (interval > 0) await sleep(interval);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Production deps factory
 // ---------------------------------------------------------------------------
