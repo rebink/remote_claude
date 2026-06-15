@@ -5,7 +5,7 @@
   import Projects from "./screens/Projects.svelte";
   import Workspace from "./screens/Workspace.svelte";
   import AddProjectDialog from "./components/AddProjectDialog.svelte";
-  import SetupWizardPlaceholder from "./screens/SetupWizardPlaceholder.svelte";
+  import SetupWizard from "./screens/SetupWizard.svelte";
   import type { Project } from "./lib/types";
 
   let adding = $state(false);
@@ -22,7 +22,7 @@
   {#if opened}
     <Workspace project={opened} onback={() => (opened = null)} />
   {:else if setupPath}
-    <SetupWizardPlaceholder localPath={setupPath} onback={() => (setupPath = null)} />
+    <SetupWizard localPath={setupPath} onfinish={async () => { setupPath = null; await loadProjects(); }} onback={() => (setupPath = null)} />
   {:else if adding}
     <AddProjectDialog {onsaved} {onneedssetup} oncancel={() => (adding = false)} />
   {:else}
