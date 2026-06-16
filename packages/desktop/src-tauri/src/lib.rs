@@ -33,9 +33,9 @@ struct ProvisionArgs {
     key_path: String,
     agent_port: u16,
     token: String,
-    project_dir: String,   // local folder where patchwire.yml lands (current_dir)
-    project: String,       // project name passed as --project
-    remote_path: String,   // remote path passed as --path
+    #[serde(default)] project_dir: Option<String>,   // local folder where patchwire.yml lands (current_dir)
+    #[serde(default)] project: Option<String>,       // project name passed as --project
+    #[serde(default)] remote_path: Option<String>,   // remote path passed as --path
 }
 
 fn validate_and_resolve(args: &ProvisionArgs) -> Result<String, String> {
@@ -82,8 +82,10 @@ async fn start_provision(
 ) -> Result<(), String> {
     // Validate inputs BEFORE claiming busy — a validation error must NOT leave busy set.
     let key_path = validate_and_resolve(&args)?;
-    if !std::path::Path::new(&args.project_dir).is_dir() {
-        return Err("project_dir does not exist or is not a directory".into());
+    if let Some(ref dir) = args.project_dir {
+        if !std::path::Path::new(dir).is_dir() {
+            return Err("project_dir does not exist or is not a directory".into());
+        }
     }
 
     // Get sidecar handle BEFORE claiming busy — so only .spawn() is inside the claimed region.
@@ -94,21 +96,28 @@ async fn start_provision(
         return Err("a provision is already in progress".into());
     }
 
+    // Build argv — append project flags only when both project + remote_path are present.
+    let mut argv: Vec<String> = vec![
+        "setup".into(), "--provision-remote".into(), "--stream".into(), "--token-stdin".into(),
+        "--host".into(), args.host.clone(),
+        "--user".into(), args.user.clone(),
+        "--ssh-port".into(), args.port.to_string(),
+        "--key-path".into(), key_path.clone(),
+        "--agent-port".into(), args.agent_port.to_string(),
+    ];
+    if let (Some(p), Some(rp)) = (args.project.as_ref(), args.remote_path.as_ref()) {
+        argv.push("--project".into()); argv.push(p.clone());
+        argv.push("--path".into()); argv.push(rp.clone());
+    }
+
+    // Set current_dir only when project_dir is present.
+    let mut cmd = sidecar;
+    if let Some(ref dir) = args.project_dir {
+        cmd = cmd.current_dir(std::path::PathBuf::from(dir));
+    }
+
     // Spawn the sidecar. On failure, reset busy before returning.
-    let (mut rx, mut child) = match sidecar
-        .current_dir(std::path::PathBuf::from(&args.project_dir))
-        .args([
-            "setup", "--provision-remote", "--stream", "--token-stdin",
-            "--host", &args.host,
-            "--user", &args.user,
-            "--ssh-port", &args.port.to_string(),
-            "--key-path", &key_path,
-            "--agent-port", &args.agent_port.to_string(),
-            "--project", &args.project,
-            "--path", &args.remote_path,
-        ])
-        .spawn()
-    {
+    let (mut rx, mut child) = match cmd.args(argv).spawn() {
         Ok(v) => v,
         Err(e) => {
             state.busy.store(false, Ordering::SeqCst);
@@ -297,6 +306,36 @@ fn save_project(app: tauri::AppHandle, project: serde_json::Value) -> Result<(),
     list.push(project);
     let text = serde_json::to_string_pretty(&list).map_err(|e| e.to_string())?;
     fs::write(&path, text).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_connections(app: tauri::AppHandle) -> Result<Vec<serde_json::Value>, String> {
+    let path = data_file(&app, "connections.json")?;
+    if !path.exists() { return Ok(vec![]); }
+    let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_connection(app: tauri::AppHandle, connection: serde_json::Value) -> Result<(), String> {
+    let path = data_file(&app, "connections.json")?;
+    let mut list: Vec<serde_json::Value> = if path.exists() {
+        serde_json::from_str(&fs::read_to_string(&path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?
+    } else { vec![] };
+    let id = connection.get("id").and_then(|v| v.as_str()).unwrap_or("");
+    if id.is_empty() { return Err("connection.id is required".into()); }
+    list.retain(|c| c.get("id").and_then(|v| v.as_str()) != Some(id));
+    list.push(connection);
+    fs::write(&path, serde_json::to_string_pretty(&list).map_err(|e| e.to_string())?).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_connection(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let path = data_file(&app, "connections.json")?;
+    if !path.exists() { return Ok(()); }
+    let mut list: Vec<serde_json::Value> = serde_json::from_str(&fs::read_to_string(&path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    list.retain(|c| c.get("id").and_then(|v| v.as_str()) != Some(id.as_str()));
+    fs::write(&path, serde_json::to_string_pretty(&list).map_err(|e| e.to_string())?).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -584,6 +623,9 @@ pub fn run() {
             host_logs,
             list_projects,
             save_project,
+            list_connections,
+            save_connection,
+            delete_connection,
             read_project_config,
             start_chat,
             cancel_chat,
