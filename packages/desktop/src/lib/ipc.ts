@@ -116,6 +116,6 @@ export async function writeProjectYml(args: ProjectYmlArgs): Promise<void> {
   await invoke("write_project_yml", { args });
 }
 
-export async function initRemoteCopy(projectDir: string): Promise<string> {
-  return invoke<string>("init_remote_copy", { projectDir });
+export async function initRemoteCopy(projectDir: string, remotePath: string): Promise<string> {
+  return invoke<string>("init_remote_copy", { projectDir, remotePath });
 }

@@ -226,9 +226,9 @@ describe("add-project ipc", () => {
     await writeProjectYml(a);
     expect(invokeMock).toHaveBeenCalledWith("write_project_yml", { args: a });
   });
-  it("initRemoteCopy invokes init_remote_copy with the project dir", async () => {
+  it("initRemoteCopy invokes init_remote_copy with the project dir and remote path", async () => {
     invokeMock.mockResolvedValue("ok");
-    expect(await initRemoteCopy("/l/api")).toBe("ok");
-    expect(invokeMock).toHaveBeenCalledWith("init_remote_copy", { projectDir: "/l/api" });
+    expect(await initRemoteCopy("/l/api", "~/patchwire/api")).toBe("ok");
+    expect(invokeMock).toHaveBeenCalledWith("init_remote_copy", { projectDir: "/l/api", remotePath: "~/patchwire/api" });
   });
 });

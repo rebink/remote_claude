@@ -631,13 +631,12 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
     .map_err(|e| e.to_string())
 }
 
-// Run `patchwire init-remote --from-local --project <name>` in the project dir.
-// init-remote reads patchwire.yml (written first by write_project_yml) for host/user/path,
-// creates the remote dir if missing, and rsyncs the local folder to the remote.
-// --from-local and --project are both requiredOption in the CLI; no --use-existing so the
-// dir is created + content is pushed (the "normal" new-project path).
+// Run `patchwire init-remote --from-local --project <name> --remote-path <path>` in the project dir.
+// Passing --remote-path explicitly overrides the CLI default (~/workspace/<project>) so the
+// initial rsync lands in the same path that write_project_yml wrote into patchwire.yml and that
+// mutagen will use for all subsequent syncs.  Without this flag the destinations diverge.
 #[tauri::command]
-async fn init_remote_copy(app: tauri::AppHandle, project_dir: String) -> Result<String, String> {
+async fn init_remote_copy(app: tauri::AppHandle, project_dir: String, remote_path: String) -> Result<String, String> {
     use tauri_plugin_shell::ShellExt;
     if !std::path::Path::new(&project_dir).is_dir() {
         return Err("project_dir does not exist".into());
@@ -651,7 +650,7 @@ async fn init_remote_copy(app: tauri::AppHandle, project_dir: String) -> Result<
     let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
     let output = sidecar
         .current_dir(std::path::PathBuf::from(&project_dir))
-        .args(["init-remote", "--from-local", "--project", &project_name])
+        .args(["init-remote", "--from-local", "--project", &project_name, "--remote-path", &remote_path])
         .output()
         .await
         .map_err(|e| e.to_string())?;
