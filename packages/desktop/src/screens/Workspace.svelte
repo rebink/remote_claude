@@ -2,9 +2,9 @@
   import { onMount, onDestroy } from "svelte";
   import type { Project } from "../lib/types";
   import {
-    initChatState, startTurn, applyChatEvent, endStream, type ChatState,
+    initChatState, startTurn, applyChatEvent, endStream, withAttachments, type ChatState,
   } from "../lib/chat-session";
-  import { startChat, cancelChat, applyPatch, onChatEvent, onChatEnd, startSyncWatch, stopSyncWatch, onSyncEvent, syncCommand } from "../lib/ipc";
+  import { startChat, cancelChat, applyPatch, onChatEvent, onChatEnd, startSyncWatch, stopSyncWatch, onSyncEvent, syncCommand, pickFile, pushAttachment } from "../lib/ipc";
   import ChatPane from "../components/ChatPane.svelte";
   import ChangesPanel from "../components/ChangesPanel.svelte";
   import SyncPill from "../components/SyncPill.svelte";
@@ -15,6 +15,9 @@
 
   let chat = $state<ChatState>(initChatState(crypto.randomUUID()));
   let applying = $state(false);
+  let attachments = $state<{ name: string; remotePath: string }[]>([]);
+
+  function baseName(p: string): string { return p.replace(/[/\\]+$/, "").split(/[/\\]/).pop() ?? p; }
   let sync = $state<SyncStatus>({ kind: "no_session", conflicts: [] });
   let unlisten: UnlistenFn | null = null;
   let unlistenEnd: UnlistenFn | null = null;
@@ -46,10 +49,35 @@
     if (line && line.type === "status") sync = line.status;
   }
 
-  async function send(text: string) {
-    chat = startTurn(chat, text);
+  async function attachFile() {
     try {
-      await startChat(project.localPath, chat.sessionUuid, text);
+      const f = await pickFile();
+      if (!f) return;
+      const remotePath = await pushAttachment(project.localPath, f, false);
+      attachments = [...attachments, { name: baseName(f), remotePath }];
+    } catch (e) {
+      chat = applyChatEvent(chat, { type: "error", code: "attach", message: String(e), recoverable: true });
+    }
+  }
+
+  async function attachClip() {
+    try {
+      const remotePath = await pushAttachment(project.localPath, undefined, true);
+      attachments = [...attachments, { name: "clipboard image", remotePath }];
+    } catch (e) {
+      chat = applyChatEvent(chat, { type: "error", code: "attach", message: String(e), recoverable: true });
+    }
+  }
+
+  function removeAttachment(i: number) { attachments = attachments.filter((_, idx) => idx !== i); }
+
+  async function send(text: string) {
+    const paths = attachments.map((a) => a.remotePath);
+    chat = startTurn(chat, text);          // bubble shows the user's typed text
+    const full = withAttachments(text, paths);
+    attachments = [];
+    try {
+      await startChat(project.localPath, chat.sessionUuid, full);
     } catch (e) {
       chat = applyChatEvent(chat, { type: "error", code: "ipc", message: String(e), recoverable: false });
     }
@@ -101,7 +129,9 @@
 
   <div class="split">
     <section class="left">
-      <ChatPane messages={chat.messages} streaming={chat.streaming} syncing={chat.syncing} onsend={send} oncancel={cancel} />
+      <ChatPane messages={chat.messages} streaming={chat.streaming} syncing={chat.syncing}
+        {attachments} onsend={send} oncancel={cancel}
+        onattachfile={attachFile} onattachclip={attachClip} onremoveattachment={removeAttachment} />
     </section>
     <section class="right">
       <ChangesPanel diff={chat.diff} {applying} onapply={apply} onreject={reject} />

@@ -3,8 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const invokeMock = vi.hoisted(() => vi.fn());
 const listenMock = vi.hoisted(() => vi.fn());
+const openMock = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: listenMock }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: openMock }));
 
 import Workspace from "./Workspace.svelte";
 import type { Project } from "../lib/types";
@@ -18,6 +20,7 @@ const project: Project = {
 beforeEach(() => {
   invokeMock.mockReset();
   listenMock.mockReset();
+  openMock.mockReset();
   listenMock.mockResolvedValue(() => {});
 });
 
@@ -59,5 +62,39 @@ describe("Workspace", () => {
     const { getByTestId } = render(Workspace, { props: { project } });
     await fireEvent.click(getByTestId("sync-pause"));
     expect(invokeMock).toHaveBeenCalledWith("sync_command", { projectDir: project.localPath, sub: "pause" });
+  });
+
+  it("attaching a file calls push_attachment and shows a chip", async () => {
+    openMock.mockResolvedValue("/home/r/mock.png");
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "push_attachment") return Promise.resolve("/remote/.patchwire-inbox/mock.png");
+      return Promise.resolve(undefined);
+    });
+    const { getByTestId, getAllByTestId } = render(Workspace, { props: { project } });
+    await fireEvent.click(getByTestId("attach-file"));
+    // flush microtasks: pickFile() + pushAttachment() + state update + DOM
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    expect(invokeMock).toHaveBeenCalledWith("push_attachment", expect.objectContaining({ projectDir: project.localPath, useClipboard: false }));
+    expect(getAllByTestId("attach-chip")).toHaveLength(1);
+  });
+
+  it("send appends attachment paths to the prompt and clears chips", async () => {
+    openMock.mockResolvedValue("/home/r/mock.png");
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "push_attachment") return Promise.resolve("/remote/.patchwire-inbox/mock.png");
+      return Promise.resolve(undefined); // start_chat
+    });
+    const { getByTestId, queryAllByTestId, getAllByTestId } = render(Workspace, { props: { project } });
+    await fireEvent.click(getByTestId("attach-file"));
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    // chip should be visible
+    expect(getAllByTestId("attach-chip")).toHaveLength(1);
+    await fireEvent.input(getByTestId("composer"), { target: { value: "use this" } });
+    await fireEvent.click(getByTestId("send-btn"));
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    expect(invokeMock).toHaveBeenCalledWith("start_chat", expect.objectContaining({
+      prompt: "use this\n\nAttached:\n- /remote/.patchwire-inbox/mock.png",
+    }));
+    expect(queryAllByTestId("attach-chip")).toHaveLength(0); // cleared
   });
 });
