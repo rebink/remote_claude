@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { Project, ProjectConfig } from "./types";
-import { parseProjects } from "./model";
+import type { Project, ProjectConfig, Connection } from "./types";
+import { parseProjects, parseConnections } from "./model";
 import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
@@ -87,4 +87,16 @@ export async function verifyKey(a: { host: string; user: string; sshPort: number
 
 export async function openTerminal(command: string): Promise<void> {
   await invoke("open_terminal", { command });
+}
+
+export async function listConnections(): Promise<Connection[]> {
+  return parseConnections(await invoke<unknown>("list_connections"));
+}
+
+export async function saveConnection(connection: Connection): Promise<void> {
+  await invoke("save_connection", { connection });
+}
+
+export async function deleteConnection(id: string): Promise<void> {
+  await invoke("delete_connection", { id });
 }
