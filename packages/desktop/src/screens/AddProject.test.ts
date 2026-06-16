@@ -22,7 +22,7 @@ describe("AddProject", () => {
     const { getByTestId } = render(AddProject, { props: { connection: conn } });
     await fireEvent.click(getByTestId("pick-folder"));
     await Promise.resolve();
-    expect((getByTestId("remote-path") as HTMLInputElement).value).toBe("~/patchwire/api");
+    expect((getByTestId("remote-path") as HTMLInputElement).value).toBe("~/patchwire/rebin/api");
     expect((getByTestId("create-project") as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -41,12 +41,12 @@ describe("AddProject", () => {
     // flush microtasks for each async step in the create() chain
     for (let i = 0; i < 8; i++) await Promise.resolve();
     expect(invokeMock).toHaveBeenCalledWith("write_project_yml", { args: expect.objectContaining({
-      projectDir: "/home/r/api", project: "api", host: "studio-mini", user: "rebin", remotePath: "~/patchwire/api", token: "TKN",
+      projectDir: "/home/r/api", project: "api", host: "studio-mini", user: "rebin", remotePath: "~/patchwire/rebin/api", token: "TKN",
     }) });
-    expect(invokeMock).toHaveBeenCalledWith("init_remote_copy", { projectDir: "/home/r/api", remotePath: "~/patchwire/api" });
+    expect(invokeMock).toHaveBeenCalledWith("init_remote_copy", { projectDir: "/home/r/api", remotePath: "~/patchwire/rebin/api" });
     expect(invokeMock).toHaveBeenCalledWith("sync_command", { projectDir: "/home/r/api", sub: "start" });
     expect(invokeMock).toHaveBeenCalledWith("save_project", expect.objectContaining({
-      project: expect.objectContaining({ name: "api", localPath: "/home/r/api", remotePath: "~/patchwire/api", host: "studio-mini", user: "rebin", connectionId: "c1" }),
+      project: expect.objectContaining({ name: "api", localPath: "/home/r/api", remotePath: "~/patchwire/rebin/api", host: "studio-mini", user: "rebin", connectionId: "c1" }),
     }));
     expect(onfinish).toHaveBeenCalled();
   });

@@ -107,6 +107,61 @@ describe("SetupWizard Step 4 (provision)", () => {
   });
 });
 
+describe("SetupWizard Step 4 — provisioning indicator", () => {
+  async function walkToStep4(getByTestId: (id: string) => HTMLElement, getByLabelText: (t: string) => HTMLElement) {
+    await fireEvent.input(getByLabelText("Connection name"), { target: { value: "Studio Mini" } });
+    await fireEvent.input(getByLabelText("Host"), { target: { value: "studio-mini" } });
+    await fireEvent.input(getByLabelText("User"), { target: { value: "rebin" } });
+    await fireEvent.click(getByTestId("wiz-next")); await Promise.resolve(); await Promise.resolve();
+    await fireEvent.click(getByTestId("verify-key")); await Promise.resolve(); await Promise.resolve();
+    await fireEvent.click(getByTestId("wiz-next")); // → step 3
+    await fireEvent.click(getByTestId("wiz-next")); // → step 4 + provision()
+    await Promise.resolve(); await Promise.resolve();
+  }
+
+  it("shows prov-working with 'Connecting' text immediately after Provision is clicked (idle phase, no events yet)", async () => {
+    listenMock.mockImplementation((name: string, cb: any) => {
+      // capture but never fire any events
+      return Promise.resolve(() => {});
+    });
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "ensure_ssh_key") return Promise.resolve("/k/studio-mini-rebin.pub");
+      if (cmd === "verify_key") return Promise.resolve(true);
+      return Promise.resolve(undefined);
+    });
+    const { getByTestId, getByLabelText } = render(SetupWizard, { props: {} });
+    await walkToStep4(getByTestId, getByLabelText);
+    const banner = getByTestId("prov-working");
+    expect(banner).toBeTruthy();
+    expect(banner.textContent).toContain("Connecting to studio-mini");
+  });
+
+  it("shows 'Installing' copy when a step event advances phase to executing", async () => {
+    let provCb: ((e: { payload: string }) => void) | null = null;
+    listenMock.mockImplementation((name: string, cb: any) => {
+      if (name === "pw://prov") provCb = cb;
+      return Promise.resolve(() => {});
+    });
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "ensure_ssh_key") return Promise.resolve("/k/studio-mini-rebin.pub");
+      if (cmd === "verify_key") return Promise.resolve(true);
+      return Promise.resolve(undefined);
+    });
+    const { getByTestId, getByLabelText } = render(SetupWizard, { props: {} });
+    await walkToStep4(getByTestId, getByLabelText);
+    // preview so steps are registered, then consent so phase moves to executing
+    provCb!({ payload: '{"type":"preview","plan":{"steps":[{"id":"install"}]},"elevation":[]}' });
+    await Promise.resolve();
+    await fireEvent.click(getByTestId("prov-confirm"));
+    // send a step event to drive phase to executing
+    provCb!({ payload: '{"type":"step","step":"install","status":"ok"}' });
+    await Promise.resolve();
+    const banner = getByTestId("prov-working");
+    expect(banner.textContent).toContain("Installing the agent on studio-mini");
+    expect(banner.textContent).toContain("30–60s");
+  });
+});
+
 describe("SetupWizard Steps 1-3", () => {
   it("Step 1 Next is disabled until connection name/host/user are valid", async () => {
     const { getByTestId, getByLabelText } = render(SetupWizard, { props: {} });
