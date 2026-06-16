@@ -462,6 +462,44 @@ async fn apply_patch(
 }
 
 #[tauri::command]
+async fn push_attachment(
+    app: tauri::AppHandle,
+    project_dir: String,
+    file_path: Option<String>,
+    use_clipboard: bool,
+) -> Result<String, String> {
+    use tauri_plugin_shell::ShellExt;
+    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
+    if use_clipboard == file_path.is_some() {
+        return Err("provide exactly one of file_path or use_clipboard".into());
+    }
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    let mut argv: Vec<String> = vec!["push".into()];
+    if use_clipboard {
+        argv.push("--clip".into());
+    } else if let Some(f) = file_path.as_ref() {
+        argv.push(f.clone());
+    }
+    argv.push("--stage-only".into());
+    argv.push("--json".into());
+    let output = sidecar
+        .current_dir(std::path::PathBuf::from(&project_dir))
+        .args(argv)
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Err(format!("push failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
+    match serde_json::from_str::<serde_json::Value>(&line) {
+        Ok(v) => Ok(v.get("remotePath").and_then(|p| p.as_str()).unwrap_or("").to_string()),
+        Err(_) => Err(format!("push: unparseable output: {line}")),
+    }
+}
+
+#[tauri::command]
 async fn start_sync_watch(
     app: tauri::AppHandle,
     state: tauri::State<'_, SyncWatchState>,
@@ -731,6 +769,7 @@ pub fn run() {
             start_chat,
             cancel_chat,
             apply_patch,
+            push_attachment,
             start_sync_watch,
             stop_sync_watch,
             sync_command,
