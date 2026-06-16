@@ -590,6 +590,85 @@ async fn verify_key(app: tauri::AppHandle, host: String, user: String, ssh_port:
     }
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectYmlArgs {
+    project_dir: String,
+    project: String,
+    host: String,
+    user: String,
+    ssh_port: u16,
+    agent_port: u16,
+    remote_path: String,
+    token: String,
+}
+
+// Write <project_dir>/patchwire.yml with a literal token (mirrors writeYaml in the CLI but
+// swaps ${PW_TOKEN} for the literal token received via IPC — never via argv).
+#[tauri::command]
+fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
+    if !std::path::Path::new(&args.project_dir).is_dir() {
+        return Err("project_dir does not exist".into());
+    }
+    // Validate host/user with the existing safe_token allowlist (no injection into the yml).
+    if !safe_token(&args.host) || !safe_token(&args.user) {
+        return Err("invalid host/user".into());
+    }
+    let yml = format!(
+        "project: {project}\nremote:\n  host: {host}\n  user: {user}\n  path: {path}\n  sshPort: {ssh}\n  agentUrl: http://{host}:{ap}\n  token: {token}\nsync:\n  exclude:\n    - build/\n    - .dart_tool/\n    - ios/Pods/\n    - node_modules/\n    - .git/\nai:\n  command: claude\n  args:\n    - --print\n  timeoutSec: 600\n",
+        project = args.project,
+        host = args.host,
+        user = args.user,
+        path = args.remote_path,
+        ssh = args.ssh_port,
+        ap = args.agent_port,
+        token = args.token,
+    );
+    std::fs::write(
+        std::path::Path::new(&args.project_dir).join("patchwire.yml"),
+        yml,
+    )
+    .map_err(|e| e.to_string())
+}
+
+// Run `patchwire init-remote --from-local --project <name>` in the project dir.
+// init-remote reads patchwire.yml (written first by write_project_yml) for host/user/path,
+// creates the remote dir if missing, and rsyncs the local folder to the remote.
+// --from-local and --project are both requiredOption in the CLI; no --use-existing so the
+// dir is created + content is pushed (the "normal" new-project path).
+#[tauri::command]
+async fn init_remote_copy(app: tauri::AppHandle, project_dir: String) -> Result<String, String> {
+    use tauri_plugin_shell::ShellExt;
+    if !std::path::Path::new(&project_dir).is_dir() {
+        return Err("project_dir does not exist".into());
+    }
+    // Derive the project name from the last path component (matches the yml `project` field).
+    let project_name = std::path::Path::new(&project_dir)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| "cannot derive project name from project_dir".to_string())?
+        .to_string();
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    let output = sidecar
+        .current_dir(std::path::PathBuf::from(&project_dir))
+        .args(["init-remote", "--from-local", "--project", &project_name])
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Err(format!(
+            "init-remote failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .rev()
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or("ok")
+        .to_string())
+}
+
 // Open Terminal.app and run a command (macOS). The command is built by the caller from validated host/user.
 #[tauri::command]
 fn open_terminal(command: String) -> Result<(), String> {
@@ -635,7 +714,9 @@ pub fn run() {
             sync_command,
             ensure_ssh_key,
             verify_key,
-            open_terminal
+            open_terminal,
+            write_project_yml,
+            init_remote_copy
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
