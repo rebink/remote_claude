@@ -1,6 +1,6 @@
 import { runSsh, type SshOpts } from '../../lib/ssh-runner.ts';
 import type { StepResult, CompensatingAction } from './types.ts';
-import { AGENT_INSTALL_CMD, AGENT_PACKAGE } from './primitives.ts';
+import { AGENT_INSTALL_CMD, AGENT_PACKAGE, POSIX_PATH_PREFIX, POSIX_PNPM_ENV } from './primitives.ts';
 
 /** SSH connection params without the per-call `command`. */
 export type RemoteConn = Omit<SshOpts, 'command'>;
@@ -34,12 +34,12 @@ export function corepackPnpmInstaller(
   runner: RemoteRunner = defaultRemoteRunner(conn),
 ): AgentInstaller {
   async function version(): Promise<string | null> {
-    const r = await runner('patchwire --version');
+    const r = await runner(`${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}patchwire --version`);
     return r.code === 0 ? r.stdout.trim() : null;
   }
 
   async function uninstall(): Promise<StepResult> {
-    const r = await runner(`pnpm remove -g ${AGENT_PACKAGE}`);
+    const r = await runner(`${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}pnpm remove -g ${AGENT_PACKAGE}`);
     return r.code === 0
       ? { ok: true, detail: 'removed' }
       : { ok: false, detail: (r.stderr || r.stdout || 'uninstall failed').trim() };

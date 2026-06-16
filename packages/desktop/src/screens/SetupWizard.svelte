@@ -100,7 +100,13 @@
     <h3>4 · Provision</h3>
     <ul class="steps" data-testid="prov-steps">
       {#each prov.steps as s (s.id)}
-        <li>{prov.stepStatus[s.id]?.status === "ok" ? "✓" : prov.stepStatus[s.id]?.status === "failed" ? "✗" : prov.stepStatus[s.id]?.status === "degraded" ? "⚠" : "…"} {s.id}</li>
+        {@const st = prov.stepStatus[s.id]}
+        <li>
+          {st?.status === "ok" ? "✓" : st?.status === "failed" ? "✗" : st?.status === "degraded" ? "⚠" : "…"} {s.id}
+          {#if (st?.status === "failed" || st?.status === "degraded") && st?.detail}
+            <span class="step-detail error" data-testid="prov-detail">{st.detail}</span>
+          {/if}
+        </li>
       {/each}
     </ul>
     {#if prov.awaitingConsent}
@@ -111,6 +117,9 @@
       <div class={prov.result?.status === "completed" ? "ok" : "error"} data-testid="prov-result">
         {prov.result?.status === "completed" ? "Provisioned ✓ — finishing…" : `Failed: ${prov.result?.failedStep ?? "unknown"}`}
       </div>
+      {#if prov.result?.status !== "completed" && prov.result?.failedStep && prov.stepStatus[prov.result.failedStep]?.detail}
+        <div class="error" data-testid="prov-detail">{prov.stepStatus[prov.result.failedStep]?.detail}</div>
+      {/if}
     {/if}
   {/if}
 </div>
@@ -132,4 +141,5 @@
   .ok { color: var(--ok); font-size: 12px; }
   .review { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
   .steps { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-family: monospace; }
+  .step-detail { display: block; padding-left: 1.2em; font-size: 11px; }
 </style>

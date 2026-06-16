@@ -28,9 +28,15 @@ export const POSIX_PNPM_ENV = 'export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share
  *
  * POSIX_PATH_PREFIX ends with "; " so that ${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}mkdir ...
  * produces valid sh/zsh. POSIX_PNPM_ENV must precede `pnpm add -g` so PNPM_HOME is set.
+ *
+ * `pnpm config set global-bin-dir "$PNPM_HOME"` is REQUIRED before `pnpm add -g`: on a host
+ * that never ran `pnpm setup`, pnpm's global-bin-dir is undefined and pnpm refuses the global
+ * install with the misleading "configured global bin directory ... is not in PATH" error even
+ * though PNPM_HOME is exported and on PATH. Setting the config explicitly is the fix (we do NOT
+ * fall back to npm — it does not honor PNPM_HOME).
  */
 export const AGENT_INSTALL_CMD =
-  `${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}mkdir -p "$PNPM_HOME"; if command -v pnpm >/dev/null 2>&1; then :; elif command -v corepack >/dev/null 2>&1; then corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate; else echo "pnpm not found and corepack unavailable; install pnpm on the host" >&2; exit 1; fi && pnpm add -g ${AGENT_PACKAGE}`;
+  `${POSIX_PATH_PREFIX}${POSIX_PNPM_ENV}mkdir -p "$PNPM_HOME"; if command -v pnpm >/dev/null 2>&1; then :; elif command -v corepack >/dev/null 2>&1; then corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate; else echo "pnpm not found and corepack unavailable; install pnpm on the host" >&2; exit 1; fi && pnpm config set global-bin-dir "$PNPM_HOME" && pnpm add -g ${AGENT_PACKAGE}`;
 
 /** Atomic, mode-600 write of stdin into ~/.patchwire/agent.env (temp → rename). */
 export const WRITE_AGENT_ENV_CMD =
