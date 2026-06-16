@@ -33,6 +33,15 @@ export async function pickFolder(): Promise<string | null> {
   return typeof result === "string" ? result : null;
 }
 
+export async function pickFile(): Promise<string | null> {
+  const result = await open({ directory: false, multiple: false });
+  return typeof result === "string" ? result : null;
+}
+
+export async function pushAttachment(projectDir: string, filePath: string | undefined, useClipboard: boolean): Promise<string> {
+  return invoke<string>("push_attachment", { projectDir, filePath: filePath ?? null, useClipboard });
+}
+
 export async function startChat(projectDir: string, sessionUuid: string, prompt: string): Promise<void> {
   await invoke("start_chat", { projectDir, sessionUuid, prompt });
 }

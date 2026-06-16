@@ -7,12 +7,20 @@
     syncing,
     onsend,
     oncancel,
+    attachments = [],
+    onattachfile,
+    onattachclip,
+    onremoveattachment,
   }: {
     messages: ChatMessage[];
     streaming: boolean;
     syncing: boolean;
     onsend?: (text: string) => void;
     oncancel?: () => void;
+    attachments?: { name: string }[];
+    onattachfile?: () => void;
+    onattachclip?: () => void;
+    onremoveattachment?: (i: number) => void;
   } = $props();
 
   let draft = $state("");
@@ -34,6 +42,14 @@
   {/if}
 </div>
 
+{#if attachments.length}
+  <div class="chips" data-testid="attach-chips">
+    {#each attachments as a, i (i)}
+      <span class="chip" data-testid="attach-chip">📎 {a.name}<button class="chip-x" data-testid="chip-remove-{i}" onclick={() => onremoveattachment?.(i)}>✕</button></span>
+    {/each}
+  </div>
+{/if}
+
 <div class="composer-bar">
   <textarea
     class="composer"
@@ -42,6 +58,8 @@
     placeholder="Ask Claude to change something…"
     rows="2"
   ></textarea>
+  <button class="attach" data-testid="attach-file" title="Attach file" onclick={() => onattachfile?.()}>📎</button>
+  <button class="attach" data-testid="attach-clip" title="Attach clipboard image" onclick={() => onattachclip?.()}>📷</button>
   {#if streaming}
     <button class="stop" data-testid="stop-btn" onclick={() => oncancel?.()}>Stop</button>
   {/if}
@@ -59,4 +77,8 @@
   .send { background: var(--accent-strong); color: #fff; padding: 8px 14px; font-weight: 600; }
   .send:disabled { opacity: 0.5; cursor: not-allowed; }
   .stop { background: var(--surface-raised); color: var(--text); padding: 8px 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 14px 0; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 11px; }
+  .chip-x { background: transparent; color: var(--text-muted); padding: 0 2px; }
+  .attach { background: var(--surface-raised); color: var(--text); padding: 8px 10px; }
 </style>

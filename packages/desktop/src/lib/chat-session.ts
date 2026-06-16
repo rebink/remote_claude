@@ -73,6 +73,11 @@ export function endStream(state: ChatState): ChatState {
   return { ...state, streaming: false, syncing: false };
 }
 
+export function withAttachments(prompt: string, paths: string[]): string {
+  if (paths.length === 0) return prompt;
+  return `${prompt}\n\nAttached:\n${paths.map((p) => `- ${p}`).join("\n")}`;
+}
+
 export function parseApplyResult(line: string): ApplyResult {
   try {
     const o = JSON.parse(line.trim());

@@ -11,6 +11,8 @@ import {
   listProjects,
   saveProject,
   pickFolder,
+  pickFile,
+  pushAttachment,
   startChat,
   cancelChat,
   applyPatch,
@@ -216,6 +218,30 @@ describe("connections ipc", () => {
     invokeMock.mockResolvedValue(undefined);
     await deleteConnection("a");
     expect(invokeMock).toHaveBeenCalledWith("delete_connection", { id: "a" });
+  });
+});
+
+describe("attachment ipc", () => {
+  beforeEach(() => openMock.mockReset());
+  it("pickFile opens a file (not directory) dialog", async () => {
+    openMock.mockResolvedValue("/home/r/mock.png");
+    expect(await pickFile()).toBe("/home/r/mock.png");
+    expect(openMock).toHaveBeenCalledWith({ directory: false, multiple: false });
+  });
+  it("pickFile returns null on cancel", async () => {
+    openMock.mockResolvedValue(null);
+    expect(await pickFile()).toBeNull();
+  });
+  it("pushAttachment (file) invokes push_attachment", async () => {
+    invokeMock.mockResolvedValue("/remote/.patchwire-inbox/mock.png");
+    const r = await pushAttachment("/l/api", "/home/r/mock.png", false);
+    expect(invokeMock).toHaveBeenCalledWith("push_attachment", { projectDir: "/l/api", filePath: "/home/r/mock.png", useClipboard: false });
+    expect(r).toBe("/remote/.patchwire-inbox/mock.png");
+  });
+  it("pushAttachment (clipboard) passes filePath null + useClipboard true", async () => {
+    invokeMock.mockResolvedValue("/remote/.patchwire-inbox/clip.png");
+    await pushAttachment("/l/api", undefined, true);
+    expect(invokeMock).toHaveBeenCalledWith("push_attachment", { projectDir: "/l/api", filePath: null, useClipboard: true });
   });
 });
 

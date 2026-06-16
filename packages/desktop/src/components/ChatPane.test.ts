@@ -38,4 +38,23 @@ describe("ChatPane", () => {
     await fireEvent.click(getByTestId("stop-btn"));
     expect(oncancel).toHaveBeenCalled();
   });
+
+  it("renders attachment chips and fires remove", async () => {
+    const onremoveattachment = vi.fn();
+    const { getAllByTestId, getByTestId } = render(ChatPane, {
+      props: { messages: [], streaming: false, syncing: false, attachments: [{ name: "a.png" }, { name: "b.png" }], onremoveattachment },
+    });
+    expect(getAllByTestId("attach-chip")).toHaveLength(2);
+    await fireEvent.click(getByTestId("chip-remove-0"));
+    expect(onremoveattachment).toHaveBeenCalledWith(0);
+  });
+
+  it("attach buttons fire their handlers", async () => {
+    const onattachfile = vi.fn(); const onattachclip = vi.fn();
+    const { getByTestId } = render(ChatPane, { props: { messages: [], streaming: false, syncing: false, onattachfile, onattachclip } });
+    await fireEvent.click(getByTestId("attach-file"));
+    await fireEvent.click(getByTestId("attach-clip"));
+    expect(onattachfile).toHaveBeenCalled();
+    expect(onattachclip).toHaveBeenCalled();
+  });
 });

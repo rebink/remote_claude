@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initChatState, startTurn, applyChatEvent, parseApplyResult, endStream } from "./chat-session";
+import { initChatState, startTurn, applyChatEvent, parseApplyResult, endStream, withAttachments } from "./chat-session";
 
 const uuid = "test-uuid-1234";
 
@@ -99,6 +99,19 @@ describe("endStream", () => {
     expect(after.syncing).toBe(false);
     expect(after.error).toBe("sidecar crashed");
     expect(after.diff).toEqual(withError.diff);
+  });
+});
+
+describe("withAttachments", () => {
+  it("returns the prompt unchanged when no paths", () => {
+    expect(withAttachments("fix the bug", [])).toBe("fix the bug");
+  });
+  it("appends an Attached block for one path", () => {
+    expect(withAttachments("see this", ["/r/.patchwire-inbox/a.png"]))
+      .toBe("see this\n\nAttached:\n- /r/.patchwire-inbox/a.png");
+  });
+  it("lists multiple paths", () => {
+    expect(withAttachments("p", ["/r/a", "/r/b"])).toBe("p\n\nAttached:\n- /r/a\n- /r/b");
   });
 });
 
