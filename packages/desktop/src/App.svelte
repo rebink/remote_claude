@@ -1,32 +1,35 @@
 <script lang="ts">
   import "./styles/tokens.css";
   import { onMount } from "svelte";
-  import { projects, loadProjects } from "./lib/stores";
+  import { loadConnections, loadProjects } from "./lib/stores";
+  import Connections from "./screens/Connections.svelte";
   import Projects from "./screens/Projects.svelte";
   import Workspace from "./screens/Workspace.svelte";
-  import AddProjectDialog from "./components/AddProjectDialog.svelte";
   import SetupWizard from "./screens/SetupWizard.svelte";
-  import type { Project } from "./lib/types";
+  import AddProjectPlaceholder from "./screens/AddProjectPlaceholder.svelte";
+  import type { Connection, Project } from "./lib/types";
 
-  let adding = $state(false);
+  let selectedConn = $state<Connection | null>(null);
+  let addingConn = $state(false);
+  let addingProj = $state(false);
   let opened = $state<Project | null>(null);
-  let setupPath = $state<string | null>(null);
 
-  onMount(async () => { await loadProjects(); });
+  onMount(async () => { await loadConnections(); await loadProjects(); });
 
-  async function onsaved() { adding = false; await loadProjects(); }
-  function onneedssetup(localPath: string) { adding = false; setupPath = localPath; }
+  async function onConnectionAdded() { addingConn = false; await loadConnections(); }
 </script>
 
 <div data-testid="app-root" class="app">
   {#if opened}
     <Workspace project={opened} onback={() => (opened = null)} />
-  {:else if setupPath}
-    <SetupWizard localPath={setupPath} onfinish={async () => { setupPath = null; await loadProjects(); }} onback={() => (setupPath = null)} />
-  {:else if adding}
-    <AddProjectDialog {onsaved} {onneedssetup} oncancel={() => (adding = false)} />
+  {:else if addingConn}
+    <SetupWizard onfinish={onConnectionAdded} onback={() => (addingConn = false)} />
+  {:else if selectedConn && addingProj}
+    <AddProjectPlaceholder connection={selectedConn} onback={() => (addingProj = false)} />
+  {:else if selectedConn}
+    <Projects connection={selectedConn} onopen={(p) => (opened = p)} onadd={() => (addingProj = true)} onback={() => (selectedConn = null)} />
   {:else}
-    <Projects onopen={(p) => (opened = p)} onadd={() => (adding = true)} />
+    <Connections onselect={(c) => (selectedConn = c)} onadd={() => (addingConn = true)} />
   {/if}
 </div>
 
