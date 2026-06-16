@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSafeToken, genToken, defaultRemotePath, sshCopyIdCommand, wizardCanProvision } from "./wizard";
+import { isSafeToken, genToken, defaultRemotePath, remoteProjectPath, sshCopyIdCommand, wizardCanProvision } from "./wizard";
 
 describe("isSafeToken", () => {
   it("accepts hostnames/users; rejects whitespace/newline/#/@", () => {
@@ -25,6 +25,12 @@ describe("genToken", () => {
 describe("defaultRemotePath", () => {
   it("is ~/workspace/<project>", () => {
     expect(defaultRemotePath("api-server")).toBe("~/workspace/api-server");
+  });
+});
+
+describe("remoteProjectPath", () => {
+  it("is ~/patchwire/<name>", () => {
+    expect(remoteProjectPath("api")).toBe("~/patchwire/api");
   });
 });
 

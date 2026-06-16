@@ -28,6 +28,8 @@ import {
   listConnections,
   saveConnection,
   deleteConnection,
+  writeProjectYml,
+  initRemoteCopy,
 } from "./ipc";
 
 beforeEach(() => invokeMock.mockReset());
@@ -214,5 +216,19 @@ describe("connections ipc", () => {
     invokeMock.mockResolvedValue(undefined);
     await deleteConnection("a");
     expect(invokeMock).toHaveBeenCalledWith("delete_connection", { id: "a" });
+  });
+});
+
+describe("add-project ipc", () => {
+  it("writeProjectYml invokes write_project_yml with all fields", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    const a = { projectDir: "/l/api", project: "api", host: "h", user: "u", sshPort: 22, agentPort: 7878, remotePath: "~/patchwire/api", token: "T" };
+    await writeProjectYml(a);
+    expect(invokeMock).toHaveBeenCalledWith("write_project_yml", { args: a });
+  });
+  it("initRemoteCopy invokes init_remote_copy with the project dir", async () => {
+    invokeMock.mockResolvedValue("ok");
+    expect(await initRemoteCopy("/l/api")).toBe("ok");
+    expect(invokeMock).toHaveBeenCalledWith("init_remote_copy", { projectDir: "/l/api" });
   });
 });
