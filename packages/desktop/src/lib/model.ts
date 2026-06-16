@@ -1,4 +1,4 @@
-import type { Project, ProjectConfig, ProjectStatus } from "./types";
+import type { Connection, Project, ProjectConfig, ProjectStatus } from "./types";
 
 function basename(p: string): string {
   const parts = p.replace(/[/\\]+$/, "").split(/[/\\]/);
@@ -25,6 +25,7 @@ export function parseProjects(raw: unknown): Project[] {
       user: typeof o.user === "string" ? o.user : "",
       lastStatus: isStatus(o.lastStatus) ? o.lastStatus : "unknown",
       syncPaused: o.syncPaused === true,
+      connectionId: typeof o.connectionId === "string" ? o.connectionId : "",
     });
   }
   return out;
@@ -47,6 +48,7 @@ export function buildProject(
   name?: string,
   host = "",
   user = "",
+  connectionId = "",
 ): Project {
   return {
     id: crypto.randomUUID(),
@@ -58,6 +60,7 @@ export function buildProject(
     user,
     lastStatus: "unknown",
     syncPaused: false,
+    connectionId,
   };
 }
 
@@ -72,7 +75,37 @@ export function projectFromConfig(localPath: string, cfg: ProjectConfig): Projec
     user: cfg.user,
     lastStatus: "unknown",
     syncPaused: false,
+    connectionId: "",
   };
+}
+
+export function buildConnection(c: Omit<Connection, "id">): Connection {
+  return { id: crypto.randomUUID(), ...c };
+}
+
+export function parseConnections(raw: unknown): Connection[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Connection[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const o = r as Record<string, unknown>;
+    const id = typeof o.id === "string" ? o.id : "";
+    const host = typeof o.host === "string" ? o.host : "";
+    const user = typeof o.user === "string" ? o.user : "";
+    if (!id || !host || !user) continue;
+    out.push({
+      id,
+      name: typeof o.name === "string" && o.name ? o.name : id,
+      host,
+      user,
+      sshPort: typeof o.sshPort === "number" ? o.sshPort : 22,
+      keyPath: typeof o.keyPath === "string" ? o.keyPath : "",
+      agentPort: typeof o.agentPort === "number" ? o.agentPort : 7878,
+      token: typeof o.token === "string" ? o.token : "",
+      agentVersion: typeof o.agentVersion === "string" ? o.agentVersion : undefined,
+    });
+  }
+  return out;
 }
 
 export function projectStatusLabel(

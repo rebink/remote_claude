@@ -4,6 +4,8 @@ import {
   buildProject,
   projectFromConfig,
   projectStatusLabel,
+  parseConnections,
+  buildConnection,
 } from "./model";
 
 describe("buildProject", () => {
@@ -81,6 +83,44 @@ describe("parseProjects carries host/user", () => {
     ]);
     expect(out[0].host).toBe("h"); expect(out[0].user).toBe("u");
     expect(out[1].host).toBe(""); expect(out[1].user).toBe("");
+  });
+});
+
+describe("buildConnection", () => {
+  it("builds a connection with an id and all fields", () => {
+    const c = buildConnection({ name: "mini", host: "h", user: "u", sshPort: 22, keyPath: "/k", agentPort: 7878, token: "T", agentVersion: "0.3.17" });
+    expect(c).toMatchObject({ name: "mini", host: "h", user: "u", sshPort: 22, keyPath: "/k", agentPort: 7878, token: "T", agentVersion: "0.3.17" });
+    expect(c.id.length).toBeGreaterThan(0);
+  });
+});
+
+describe("parseConnections", () => {
+  it("coerces records, drops ones missing id/host/user, defaults optional", () => {
+    const out = parseConnections([
+      { id: "a", name: "mini", host: "h", user: "u", sshPort: 22, keyPath: "/k", agentPort: 7878, token: "T" },
+      { id: "b", host: "h2", user: "u2" },
+      { name: "broken" },
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out[0].name).toBe("mini");
+    expect(out[1].name).toBe("b");       // falls back to id
+    expect(out[1].sshPort).toBe(22);     // default
+    expect(out[1].agentPort).toBe(7878); // default
+  });
+});
+
+describe("project connectionId", () => {
+  it("buildProject carries connectionId", () => {
+    const p = buildProject("/l", "/r", "n", "h", "u", "conn-1");
+    expect(p.connectionId).toBe("conn-1");
+  });
+  it("parseProjects carries connectionId (default empty)", () => {
+    const out = parseProjects([
+      { id: "a", name: "n", localPath: "/l", remotePath: "/r", connectionId: "c1" },
+      { id: "b", name: "m", localPath: "/l2", remotePath: "/r2" },
+    ]);
+    expect(out[0].connectionId).toBe("c1");
+    expect(out[1].connectionId).toBe("");
   });
 });
 
