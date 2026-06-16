@@ -25,7 +25,7 @@
     if (!dir) return;
     localPath = dir;
     name = basename(dir);
-    remotePath = `~/patchwire/${name}`;
+    remotePath = `~/patchwire/${chosen.user}/${name}`;
   }
 
   async function create() {
