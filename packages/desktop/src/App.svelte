@@ -6,7 +6,7 @@
   import Projects from "./screens/Projects.svelte";
   import Workspace from "./screens/Workspace.svelte";
   import SetupWizard from "./screens/SetupWizard.svelte";
-  import AddProjectPlaceholder from "./screens/AddProjectPlaceholder.svelte";
+  import AddProject from "./screens/AddProject.svelte";
   import type { Connection, Project } from "./lib/types";
 
   let selectedConn = $state<Connection | null>(null);
@@ -25,7 +25,7 @@
   {:else if addingConn}
     <SetupWizard onfinish={onConnectionAdded} onback={() => (addingConn = false)} />
   {:else if selectedConn && addingProj}
-    <AddProjectPlaceholder connection={selectedConn} onback={() => (addingProj = false)} />
+    <AddProject connection={selectedConn} onfinish={async () => { addingProj = false; await loadProjects(); }} onback={() => (addingProj = false)} />
   {:else if selectedConn}
     <Projects connection={selectedConn} onopen={(p) => (opened = p)} onadd={() => (addingProj = true)} onback={() => (selectedConn = null)} />
   {:else}
