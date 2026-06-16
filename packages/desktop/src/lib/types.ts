@@ -6,6 +6,18 @@ export type ProjectStatus =
   | "conflict"
   | "unknown";
 
+export interface Connection {
+  id: string;
+  name: string;
+  host: string;
+  user: string;
+  sshPort: number;
+  keyPath: string;
+  agentPort: number;
+  token: string;
+  agentVersion?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -16,6 +28,7 @@ export interface Project {
   user: string;
   lastStatus: ProjectStatus;
   syncPaused: boolean;
+  connectionId: string;
 }
 
 export interface ProjectConfig {

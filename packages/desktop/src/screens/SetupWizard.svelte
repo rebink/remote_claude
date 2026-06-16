@@ -1,23 +1,24 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { isSafeToken, defaultRemotePath, sshCopyIdCommand, genToken, wizardCanProvision } from "../lib/wizard";
-  import { ensureSshKey, verifyKey, openTerminal, startProvision, sendConsent, onProvEvent, saveProject } from "../lib/ipc";
+  import { isSafeToken, sshCopyIdCommand, genToken, wizardCanProvision } from "../lib/wizard";
+  import { ensureSshKey, verifyKey, openTerminal, startProvision, sendConsent, onProvEvent, saveConnection } from "../lib/ipc";
   import { initialState, reduce, type ProvisionUiState } from "../provision-state";
-  import { buildProject } from "../lib/model";
+  import { buildConnection } from "../lib/model";
+  import type { Connection } from "../lib/types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
-  let { localPath, onfinish, onback }: { localPath: string; onfinish?: () => void; onback?: () => void } = $props();
+  let { onfinish, onback }: { onfinish?: (c: Connection) => void; onback?: () => void } = $props();
 
   let step = $state(1);
+  let name = $state("");
   let host = $state("");
   let user = $state("");
   let sshPort = $state(22);
   let agentPort = $state(7878);
-  let project = $state("");
-  let remotePath = $state("");
   let pubKeyPath = $state("");
   let keyVerified = $state(false);
   let verifyError = $state("");
+  let token = $state("");
 
   let prov = $state<ProvisionUiState>(initialState());
   let unlistenProv: UnlistenFn | null = null;
@@ -25,10 +26,9 @@
 
   let keyPath = $derived(`~/.patchwire/keys/${host}-${user}`);
   let copyCmd = $derived(pubKeyPath ? sshCopyIdCommand(pubKeyPath, user, host, sshPort) : "");
-  let step1Valid = $derived(isSafeToken(host) && isSafeToken(user) && project.trim() !== "");
+  let step1Valid = $derived(name.trim() !== "" && isSafeToken(host) && isSafeToken(user));
 
   async function toStep2() {
-    if (!remotePath) remotePath = defaultRemotePath(project);
     pubKeyPath = await ensureSshKey(host, user);
     step = 2;
   }
@@ -44,8 +44,8 @@
       prov = reduce(prov, line);
       if (!saved && prov.phase === "done" && prov.result?.status === "completed") {
         saved = true;
-        const p = buildProject(localPath, remotePath, project, host, user);
-        saveProject(p).then(() => onfinish?.());
+        const c = buildConnection({ name, host, user, sshPort, keyPath, agentPort, token, agentVersion: undefined });
+        saveConnection(c).then(() => onfinish?.(c));
       }
     });
   });
@@ -55,22 +55,22 @@
   async function provision() {
     prov = initialState();
     saved = false;
-    await startProvision({ host, user, port: sshPort, keyPath, agentPort, token: genToken(), projectDir: localPath, project, remotePath });
+    token = genToken();
+    await startProvision({ host, user, port: sshPort, keyPath, agentPort, token });
   }
 </script>
 
 <div class="wiz" data-testid="setup-wizard">
   <header>
     <button class="back" onclick={() => onback?.()}>←</button>
-    <span>Set up — {localPath}</span>
+    <span>Add connection</span>
   </header>
 
   {#if step === 1}
     <h3>1 · Machine</h3>
+    <label>Connection name<input aria-label="Connection name" bind:value={name} /></label>
     <label>Host<input aria-label="Host" bind:value={host} /></label>
     <label>User<input aria-label="User" bind:value={user} /></label>
-    <label>Project name<input aria-label="Project name" bind:value={project} /></label>
-    <label>Remote path<input aria-label="Remote path" bind:value={remotePath} placeholder={defaultRemotePath(project || "project")} /></label>
     <div class="ports">
       <label>SSH port<input aria-label="SSH port" type="number" bind:value={sshPort} /></label>
       <label>Agent port<input aria-label="Agent port" type="number" bind:value={agentPort} /></label>
@@ -91,8 +91,7 @@
   {:else if step === 3}
     <h3>3 · Review</h3>
     <ul class="review">
-      <li>Project: <b>{project}</b></li>
-      <li class="mono">{localPath} ⇄ {remotePath}</li>
+      <li>Connection: <b>{name}</b></li>
       <li class="mono">{user}@{host}:{sshPort}</li>
     </ul>
     <button class="primary" data-testid="wiz-next" onclick={() => { step = 4; provision(); }}>Provision</button>

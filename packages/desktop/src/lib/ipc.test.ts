@@ -25,6 +25,9 @@ import {
   verifyKey,
   openTerminal,
   startProvision,
+  listConnections,
+  saveConnection,
+  deleteConnection,
 } from "./ipc";
 
 beforeEach(() => invokeMock.mockReset());
@@ -191,5 +194,25 @@ describe("wizard ipc", () => {
     const args = { host: "h", user: "u", port: 22, keyPath: "/k", agentPort: 7878, token: "T", projectDir: "/l", project: "p", remotePath: "/r" };
     await startProvision(args);
     expect(invokeMock).toHaveBeenCalledWith("start_provision", { args });
+  });
+});
+
+describe("connections ipc", () => {
+  it("listConnections parses records", async () => {
+    invokeMock.mockResolvedValue([{ id: "a", name: "mini", host: "h", user: "u", sshPort: 22, keyPath: "/k", agentPort: 7878, token: "T" }]);
+    const out = await listConnections();
+    expect(out).toHaveLength(1);
+    expect(out[0].name).toBe("mini");
+  });
+  it("saveConnection invokes save_connection", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    const c = { id: "a", name: "m", host: "h", user: "u", sshPort: 22, keyPath: "/k", agentPort: 7878, token: "T" };
+    await saveConnection(c);
+    expect(invokeMock).toHaveBeenCalledWith("save_connection", { connection: c });
+  });
+  it("deleteConnection invokes delete_connection", async () => {
+    invokeMock.mockResolvedValue(undefined);
+    await deleteConnection("a");
+    expect(invokeMock).toHaveBeenCalledWith("delete_connection", { id: "a" });
   });
 });
