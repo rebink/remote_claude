@@ -614,6 +614,14 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
     if !safe_token(&args.host) || !safe_token(&args.user) {
         return Err("invalid host/user".into());
     }
+    // Fix 1 (HIGH): Reject CR/LF in free-form fields that are interpolated raw into YAML.
+    // A newline in any of these values would inject arbitrary YAML keys (e.g. override
+    // ai.command → RCE when chat runs). remote_path is user-editable in the UI → real vector.
+    for (label, v) in [("project", &args.project), ("remote_path", &args.remote_path), ("token", &args.token)] {
+        if v.contains('\n') || v.contains('\r') {
+            return Err(format!("invalid {label}: contains a newline"));
+        }
+    }
     let yml = format!(
         "project: {project}\nremote:\n  host: {host}\n  user: {user}\n  path: {path}\n  sshPort: {ssh}\n  agentUrl: http://{host}:{ap}\n  token: {token}\nsync:\n  exclude:\n    - build/\n    - .dart_tool/\n    - ios/Pods/\n    - node_modules/\n    - .git/\nai:\n  command: claude\n  args:\n    - --print\n  timeoutSec: 600\n",
         project = args.project,
@@ -624,11 +632,26 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
         ap = args.agent_port,
         token = args.token,
     );
-    std::fs::write(
-        std::path::Path::new(&args.project_dir).join("patchwire.yml"),
-        yml,
-    )
-    .map_err(|e| e.to_string())
+    // Fix 2 (MEDIUM): Write the yml file owner-only (0o600) because it contains a literal token.
+    let path = std::path::Path::new(&args.project_dir).join("patchwire.yml");
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(&path)
+            .map_err(|e| e.to_string())?;
+        f.write_all(yml.as_bytes()).map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&path, yml).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 // Run `patchwire init-remote --from-local --project <name> --remote-path <path>` in the project dir.
