@@ -590,6 +590,107 @@ async fn verify_key(app: tauri::AppHandle, host: String, user: String, ssh_port:
     }
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectYmlArgs {
+    project_dir: String,
+    project: String,
+    host: String,
+    user: String,
+    ssh_port: u16,
+    agent_port: u16,
+    remote_path: String,
+    token: String,
+}
+
+// Write <project_dir>/patchwire.yml with a literal token (mirrors writeYaml in the CLI but
+// swaps ${PW_TOKEN} for the literal token received via IPC — never via argv).
+#[tauri::command]
+fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
+    if !std::path::Path::new(&args.project_dir).is_dir() {
+        return Err("project_dir does not exist".into());
+    }
+    // Validate host/user with the existing safe_token allowlist (no injection into the yml).
+    if !safe_token(&args.host) || !safe_token(&args.user) {
+        return Err("invalid host/user".into());
+    }
+    // Fix 1 (HIGH): Reject CR/LF in free-form fields that are interpolated raw into YAML.
+    // A newline in any of these values would inject arbitrary YAML keys (e.g. override
+    // ai.command → RCE when chat runs). remote_path is user-editable in the UI → real vector.
+    for (label, v) in [("project", &args.project), ("remote_path", &args.remote_path), ("token", &args.token)] {
+        if v.contains('\n') || v.contains('\r') {
+            return Err(format!("invalid {label}: contains a newline"));
+        }
+    }
+    let yml = format!(
+        "project: {project}\nremote:\n  host: {host}\n  user: {user}\n  path: {path}\n  sshPort: {ssh}\n  agentUrl: http://{host}:{ap}\n  token: {token}\nsync:\n  exclude:\n    - build/\n    - .dart_tool/\n    - ios/Pods/\n    - node_modules/\n    - .git/\nai:\n  command: claude\n  args:\n    - --print\n  timeoutSec: 600\n",
+        project = args.project,
+        host = args.host,
+        user = args.user,
+        path = args.remote_path,
+        ssh = args.ssh_port,
+        ap = args.agent_port,
+        token = args.token,
+    );
+    // Fix 2 (MEDIUM): Write the yml file owner-only (0o600) because it contains a literal token.
+    let path = std::path::Path::new(&args.project_dir).join("patchwire.yml");
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(&path)
+            .map_err(|e| e.to_string())?;
+        f.write_all(yml.as_bytes()).map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&path, yml).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+// Run `patchwire init-remote --from-local --project <name> --remote-path <path>` in the project dir.
+// Passing --remote-path explicitly overrides the CLI default (~/workspace/<project>) so the
+// initial rsync lands in the same path that write_project_yml wrote into patchwire.yml and that
+// mutagen will use for all subsequent syncs.  Without this flag the destinations diverge.
+#[tauri::command]
+async fn init_remote_copy(app: tauri::AppHandle, project_dir: String, remote_path: String) -> Result<String, String> {
+    use tauri_plugin_shell::ShellExt;
+    if !std::path::Path::new(&project_dir).is_dir() {
+        return Err("project_dir does not exist".into());
+    }
+    // Derive the project name from the last path component (matches the yml `project` field).
+    let project_name = std::path::Path::new(&project_dir)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| "cannot derive project name from project_dir".to_string())?
+        .to_string();
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    let output = sidecar
+        .current_dir(std::path::PathBuf::from(&project_dir))
+        .args(["init-remote", "--from-local", "--project", &project_name, "--remote-path", &remote_path])
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Err(format!(
+            "init-remote failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .rev()
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or("ok")
+        .to_string())
+}
+
 // Open Terminal.app and run a command (macOS). The command is built by the caller from validated host/user.
 #[tauri::command]
 fn open_terminal(command: String) -> Result<(), String> {
@@ -635,7 +736,9 @@ pub fn run() {
             sync_command,
             ensure_ssh_key,
             verify_key,
-            open_terminal
+            open_terminal,
+            write_project_yml,
+            init_remote_copy
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

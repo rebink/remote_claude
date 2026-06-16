@@ -100,3 +100,22 @@ export async function saveConnection(connection: Connection): Promise<void> {
 export async function deleteConnection(id: string): Promise<void> {
   await invoke("delete_connection", { id });
 }
+
+export interface ProjectYmlArgs {
+  projectDir: string;
+  project: string;
+  host: string;
+  user: string;
+  sshPort: number;
+  agentPort: number;
+  remotePath: string;
+  token: string;
+}
+
+export async function writeProjectYml(args: ProjectYmlArgs): Promise<void> {
+  await invoke("write_project_yml", { args });
+}
+
+export async function initRemoteCopy(projectDir: string, remotePath: string): Promise<string> {
+  return invoke<string>("init_remote_copy", { projectDir, remotePath });
+}

@@ -35,4 +35,16 @@ describe("App routing (connections)", () => {
     await fireEvent.click(await findByTestId("conn-row-c1"));
     expect((await findByTestId("projects-empty")).textContent).toBeTruthy();
   });
+
+  it("clicking ＋ New on Projects renders the real AddProject screen", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "list_connections") return Promise.resolve([conn]);
+      if (cmd === "list_projects") return Promise.resolve([]);
+      return Promise.resolve(undefined);
+    });
+    const { findByTestId } = render(App);
+    await fireEvent.click(await findByTestId("conn-row-c1"));
+    await fireEvent.click(await findByTestId("new-project"));
+    expect(await findByTestId("create-project")).toBeTruthy();
+  });
 });

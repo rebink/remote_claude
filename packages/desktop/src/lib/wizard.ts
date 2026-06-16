@@ -8,6 +8,10 @@ export function defaultRemotePath(project: string): string {
   return `~/workspace/${project}`;
 }
 
+export function remoteProjectPath(name: string): string {
+  return `~/patchwire/${name}`;
+}
+
 export function genToken(): string {
   const a = new Uint8Array(32);
   crypto.getRandomValues(a);
