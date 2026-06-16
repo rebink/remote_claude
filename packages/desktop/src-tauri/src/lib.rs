@@ -477,11 +477,17 @@ async fn push_attachment(
     let mut argv: Vec<String> = vec!["push".into()];
     if use_clipboard {
         argv.push("--clip".into());
+        argv.push("--stage-only".into());
+        argv.push("--json".into());
     } else if let Some(f) = file_path.as_ref() {
+        if f.starts_with('-') {
+            return Err("file_path must not start with '-'".into());
+        }
+        argv.push("--stage-only".into());
+        argv.push("--json".into());
+        argv.push("--".into());
         argv.push(f.clone());
     }
-    argv.push("--stage-only".into());
-    argv.push("--json".into());
     let output = sidecar
         .current_dir(std::path::PathBuf::from(&project_dir))
         .args(argv)
