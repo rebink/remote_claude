@@ -6,6 +6,7 @@ import { parseProjects, parseConnections } from "./model";
 import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
+import type { FlutterTarget } from "./flutter-attach";
 export type { ProvisionArgs } from "../ipc";
 export { startProvision, sendConsent, onProvEvent } from "../ipc";
 
@@ -127,4 +128,24 @@ export async function writeProjectYml(args: ProjectYmlArgs): Promise<void> {
 
 export async function initRemoteCopy(projectDir: string, remotePath: string): Promise<string> {
   return invoke<string>("init_remote_copy", { projectDir, remotePath });
+}
+
+/** Best-effort detection of a running VM Service URI (clipboard scan in the Rust cmd). Returns null if none. */
+export async function detectVmUri(): Promise<string | null> {
+  const r = await invoke<string | null>("detect_vm_uri");
+  return typeof r === "string" && r ? r : null;
+}
+
+/** Validate the URI, open the reverse tunnel, register the session with the agent. Returns the detected target. */
+export async function startFlutterAttach(projectDir: string, vmUri: string): Promise<FlutterTarget> {
+  return invoke<FlutterTarget>("start_flutter_attach", { projectDir, vmUri });
+}
+
+export async function stopFlutterAttach(projectDir: string): Promise<void> {
+  await invoke("stop_flutter_attach", { projectDir });
+}
+
+/** Fires when the tunnelled VM Service WebSocket closes (app restart). */
+export async function onFlutterVmClosed(handler: () => void): Promise<UnlistenFn> {
+  return listen<string>("pw://flutter-vm-closed", () => handler());
 }

@@ -7,6 +7,7 @@
   import { startChat, cancelChat, applyPatch, onChatEvent, onChatEnd, startSyncWatch, stopSyncWatch, onSyncEvent, syncCommand, pickFile, pushAttachment } from "../lib/ipc";
   import ChatPane from "../components/ChatPane.svelte";
   import ChangesPanel from "../components/ChangesPanel.svelte";
+  import FlutterPanel from "../components/FlutterPanel.svelte";
   import SyncPill from "../components/SyncPill.svelte";
   import type { SyncStatus } from "../lib/sync-events";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -135,6 +136,7 @@
     </section>
     <section class="right">
       <ChangesPanel diff={chat.diff} {applying} onapply={apply} onreject={reject} />
+      <FlutterPanel projectDir={project.localPath} />
     </section>
   </div>
 </div>
