@@ -1,9 +1,15 @@
-name: Desktop Release (unsigned)
+name: Desktop Release
 
-# Manual only — builds unsigned installers as artifacts. Does NOT publish to npm/marketplace
-# (that is release.yml, on tag). Safe to run repeatedly.
+# Tag-triggered real release (desktop-v*) → versioned release + moving desktop-latest
+# alias. workflow_dispatch stays a dry run (artifacts only, no publish).
 on:
+  push:
+    tags:
+      - "desktop-v*"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,12 +20,15 @@ jobs:
           - os: macos-latest
             triple: aarch64-apple-darwin
             bunTarget: bun-darwin-arm64
+            assetOs: macos
           - os: ubuntu-22.04
             triple: x86_64-unknown-linux-gnu
             bunTarget: bun-linux-x64
+            assetOs: linux
           - os: windows-latest
             triple: x86_64-pc-windows-msvc
             bunTarget: bun-windows-x64
+            assetOs: windows
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +50,7 @@ jobs:
       - name: Install workspace deps
         run: pnpm install --frozen-lockfile
 
-      - name: Build the CLI sidecar binary for this runner (bun --compile, native target only)
+      - name: Build the CLI sidecar binary for this runner
         run: node scripts/build-cli-binaries.mjs --only ${{ matrix.bunTarget }}
 
       - name: Stage the sidecar for this platform
@@ -50,14 +59,67 @@ jobs:
       - name: Build the desktop app (unsigned)
         run: pnpm --filter patchwire-desktop tauri build
 
-      - name: Collect installers
+      - name: Rename bundles to stable asset names (shared constant)
         shell: bash
         run: |
           mkdir -p out
-          cp -r packages/desktop/src-tauri/target/release/bundle/* out/ 2>/dev/null || true
+          node -e '
+            import("./packages/website/src/lib/release-assets.mjs").then(({ releaseAssets }) => {
+              const fs = require("fs");
+              const cp = require("child_process");
+              const bundleDir = "packages/desktop/src-tauri/target/release/bundle";
+              const findByExt = (ext) =>
+                cp.execSync(`find ${bundleDir} -type f -name "*.${ext}"`).toString().trim().split("\n").filter(Boolean);
+              const extFor = { dmg: "dmg", nsis: "exe", deb: "deb", rpm: "rpm" };
+              for (const a of releaseAssets.filter((a) => a.os === process.env.ASSET_OS)) {
+                const matches = findByExt(extFor[a.kind]);
+                if (!matches.length) { console.log(`no ${a.kind} bundle found, skipping ${a.stable}`); continue; }
+                fs.copyFileSync(matches[0], `out/${a.stable}`);
+                console.log(`out/${a.stable} <- ${matches[0]}`);
+              }
+            });
+          '
+        env:
+          ASSET_OS: ${{ matrix.assetOs }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: patchwire-desktop-${{ matrix.triple }}
+          name: patchwire-desktop-${{ matrix.assetOs }}
           path: out/**
           if-no-files-found: warn
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Flatten + checksum
+        shell: bash
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          cd release && sha256sum * > SHASUMS256.txt && cat SHASUMS256.txt
+
+      - name: Publish versioned release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          prerelease: true
+          files: release/*
+
+      - name: Move desktop-latest alias to this build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release delete desktop-latest --yes --cleanup-tag || true
+          gh release create desktop-latest release/* \
+            --title "Desktop (latest)" \
+            --notes "Rolling latest desktop build (unsigned). Same assets as ${{ github.ref_name }}." \
+            --prerelease \
+            --target "$GITHUB_SHA"
