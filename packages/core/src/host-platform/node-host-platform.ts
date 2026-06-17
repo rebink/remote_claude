@@ -8,7 +8,7 @@ import { nodeResolveMutagenDeps } from './node-deps.ts';
 import { normalizePatch } from './patch.ts';
 import { toolCandidates } from './discover-tool.ts';
 import { clipboardImageCommands } from './clipboard.ts';
-import manifest from './mutagen-manifest.json';
+import manifest from './mutagen-manifest.json' with { type: 'json' };
 
 /** Build the Node-backed HostPlatform used by the CLI and extension. */
 export function createNodeHostPlatform(opts?: { bundledMutagenPath?: () => string | null }): HostPlatform {
