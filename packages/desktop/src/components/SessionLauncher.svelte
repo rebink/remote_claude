@@ -27,19 +27,24 @@
   {#if !connection}
     <p class="warn" data-testid="no-conn">No connection found for this project.</p>
   {/if}
-  <label class="skip"><input type="checkbox" data-testid="skip-perms" bind:checked={skipPerms} /> Skip permission prompts (<code>--dangerously-skip-permissions</code>)</label>
+  <label class="skip">
+    <input type="checkbox" data-testid="skip-perms" bind:checked={skipPerms} />
+    <span>Skip permission prompts <code class="flag">--dangerously-skip-permissions</code></span>
+  </label>
   <button class="primary" data-testid="open-session" disabled={!connection} onclick={open}>Open claude session</button>
   {#if error}<p class="err" data-testid="launch-error">{error}</p>{/if}
 </div>
 
 <style>
-  .launcher { padding: 24px; display: flex; flex-direction: column; gap: 14px; max-width: 460px; margin: 0 auto; }
+  .launcher { padding: 24px; display: flex; flex-direction: column; gap: 14px; max-width: 460px; }
   h2 { font-size: 16px; }
   .hint { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
-  .skip { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+  .skip { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-muted); line-height: 1.5; cursor: pointer; }
+  .skip input { margin-top: 2px; flex: 0 0 auto; }
   .primary { background: var(--accent-strong); color: #fff; padding: 10px; font-weight: 600; align-self: flex-start; }
   .primary:disabled { opacity: .5; cursor: not-allowed; }
   .warn { color: var(--warn); font-size: 12px; }
-  .err { color: var(--error); font-size: 12px; }
+  .err { color: var(--error); font-size: 12px; overflow-wrap: anywhere; }
   code { background: var(--surface-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 1px 5px; }
+  .flag { font-size: 11px; padding: 1px 5px; white-space: nowrap; }
 </style>

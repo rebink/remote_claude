@@ -23,17 +23,18 @@
   {#if error}<div class="err">{error}</div>{/if}
   <ul class="body" data-testid="changes-body">
     {#if entries.length === 0}<li class="empty">No changes</li>{/if}
-    {#each entries as e (e.path)}<li><span class="badge">{e.status}</span> <code>{e.path}</code></li>{/each}
+    {#each entries as e (e.path)}<li><span class="badge">{e.status}</span><code title={e.path}>{e.path}</code></li>{/each}
   </ul>
 </div>
 
 <style>
-  .changes { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .changes { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .row { display: flex; align-items: center; gap: 8px; }
   .ghost { background: var(--surface-raised); color: var(--text); padding: 4px 10px; font-size: 12px; }
-  .body { display: flex; flex-direction: column; gap: 4px; font-size: 12px; margin: 0; padding: 0; list-style: none; }
+  .body { display: flex; flex-direction: column; gap: 4px; font-size: 12px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+  .body li { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
   .empty { color: var(--text-muted); }
-  .badge { display: inline-block; min-width: 22px; color: var(--warn); font-family: monospace; }
+  .badge { flex: 0 0 auto; min-width: 20px; color: var(--warn); font-family: monospace; }
   .err { color: var(--error); font-size: 12px; }
-  code { color: var(--text); }
+  code { color: var(--text); flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 </style>

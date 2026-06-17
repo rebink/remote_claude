@@ -70,6 +70,11 @@
   .ghost { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 12px; }
   .conflicts { color: var(--error); padding: 4px 16px; font-size: 12px; border-bottom: 1px solid var(--border); }
   .split { flex: 1; display: flex; min-height: 0; }
-  .left { width: 50%; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-height: 0; overflow-y: auto; }
-  .right { width: 50%; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+  .left { flex: 1 1 40%; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-height: 0; overflow-y: auto; }
+  .right { flex: 1 1 60%; min-width: 0; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+  @media (max-width: 820px) {
+    .split { flex-direction: column; }
+    .left, .right { flex: 1 1 auto; width: 100%; }
+    .left { border-right: none; border-bottom: 1px solid var(--border); }
+  }
 </style>
