@@ -698,41 +698,101 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
     Ok(())
 }
 
-// Run `patchwire init-remote --from-local --project <name> --remote-path <path>` in the project dir.
-// Passing --remote-path explicitly overrides the CLI default (~/workspace/<project>) so the
-// initial rsync lands in the same path that write_project_yml wrote into patchwire.yml and that
-// mutagen will use for all subsequent syncs.  Without this flag the destinations diverge.
+// Best-effort local machine name for namespacing remote paths. macOS uses the
+// friendly ComputerName; other platforms fall back to the hostname. The caller
+// slugifies the result and falls back to the SSH user if this errors.
 #[tauri::command]
-async fn init_remote_copy(app: tauri::AppHandle, project_dir: String, remote_path: String) -> Result<String, String> {
+fn computer_name() -> Result<String, String> {
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(out) = std::process::Command::new("scutil")
+            .args(["--get", "ComputerName"])
+            .output()
+        {
+            if out.status.success() {
+                let name = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if !name.is_empty() {
+                    return Ok(name);
+                }
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(name) = std::env::var("COMPUTERNAME") {
+            let n = name.trim().to_string();
+            if !n.is_empty() {
+                return Ok(n);
+            }
+        }
+    }
+    // Unix / ultimate fallback: the `hostname` command.
+    if let Ok(out) = std::process::Command::new("hostname").output() {
+        if out.status.success() {
+            let name = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !name.is_empty() {
+                return Ok(name);
+            }
+        }
+    }
+    Err("could not determine computer name".into())
+}
+
+// Run `patchwire init-remote --from-local --json` in the project dir. `mode`
+// selects how an existing remote path is handled: "create" (no flag),
+// "overwrite" (--overwrite, rm -rf + re-push) or "use_existing" (--use-existing,
+// config-only). The full NDJSON stdout is returned to the caller, which parses it
+// (parseInitRemoteResult) — including the `target_exists` signal that exits
+// non-zero but is reported on stdout.
+#[tauri::command]
+async fn init_remote_copy(
+    app: tauri::AppHandle,
+    project_dir: String,
+    remote_path: String,
+    mode: String,
+) -> Result<String, String> {
     use tauri_plugin_shell::ShellExt;
     if !std::path::Path::new(&project_dir).is_dir() {
         return Err("project_dir does not exist".into());
     }
-    // Derive the project name from the last path component (matches the yml `project` field).
     let project_name = std::path::Path::new(&project_dir)
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or_else(|| "cannot derive project name from project_dir".to_string())?
         .to_string();
+
+    let mut args: Vec<String> = vec![
+        "init-remote".into(),
+        "--from-local".into(),
+        "--project".into(),
+        project_name,
+        "--remote-path".into(),
+        remote_path,
+        "--json".into(),
+    ];
+    match mode.as_str() {
+        "overwrite" => args.push("--overwrite".into()),
+        "use_existing" => args.push("--use-existing".into()),
+        _ => {} // "create" — no flag
+    }
+
     let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
     let output = sidecar
         .current_dir(std::path::PathBuf::from(&project_dir))
-        .args(["init-remote", "--from-local", "--project", &project_name, "--remote-path", &remote_path])
+        .args(args)
         .output()
         .await
         .map_err(|e| e.to_string())?;
-    if !output.status.success() {
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    // Hard failure with no NDJSON to parse → surface stderr as an error.
+    if stdout.trim().is_empty() && !output.status.success() {
         return Err(format!(
             "init-remote failed: {}",
             String::from_utf8_lossy(&output.stderr)
         ));
     }
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .rev()
-        .find(|l| !l.trim().is_empty())
-        .unwrap_or("ok")
-        .to_string())
+    Ok(stdout)
 }
 
 // Open Terminal.app and run a command (macOS). The command is built by the caller from validated host/user.
@@ -782,6 +842,7 @@ pub fn run() {
             ensure_ssh_key,
             verify_key,
             open_terminal,
+            computer_name,
             write_project_yml,
             init_remote_copy
         ])
