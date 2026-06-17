@@ -37,6 +37,17 @@ describe('VmServiceClient', () => {
     sock.emit('open');
     await expect(client.call('getVM', {})).rejects.toThrow('boom');
   });
+
+  it('rejects pending calls when the socket closes', async () => {
+    const sock = new FakeSocket();
+    // suppress the auto-echo so the call stays pending until close
+    sock.send = () => {};
+    const client = new VmServiceClient(() => sock as never);
+    sock.emit('open');
+    const p = client.call('getVM', {});
+    sock.emit('close');
+    await expect(p).rejects.toThrow(/closed|connection/i);
+  });
 });
 
 describe('findFlutterIsolate', () => {

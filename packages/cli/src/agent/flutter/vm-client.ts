@@ -27,6 +27,12 @@ export class VmServiceClient {
       this.openWaiters.splice(0).forEach((w) => w());
     });
     this.sock.on('message', (data) => this.handleMessage(String(data)));
+    const failAll = (reason: string) => {
+      for (const p of this.pending.values()) p.reject(new Error(reason));
+      this.pending.clear();
+    };
+    this.sock.on('close', () => failAll('VM Service connection closed'));
+    this.sock.on('error', () => failAll('VM Service connection error'));
   }
 
   ready(): Promise<void> {
