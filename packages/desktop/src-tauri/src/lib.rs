@@ -714,9 +714,13 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
     } else {
         let mut b = String::from("  exclude:\n");
         for e in &args.exclude {
-            b.push_str("    - ");
-            b.push_str(e);
-            b.push('\n');
+            // Double-quote every entry: glob patterns like `*.swp` / `**/Pods/`
+            // start with `*`, which YAML reads as an alias and rejects. Quoting
+            // (escaping `\` and `"`) makes any single-line value a valid scalar.
+            let escaped = e.replace('\\', "\\\\").replace('"', "\\\"");
+            b.push_str("    - \"");
+            b.push_str(&escaped);
+            b.push_str("\"\n");
         }
         b
     };
