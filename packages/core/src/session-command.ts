@@ -18,14 +18,18 @@ function shSingleQuote(s: string): string {
  * (with a TTY via -tt), cd into the synced project, and exec a login+interactive
  * shell running `claude`. The whole remote command is single-quote-escaped so the
  * launcher (osascript `do script` / `bash -lc`) and the `open_terminal` guard see
- * NO double quotes. `remotePath` stays inside the remote command so its leading
- * `~` expands on the remote. host/user are token-validated upstream.
+ * NO double quotes. `remotePath` is validated against `^~?[A-Za-z0-9_./-]+$`
+ * (rejecting shell metacharacters) so the unquoted interpolation is safe; its
+ * leading `~` still expands on the remote. host/user are token-validated upstream.
  */
 export function buildSessionShellCommand(
   target: SessionTarget,
   keyPath: string,
   skipPermissions = false,
 ): string {
+  if (!/^~?[A-Za-z0-9_./-]+$/.test(target.remotePath)) {
+    throw new Error(`invalid remotePath (only ~, letters, digits, '.', '_', '/', '-' allowed): ${target.remotePath}`);
+  }
   const claude = skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude';
   const remote = `cd ${target.remotePath} && exec zsh -lic ${shSingleQuote(claude)}`;
   const port = target.sshPort ?? 22;
