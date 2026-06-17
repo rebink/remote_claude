@@ -1,11 +1,12 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { ChatBody } from '@patchwire/protocol';
 import type { AskEvent, VerifyResult } from '@patchwire/protocol';
-import { existsSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { FlutterSessionStore } from './flutter/session-store.ts';
 import { buildMcpConfig } from './flutter/mcp-config.ts';
+import { resolvePatchwireBin } from './flutter/resolve-bin.ts';
 import { z } from 'zod';
 import type { UsersStore } from './users-store.ts';
 import { resolveUserFromHeader } from './auth.ts';
@@ -254,6 +255,8 @@ export function buildServer(opts: AgentOptions) {
     );
     emit({ type: 'accepted', queueWaitMs: lease.queueWaitMs });
 
+    // Declared outside the try so the finally block can clean it up.
+    let mcpTempDir: string | undefined;
     try {
       const startRun = Date.now();
 
@@ -261,8 +264,9 @@ export function buildServer(opts: AgentOptions) {
       const fsession = flutterSessions.get(username, project);
       if (fsession) {
         const dir = mkdtempSync(join(tmpdir(), 'pw-flutter-'));
+        mcpTempDir = dir;
         mcpConfigPath = join(dir, 'mcp.json');
-        writeFileSync(mcpConfigPath, JSON.stringify(buildMcpConfig(fsession, process.argv[1] ?? 'patchwire')), { mode: 0o600 });
+        writeFileSync(mcpConfigPath, JSON.stringify(buildMcpConfig(fsession, resolvePatchwireBin())), { mode: 0o600 });
       }
 
       let claudeResult;
@@ -349,6 +353,13 @@ export function buildServer(opts: AgentOptions) {
         /* socket already gone */
       }
     } finally {
+      if (mcpTempDir) {
+        try {
+          rmSync(mcpTempDir, { recursive: true, force: true });
+        } catch {
+          /* best effort */
+        }
+      }
       await resetClean(projectDir).catch(() => {});
       concurrency.release(lease);
       try {
