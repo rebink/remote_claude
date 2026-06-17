@@ -1,8 +1,10 @@
 <script lang="ts">
   import { connections } from "../lib/stores";
-  import { pickFolder, writeProjectYml, initRemoteCopy, syncCommand, saveProject } from "../lib/ipc";
+  import { pickFolder, writeProjectYml, initRemoteCopy, syncCommand, saveProject, computerName, type InitRemoteMode } from "../lib/ipc";
+  import { slugifySegment } from "../lib/slug";
   import { buildProject } from "../lib/model";
   import type { Connection } from "../lib/types";
+  import { onMount } from "svelte";
 
   let { connection, onfinish, onback }: { connection: Connection; onfinish?: () => void; onback?: () => void } = $props();
 
@@ -14,9 +16,13 @@
   let busy = $state(false);
   let phase = $state("");
   let error = $state("");
+  let computer = $state("");
+  let existsPrompt = $state(false);
 
   let chosen = $derived($connections.find((c) => c.id === connId) ?? connection);
   let canCreate = $derived(localPath.trim() !== "" && remotePath.trim() !== "");
+
+  onMount(() => { computerName().then((v) => (computer = v)); });
 
   function basename(p: string): string { return p.replace(/[/\\]+$/, "").split(/[/\\]/).pop() ?? ""; }
 
@@ -25,26 +31,44 @@
     if (!dir) return;
     localPath = dir;
     name = basename(dir);
-    remotePath = `~/patchwire/${chosen.user}/${name}`;
+    const seg = slugifySegment(computer) || chosen.user;
+    remotePath = `~/patchwire/${seg}/${name}`;
   }
 
-  async function create() {
-    error = ""; busy = true;
-    try {
-      phase = "Writing config…";
-      await writeProjectYml({ projectDir: localPath, project: name, host: chosen.host, user: chosen.user, sshPort: chosen.sshPort, agentPort: chosen.agentPort, remotePath, token: chosen.token });
-      phase = "Copying to remote…";
-      await initRemoteCopy(localPath, remotePath);
+  // Copy step, re-runnable with a different mode after a target_exists prompt.
+  async function runCopy(mode: InitRemoteMode) {
+    phase = "Copying to remote…";
+    const r = await initRemoteCopy(localPath, remotePath, mode);
+    if (r.ok) {
       phase = "Starting sync…";
       await syncCommand(localPath, "start");
       await saveProject(buildProject(localPath, remotePath, name, chosen.host, chosen.user, chosen.id));
       onfinish?.();
+      return;
+    }
+    if (r.code === "target_exists") { existsPrompt = true; busy = false; return; }
+    error = `Failed: ${r.stderr ?? r.code}`;
+    busy = false;
+  }
+
+  async function create() {
+    error = ""; existsPrompt = false; busy = true;
+    try {
+      phase = "Writing config…";
+      await writeProjectYml({ projectDir: localPath, project: name, host: chosen.host, user: chosen.user, sshPort: chosen.sshPort, agentPort: chosen.agentPort, remotePath, token: chosen.token });
+      await runCopy("create");
     } catch (e) {
       error = `Failed: ${e}`;
-    } finally {
       busy = false;
     }
   }
+
+  async function chooseExisting(mode: InitRemoteMode) {
+    existsPrompt = false; error = ""; busy = true;
+    try { await runCopy(mode); } catch (e) { error = `Failed: ${e}`; busy = false; }
+  }
+
+  function cancelExists() { existsPrompt = false; busy = false; error = "Cancelled: target exists on remote."; }
 </script>
 
 <div class="add">
@@ -63,6 +87,17 @@
   {#if phase}<div class="phase" data-testid="add-phase">{phase}</div>{/if}
   {#if error}<div class="error" role="alert" data-testid="add-error">{error}</div>{/if}
 
+  {#if existsPrompt}
+    <div class="exists-modal" data-testid="exists-modal" role="dialog" aria-label="Remote path exists">
+      <p>{remotePath} already exists on the remote.</p>
+      <div class="exists-actions">
+        <button class="primary" data-testid="exists-overwrite" onclick={() => chooseExisting("overwrite")}>Overwrite (rm -rf + re-push)</button>
+        <button data-testid="exists-use-existing" onclick={() => chooseExisting("use_existing")}>Use existing (skip copy)</button>
+        <button class="ghost" data-testid="exists-cancel" onclick={cancelExists}>Cancel</button>
+      </div>
+    </div>
+  {/if}
+
   <button class="primary" data-testid="create-project" disabled={!canCreate || busy} onclick={create}>
     {busy ? "Working…" : "Create"}
   </button>
@@ -79,4 +114,7 @@
   .primary:disabled { opacity: .5; cursor: not-allowed; }
   .phase { color: var(--warn); font-size: 12px; }
   .error { color: var(--error); font-size: 12px; }
+  .exists-modal { border: 1px solid var(--border-strong); background: var(--surface-raised); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: var(--text); }
+  .exists-actions { display: flex; flex-direction: column; gap: 6px; }
+  .exists-actions button { padding: 8px 10px; }
 </style>
