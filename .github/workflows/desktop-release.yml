@@ -64,7 +64,8 @@ jobs:
         run: |
           mkdir -p out
           node -e '
-            import("./packages/website/src/lib/release-assets.mjs").then(({ releaseAssets }) => {
+            (async () => {
+              const { releaseAssets } = await import("./packages/website/src/lib/release-assets.mjs");
               const fs = require("fs");
               const cp = require("child_process");
               const bundleDir = "packages/desktop/src-tauri/target/release/bundle";
@@ -77,7 +78,7 @@ jobs:
                 fs.copyFileSync(matches[0], `out/${a.stable}`);
                 console.log(`out/${a.stable} <- ${matches[0]}`);
               }
-            });
+            })().catch((e) => { console.error(e); process.exit(1); });
           '
         env:
           ASSET_OS: ${{ matrix.assetOs }}
