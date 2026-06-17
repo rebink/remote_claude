@@ -645,6 +645,44 @@ struct ProjectYmlArgs {
     agent_port: u16,
     remote_path: String,
     token: String,
+    exclude: Vec<String>,
+}
+
+// Best-effort project-type detection from a directory's root files. Mirrors the
+// extension's detectProjectType.ts. Never errors on a readable dir → "common".
+#[tauri::command]
+fn detect_project_type(project_dir: String) -> Result<String, String> {
+    use std::path::Path;
+    let dir = Path::new(&project_dir);
+    if dir.join("pubspec.yaml").exists() {
+        return Ok("flutter".into());
+    }
+    let pkg = dir.join("package.json");
+    if pkg.exists() {
+        const FRONTEND_DEPS: [&str; 9] = [
+            "next", "nuxt", "react", "react-dom", "vue", "@angular/core", "svelte", "vite", "astro",
+        ];
+        if let Ok(text) = std::fs::read_to_string(&pkg) {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                let has_frontend = ["dependencies", "devDependencies"].iter().any(|k| {
+                    json.get(k)
+                        .and_then(|d| d.as_object())
+                        .map(|o| FRONTEND_DEPS.iter().any(|d| o.contains_key(*d)))
+                        .unwrap_or(false)
+                });
+                if has_frontend {
+                    return Ok("node-frontend".into());
+                }
+            }
+        }
+        return Ok("node-backend".into());
+    }
+    for f in ["requirements.txt", "pyproject.toml", "setup.py", "Pipfile"] {
+        if dir.join(f).exists() {
+            return Ok("python".into());
+        }
+    }
+    Ok("common".into())
 }
 
 // Write <project_dir>/patchwire.yml with a literal token (mirrors writeYaml in the CLI but
@@ -666,8 +704,24 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
             return Err(format!("invalid {label}: contains a newline"));
         }
     }
+    for e in &args.exclude {
+        if e.contains('\n') || e.contains('\r') {
+            return Err("invalid exclude entry: contains a newline".into());
+        }
+    }
+    let exclude_block = if args.exclude.is_empty() {
+        "  exclude: []\n".to_string()
+    } else {
+        let mut b = String::from("  exclude:\n");
+        for e in &args.exclude {
+            b.push_str("    - ");
+            b.push_str(e);
+            b.push('\n');
+        }
+        b
+    };
     let yml = format!(
-        "project: {project}\nremote:\n  host: {host}\n  user: {user}\n  path: {path}\n  sshPort: {ssh}\n  agentUrl: http://{host}:{ap}\n  token: {token}\nsync:\n  exclude:\n    - build/\n    - .dart_tool/\n    - ios/Pods/\n    - node_modules/\n    - .git/\nai:\n  command: claude\n  args:\n    - --print\n  timeoutSec: 600\n",
+        "project: {project}\nremote:\n  host: {host}\n  user: {user}\n  path: {path}\n  sshPort: {ssh}\n  agentUrl: http://{host}:{ap}\n  token: {token}\nsync:\n{exclude_block}ai:\n  command: claude\n  args:\n    - --print\n  timeoutSec: 600\n",
         project = args.project,
         host = args.host,
         user = args.user,
@@ -675,6 +729,7 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
         ssh = args.ssh_port,
         ap = args.agent_port,
         token = args.token,
+        exclude_block = exclude_block,
     );
     // Fix 2 (MEDIUM): Write the yml file owner-only (0o600) because it contains a literal token.
     let path = std::path::Path::new(&args.project_dir).join("patchwire.yml");
@@ -844,6 +899,7 @@ pub fn run() {
             open_terminal,
             computer_name,
             write_project_yml,
+            detect_project_type,
             init_remote_copy
         ])
         .run(tauri::generate_context!())
