@@ -11,6 +11,12 @@ export interface VmServiceUri {
 
 export type Parse<T> = { ok: true; value: T } | { ok: false; error: string };
 
+/** True only for loopback hosts. Used to enforce the VM Service URL is the reverse-tunnelled local endpoint (SSRF guard). */
+export function isLoopbackHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/^\[|\]$/g, '');
+  return h === '127.0.0.1' || h === 'localhost' || h === '::1';
+}
+
 /**
  * Parse a Dart VM Service URI as printed by `flutter run`
  * ("A Dart VM Service ... is available at: http://127.0.0.1:PORT/<token>=/").

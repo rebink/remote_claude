@@ -30,6 +30,7 @@ import { createHash } from 'node:crypto';
 import type { AuditLog } from './audit-log.ts';
 import { countDiffLines } from './diff-stats.ts';
 import { evaluatePolicy } from './policy.ts';
+import { isLoopbackHost } from '../lib/flutter-vmservice.ts';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -130,6 +131,12 @@ export function registerFlutterSessionRoutes(app: FastifyInstance, store: Flutte
   app.post('/flutter/session', async (req: FastifyRequest, reply) => {
     const parsed = FlutterSessionPostBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body', issues: parsed.error.issues });
+    // SSRF guard: the VM Service URL is only ever a reverse-tunnelled loopback
+    // endpoint. Reject anything else so a client can't make the MCP subprocess
+    // connect to an arbitrary host (e.g. cloud metadata).
+    let vmHost: string;
+    try { vmHost = new URL(parsed.data.url).hostname; } catch { return reply.code(400).send({ error: 'bad url' }); }
+    if (!isLoopbackHost(vmHost)) return reply.code(400).send({ error: 'VM Service URL must target loopback' });
     store.set(req.username!, parsed.data);
     return reply.status(204).send();
   });

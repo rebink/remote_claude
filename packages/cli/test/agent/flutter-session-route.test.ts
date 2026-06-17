@@ -25,6 +25,14 @@ describe('flutter session routes', () => {
       payload: { project: 'app', url: 'http://x/', target: 'phone' } });
     expect(res.statusCode).toBe(400);
   });
+  it('rejects a non-loopback url (SSRF guard) and stores nothing', async () => {
+    const store = new FlutterSessionStore();
+    const app = appWith(store);
+    const res = await app.inject({ method: 'POST', url: '/flutter/session',
+      payload: { project: 'app', url: 'http://169.254.169.254/t=/', target: 'device' } });
+    expect(res.statusCode).toBe(400);
+    expect(store.get('alice', 'app')).toBeUndefined();
+  });
   it('detaches via DELETE', async () => {
     const store = new FlutterSessionStore();
     store.set('alice', { project: 'app', url: 'http://x/', target: 'web' });

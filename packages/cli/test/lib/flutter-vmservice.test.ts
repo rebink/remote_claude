@@ -1,6 +1,6 @@
 // packages/cli/test/lib/flutter-vmservice.test.ts
 import { describe, it, expect } from 'vitest';
-import { parseVmServiceUri, wsUrlFor, capabilitiesFor } from '../../src/lib/flutter-vmservice.ts';
+import { parseVmServiceUri, wsUrlFor, capabilitiesFor, isLoopbackHost } from '../../src/lib/flutter-vmservice.ts';
 
 describe('parseVmServiceUri', () => {
   it('parses a standard http VM service uri with auth token path', () => {
@@ -36,6 +36,22 @@ describe('wsUrlFor', () => {
   it('handles a root auth path without doubling slashes', () => {
     const uri = { host: '127.0.0.1', port: 8181, authPath: '/' };
     expect(wsUrlFor(uri, '127.0.0.1', 9000)).toBe('ws://127.0.0.1:9000/ws');
+  });
+});
+
+describe('isLoopbackHost', () => {
+  it('accepts loopback hosts', () => {
+    expect(isLoopbackHost('127.0.0.1')).toBe(true);
+    expect(isLoopbackHost('localhost')).toBe(true);
+    expect(isLoopbackHost('::1')).toBe(true);
+    expect(isLoopbackHost('[::1]')).toBe(true);
+    expect(isLoopbackHost('LOCALHOST')).toBe(true);
+  });
+  it('rejects non-loopback hosts (SSRF targets)', () => {
+    expect(isLoopbackHost('evil.com')).toBe(false);
+    expect(isLoopbackHost('169.254.169.254')).toBe(false);
+    expect(isLoopbackHost('0.0.0.0')).toBe(false);
+    expect(isLoopbackHost('10.0.0.5')).toBe(false);
   });
 });
 

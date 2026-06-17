@@ -1,6 +1,6 @@
 // packages/cli/src/agent/flutter/mcp-server.ts
 import type { TargetKind } from '../../lib/flutter-vmservice.ts';
-import { capabilitiesFor, wsUrlFor, parseVmServiceUri } from '../../lib/flutter-vmservice.ts';
+import { capabilitiesFor, wsUrlFor, parseVmServiceUri, isLoopbackHost } from '../../lib/flutter-vmservice.ts';
 import { VmServiceClient, findFlutterIsolate, realSocketFactory } from './vm-client.ts';
 
 /** The VM dependency the tool handlers need (subset of VmServiceClient). */
@@ -80,6 +80,9 @@ export async function runFlutterMcpServer(env: NodeJS.ProcessEnv = process.env):
   if (!url) throw new Error('PW_FLUTTER_VM_URL not set');
   const parsed = parseVmServiceUri(url);
   if (!parsed.ok) throw new Error(`bad PW_FLUTTER_VM_URL: ${parsed.error}`);
+  if (!isLoopbackHost(parsed.value.host)) {
+    throw new Error('PW_FLUTTER_VM_URL must target loopback (refusing non-loopback host)');
+  }
   const wsUrl = wsUrlFor(parsed.value, parsed.value.host, parsed.value.port);
 
   const client = new VmServiceClient(realSocketFactory(wsUrl));
