@@ -13,12 +13,6 @@ struct ProvisionState {
 }
 
 #[derive(Default)]
-struct ChatState {
-    busy: std::sync::atomic::AtomicBool,
-    child: std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
-}
-
-#[derive(Default)]
 struct SyncWatchState {
     busy: std::sync::atomic::AtomicBool,
     child: std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
@@ -354,109 +348,6 @@ async fn read_project_config(app: tauri::AppHandle, project_dir: String) -> Resu
     let line = stdout.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
     if line.is_empty() {
         return Err(format!("config-show produced no output: {}", String::from_utf8_lossy(&output.stderr)));
-    }
-    Ok(line)
-}
-
-#[tauri::command]
-async fn start_chat(
-    app: tauri::AppHandle,
-    state: tauri::State<'_, ChatState>,
-    project_dir: String,
-    session_uuid: String,
-    prompt: String,
-) -> Result<(), String> {
-    use std::sync::atomic::Ordering;
-    use tauri_plugin_shell::ShellExt;
-    use tauri_plugin_shell::process::CommandEvent;
-    use tauri::Emitter;
-
-    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
-    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
-    if session_uuid.trim().is_empty() { return Err("session_uuid is required".into()); }
-    if prompt.trim().is_empty() { return Err("prompt is required".into()); }
-
-    // Get sidecar handle BEFORE claiming busy — so only .spawn() is inside the claimed region.
-    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
-
-    // Atomic in-progress claim: compare_exchange false→true; fail if already true.
-    if state.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
-        return Err("a chat turn is already in progress".into());
-    }
-
-    let (mut rx, child) = match sidecar
-        .current_dir(std::path::PathBuf::from(&project_dir))
-        .args(["chat", "--session", &session_uuid, "--json", &prompt])
-        .spawn()
-    {
-        Ok(v) => v,
-        Err(e) => { state.busy.store(false, Ordering::SeqCst); return Err(e.to_string()); }
-    };
-
-    *state.child.lock().unwrap() = Some(child);
-
-    tauri::async_runtime::spawn(async move {
-        while let Some(event) = rx.recv().await {
-            match event {
-                CommandEvent::Stdout(bytes) => {
-                    let line = String::from_utf8_lossy(&bytes).trim_end().to_string();
-                    if !line.is_empty() {
-                        let _ = app.emit("pw://chat", line);
-                    }
-                }
-                CommandEvent::Terminated(p) => {
-                    if let Some(st) = app.try_state::<ChatState>() {
-                        *st.child.lock().unwrap() = None;
-                        st.busy.store(false, Ordering::SeqCst);
-                    }
-                    let _ = app.emit("pw://chat-end", p.code);
-                }
-                _ => {}
-            }
-        }
-    });
-    Ok(())
-}
-
-#[tauri::command]
-fn cancel_chat(state: tauri::State<'_, ChatState>) -> Result<(), String> {
-    use std::sync::atomic::Ordering;
-    if let Some(child) = state.child.lock().unwrap().take() {
-        let _ = child.kill();
-    }
-    state.busy.store(false, Ordering::SeqCst);
-    Ok(())
-}
-
-#[tauri::command]
-async fn apply_patch(
-    app: tauri::AppHandle,
-    project_dir: String,
-    patch: String,
-) -> Result<String, String> {
-    use tauri_plugin_shell::ShellExt;
-    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
-    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
-
-    let pw_dir = std::path::Path::new(&project_dir).join(".patchwire");
-    std::fs::create_dir_all(&pw_dir).map_err(|e| e.to_string())?;
-    let patch_path = pw_dir.join("desktop.patch");
-    std::fs::write(&patch_path, &patch).map_err(|e| e.to_string())?;
-
-    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
-    let output = sidecar
-        .current_dir(std::path::PathBuf::from(&project_dir))
-        .args(["apply", "--yes", "--json", &patch_path.to_string_lossy()])
-        .output()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    // Return the last non-empty line (the JSON result line).
-    let line = stdout.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
-    if line.is_empty() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("apply produced no result: {stderr}"));
     }
     Ok(line)
 }
@@ -854,17 +745,62 @@ async fn init_remote_copy(
     Ok(stdout)
 }
 
-// Open Terminal.app and run a command (macOS). The command is built by the caller from validated host/user.
+// Launch the user's native terminal running `command`. Cross-OS. The command is
+// built by us (buildSessionShellCommand) and contains no double quotes/newlines.
 #[tauri::command]
 fn open_terminal(command: String) -> Result<(), String> {
-    // Reject control chars / quotes that could break out of the AppleScript string.
     if command.contains('"') || command.contains('\n') || command.contains('\r') {
         return Err("invalid command".into());
     }
-    let script = format!("tell application \"Terminal\" to do script \"{command}\"");
-    let out = std::process::Command::new("osascript").args(["-e", &script]).output().map_err(|e| e.to_string())?;
-    if !out.status.success() { return Err(String::from_utf8_lossy(&out.stderr).to_string()); }
-    Ok(())
+    #[cfg(target_os = "macos")]
+    {
+        let script = format!("tell application \"Terminal\" to do script \"{command}\"");
+        let out = std::process::Command::new("osascript").args(["-e", &script]).output().map_err(|e| e.to_string())?;
+        if !out.status.success() { return Err(String::from_utf8_lossy(&out.stderr).to_string()); }
+        return Ok(());
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let inner = format!("{command}; exec bash");
+        let candidates: [(&str, Vec<String>); 4] = [
+            ("x-terminal-emulator", vec!["-e".into(), "bash".into(), "-lc".into(), inner.clone()]),
+            ("gnome-terminal", vec!["--".into(), "bash".into(), "-lc".into(), inner.clone()]),
+            ("konsole", vec!["-e".into(), "bash".into(), "-lc".into(), inner.clone()]),
+            ("xterm", vec!["-e".into(), "bash".into(), "-lc".into(), inner.clone()]),
+        ];
+        for (prog, args) in candidates.iter() {
+            if std::process::Command::new(prog).args(args).spawn().is_ok() {
+                return Ok(());
+            }
+        }
+        return Err("no supported terminal emulator found".into());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if std::process::Command::new("wt.exe").args(["cmd", "/k", &command]).spawn().is_ok() {
+            return Ok(());
+        }
+        std::process::Command::new("cmd").args(["/c", "start", "cmd", "/k", &command]).spawn().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    #[allow(unreachable_code)]
+    Err("unsupported platform".into())
+}
+
+// `git status --porcelain` for the project; parser lives on the TS side.
+#[tauri::command]
+fn git_status(project_dir: String) -> Result<String, String> {
+    if !std::path::Path::new(&project_dir).is_dir() {
+        return Err("project_dir does not exist".into());
+    }
+    let out = std::process::Command::new("git")
+        .args(["-C", &project_dir, "status", "--porcelain"])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Err(String::from_utf8_lossy(&out.stderr).to_string());
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -873,8 +809,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(ProvisionState::default())
-        .manage(ChatState::default())
         .manage(SyncWatchState::default())
         .invoke_handler(tauri::generate_handler![
             start_provision,
@@ -891,9 +827,6 @@ pub fn run() {
             save_connection,
             delete_connection,
             read_project_config,
-            start_chat,
-            cancel_chat,
-            apply_patch,
             push_attachment,
             start_sync_watch,
             stop_sync_watch,
@@ -904,7 +837,8 @@ pub fn run() {
             computer_name,
             write_project_yml,
             detect_project_type,
-            init_remote_copy
+            init_remote_copy,
+            git_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
