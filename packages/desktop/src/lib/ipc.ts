@@ -1,14 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { Project, ProjectConfig, Connection } from "./types";
 import type { ProjectType } from "@patchwire/core/sync-templates";
 import { parseProjects, parseConnections } from "./model";
-import { parseChatLine, type ChatEvent } from "./chat-events";
-import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
 import type { FlutterTarget } from "./flutter-attach";
 import { parseInitRemoteResult, type InitRemoteResult } from "./init-remote-events";
+import { parseGitStatus, type ChangedEntry } from "./git-status";
 export type { ProvisionArgs } from "../ipc";
 export { startProvision, sendConsent, onProvEvent } from "../ipc";
 
@@ -45,28 +45,13 @@ export async function pushAttachment(projectDir: string, filePath: string | unde
   return invoke<string>("push_attachment", { projectDir, filePath: filePath ?? null, useClipboard });
 }
 
-export async function startChat(projectDir: string, sessionUuid: string, prompt: string): Promise<void> {
-  await invoke("start_chat", { projectDir, sessionUuid, prompt });
+export async function copyToClipboard(text: string): Promise<void> {
+  await writeText(text);
 }
 
-export async function cancelChat(): Promise<void> {
-  await invoke("cancel_chat");
-}
-
-export async function applyPatch(projectDir: string, patch: string): Promise<ApplyResult> {
-  const line = await invoke<string>("apply_patch", { projectDir, patch });
-  return parseApplyResult(line);
-}
-
-export async function onChatEvent(handler: (ev: ChatEvent) => void): Promise<UnlistenFn> {
-  return listen<string>("pw://chat", (e) => {
-    const ev = parseChatLine(e.payload);
-    if (ev) handler(ev);
-  });
-}
-
-export async function onChatEnd(handler: (code: number | null) => void): Promise<UnlistenFn> {
-  return listen<number | null>("pw://chat-end", (e) => handler(e.payload));
+export async function gitStatus(projectDir: string): Promise<ChangedEntry[]> {
+  const out = await invoke<string>("git_status", { projectDir });
+  return parseGitStatus(out);
 }
 
 export async function syncCommand(projectDir: string, sub: "status" | "start" | "pause" | "resume" | "flush" | "stop"): Promise<SyncLine | null> {
