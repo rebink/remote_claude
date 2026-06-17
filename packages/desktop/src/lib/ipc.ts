@@ -7,6 +7,7 @@ import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
 import type { FlutterTarget } from "./flutter-attach";
+import { parseInitRemoteResult, type InitRemoteResult } from "./init-remote-events";
 export type { ProvisionArgs } from "../ipc";
 export { startProvision, sendConsent, onProvEvent } from "../ipc";
 
@@ -126,8 +127,26 @@ export async function writeProjectYml(args: ProjectYmlArgs): Promise<void> {
   await invoke("write_project_yml", { args });
 }
 
-export async function initRemoteCopy(projectDir: string, remotePath: string): Promise<string> {
-  return invoke<string>("init_remote_copy", { projectDir, remotePath });
+export type InitRemoteMode = "create" | "overwrite" | "use_existing";
+export type { InitRemoteResult };
+
+export async function initRemoteCopy(
+  projectDir: string,
+  remotePath: string,
+  mode: InitRemoteMode = "create",
+): Promise<InitRemoteResult> {
+  const stdout = await invoke<string>("init_remote_copy", { projectDir, remotePath, mode });
+  return parseInitRemoteResult(stdout);
+}
+
+/** Local machine name for path namespacing; "" if unavailable (caller falls back). */
+export async function computerName(): Promise<string> {
+  try {
+    const r = await invoke<string>("computer_name");
+    return typeof r === "string" ? r : "";
+  } catch {
+    return "";
+  }
 }
 
 /** Best-effort detection of a running VM Service URI (clipboard scan in the Rust cmd). Returns null if none. */
