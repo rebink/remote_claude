@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Project, ProjectConfig, Connection } from "./types";
+import type { ProjectType } from "@patchwire/core/sync-templates";
 import { parseProjects, parseConnections } from "./model";
 import { parseChatLine, type ChatEvent } from "./chat-events";
 import { parseApplyResult, type ApplyResult } from "./chat-session";
@@ -121,6 +122,7 @@ export interface ProjectYmlArgs {
   agentPort: number;
   remotePath: string;
   token: string;
+  exclude: string[];
 }
 
 export async function writeProjectYml(args: ProjectYmlArgs): Promise<void> {
@@ -137,6 +139,18 @@ export async function initRemoteCopy(
 ): Promise<InitRemoteResult> {
   const stdout = await invoke<string>("init_remote_copy", { projectDir, remotePath, mode });
   return parseInitRemoteResult(stdout);
+}
+
+const PROJECT_TYPE_SET = new Set<ProjectType>(["flutter", "node-frontend", "node-backend", "python", "common"]);
+
+/** Best-effort project-type detection of a local folder; "common" if unavailable/unrecognized. */
+export async function detectProjectType(projectDir: string): Promise<ProjectType> {
+  try {
+    const r = await invoke<string>("detect_project_type", { projectDir });
+    return PROJECT_TYPE_SET.has(r as ProjectType) ? (r as ProjectType) : "common";
+  } catch {
+    return "common";
+  }
 }
 
 /** Local machine name for path namespacing; "" if unavailable (caller falls back). */
