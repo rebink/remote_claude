@@ -754,7 +754,11 @@ fn open_terminal(command: String) -> Result<(), String> {
     }
     #[cfg(target_os = "macos")]
     {
-        let script = format!("tell application \"Terminal\" to do script \"{command}\"");
+        // The command legitimately contains backslashes (POSIX `'\''` escaping).
+        // `\` is an escape char inside an AppleScript "..." string, so escape it
+        // (and `\` only — the guard already rejected `"`/newlines) before embedding.
+        let escaped = command.replace('\\', "\\\\");
+        let script = format!("tell application \"Terminal\" to do script \"{escaped}\"");
         let out = std::process::Command::new("osascript").args(["-e", &script]).output().map_err(|e| e.to_string())?;
         if !out.status.success() { return Err(String::from_utf8_lossy(&out.stderr).to_string()); }
         return Ok(());
