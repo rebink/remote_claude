@@ -1,6 +1,7 @@
 <script lang="ts">
   import { connections } from "../lib/stores";
-  import { pickFolder, writeProjectYml, initRemoteCopy, syncCommand, saveProject, computerName, type InitRemoteMode } from "../lib/ipc";
+  import { pickFolder, writeProjectYml, initRemoteCopy, syncCommand, saveProject, computerName, detectProjectType, type InitRemoteMode } from "../lib/ipc";
+  import { EXCLUDE_TEMPLATES, PROJECT_TYPES, PROJECT_TYPE_LABELS, type ProjectType } from "@patchwire/core/sync-templates";
   import { slugifySegment } from "../lib/slug";
   import { buildProject } from "../lib/model";
   import type { Connection } from "../lib/types";
@@ -18,6 +19,7 @@
   let error = $state("");
   let computer = $state("");
   let existsPrompt = $state(false);
+  let projectType = $state<ProjectType>("common");
 
   let chosen = $derived($connections.find((c) => c.id === connId) ?? connection);
   let canCreate = $derived(localPath.trim() !== "" && remotePath.trim() !== "");
@@ -31,6 +33,7 @@
     if (!dir) return;
     localPath = dir;
     name = basename(dir);
+    projectType = await detectProjectType(dir);
     const seg = slugifySegment(computer) || chosen.user;
     remotePath = `~/patchwire/${seg}/${name}`;
   }
@@ -55,7 +58,7 @@
     error = ""; existsPrompt = false; busy = true;
     try {
       phase = "Writing config…";
-      await writeProjectYml({ projectDir: localPath, project: name, host: chosen.host, user: chosen.user, sshPort: chosen.sshPort, agentPort: chosen.agentPort, remotePath, token: chosen.token });
+      await writeProjectYml({ projectDir: localPath, project: name, host: chosen.host, user: chosen.user, sshPort: chosen.sshPort, agentPort: chosen.agentPort, remotePath, token: chosen.token, exclude: EXCLUDE_TEMPLATES[projectType] });
       await runCopy("create");
     } catch (e) {
       error = `Failed: ${e}`;
@@ -83,6 +86,15 @@
   <button class="ghost" data-testid="pick-folder" onclick={choose}>Choose folder…</button>
   <label>Local path<input aria-label="Local path" data-testid="local-path" bind:value={localPath} readonly /></label>
   <label>Remote path<input aria-label="Remote path" data-testid="remote-path" bind:value={remotePath} /></label>
+  <label>Project type
+    <select aria-label="Project type" data-testid="project-type" bind:value={projectType}>
+      {#each PROJECT_TYPES as t (t)}<option value={t}>{PROJECT_TYPE_LABELS[t]}</option>{/each}
+    </select>
+  </label>
+  <div class="exclude-preview" data-testid="exclude-preview">
+    <span class="ex-label">Excludes from sync:</span>
+    {#each EXCLUDE_TEMPLATES[projectType] as e (e)}<code>{e}</code>{/each}
+  </div>
 
   {#if phase}<div class="phase" data-testid="add-phase">{phase}</div>{/if}
   {#if error}<div class="error" role="alert" data-testid="add-error">{error}</div>{/if}
@@ -117,4 +129,7 @@
   .exists-modal { border: 1px solid var(--border-strong); background: var(--surface-raised); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: var(--text); }
   .exists-actions { display: flex; flex-direction: column; gap: 6px; }
   .exists-actions button { padding: 8px 10px; }
+  .exclude-preview { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 11px; color: var(--text-muted); }
+  .exclude-preview .ex-label { width: 100%; }
+  .exclude-preview code { background: var(--surface-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 1px 5px; color: var(--text); }
 </style>

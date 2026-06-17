@@ -6,6 +6,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: openMock }));
 import AddProject from "./AddProject.svelte";
 import { connections } from "../lib/stores";
+import { EXCLUDE_TEMPLATES } from "@patchwire/core/sync-templates";
 
 const conn = { id: "c1", name: "mini", host: "studio-mini", user: "rebin", sshPort: 22, keyPath: "/k", agentPort: 7878, token: "TKN" };
 const DONE_OK = '{"type":"done","ok":true}';
@@ -19,6 +20,7 @@ function baseInvoke(overrides: (cmd: string) => unknown | undefined = () => unde
     const o = overrides(cmd);
     if (o !== undefined) return Promise.resolve(o);
     if (cmd === "computer_name") return Promise.resolve("studio-box");
+    if (cmd === "detect_project_type") return Promise.resolve("common");
     if (cmd === "init_remote_copy") return Promise.resolve(DONE_OK);
     if (cmd === "sync_command") return Promise.resolve('{"type":"sync_action","action":"start","ok":true}');
     return Promise.resolve(undefined); // write_project_yml, save_project
@@ -99,6 +101,46 @@ describe("AddProject", () => {
     expect(overwriteCall).toBeTruthy();
     expect(queryByTestId("exists-modal")).toBeNull();
     expect(onfinish).toHaveBeenCalled();
+  });
+
+  it("defaults the project-type dropdown to the detected type and previews its excludes", async () => {
+    baseInvoke((cmd) => (cmd === "detect_project_type" ? "flutter" : undefined));
+    openMock.mockResolvedValue("/home/r/app");
+    const { getByTestId } = render(AddProject, { props: { connection: conn } });
+    await flush();
+    await fireEvent.click(getByTestId("pick-folder"));
+    await flush();
+    expect((getByTestId("project-type") as HTMLSelectElement).value).toBe("flutter");
+    expect(getByTestId("exclude-preview").textContent).toContain(".dart_tool/");
+  });
+
+  it("writes the matching exclude template into write_project_yml", async () => {
+    baseInvoke((cmd) => (cmd === "detect_project_type" ? "flutter" : undefined));
+    openMock.mockResolvedValue("/home/r/app");
+    const { getByTestId } = render(AddProject, { props: { connection: conn, onfinish: vi.fn() } });
+    await flush();
+    await fireEvent.click(getByTestId("pick-folder"));
+    await flush();
+    await fireEvent.click(getByTestId("create-project"));
+    await flush();
+    expect(invokeMock).toHaveBeenCalledWith("write_project_yml", { args: expect.objectContaining({
+      exclude: EXCLUDE_TEMPLATES.flutter,
+    }) });
+  });
+
+  it("changing the dropdown changes the written excludes", async () => {
+    baseInvoke((cmd) => (cmd === "detect_project_type" ? "flutter" : undefined));
+    openMock.mockResolvedValue("/home/r/app");
+    const { getByTestId } = render(AddProject, { props: { connection: conn, onfinish: vi.fn() } });
+    await flush();
+    await fireEvent.click(getByTestId("pick-folder"));
+    await flush();
+    await fireEvent.change(getByTestId("project-type"), { target: { value: "python" } });
+    await fireEvent.click(getByTestId("create-project"));
+    await flush();
+    expect(invokeMock).toHaveBeenCalledWith("write_project_yml", { args: expect.objectContaining({
+      exclude: EXCLUDE_TEMPLATES.python,
+    }) });
   });
 
   it("Cancel on the modal aborts without finishing", async () => {
