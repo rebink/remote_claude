@@ -38,5 +38,12 @@
       <div class="dot"></div>
     </div>
     <div id="app"></div>
+    <script>
+      // Safety net: if main.ts fails to load, still reveal the (hidden) window so
+      // it can never get stuck invisible. main.ts normally shows it on first frame.
+      setTimeout(function () {
+        try { window.__TAURI__.window.getCurrentWindow().show(); } catch (e) {}
+      }, 1500);
+    </script>
   </body>
 </html>

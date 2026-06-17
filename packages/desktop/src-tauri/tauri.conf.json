@@ -16,7 +16,8 @@
         "title": "Patchwire",
         "width": 800,
         "height": 600,
-        "backgroundColor": "#0E0E10"
+        "backgroundColor": "#0E0E10",
+        "visible": false
       }
     ],
     "security": {

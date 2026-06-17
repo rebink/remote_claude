@@ -1,5 +1,13 @@
 import { mount } from "svelte";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import App from "./App.svelte";
+
+// The window starts hidden (tauri.conf `visible: false`) so the white WKWebView
+// never shows during load. Reveal it now that the dark splash markup is in the
+// DOM and about to paint — the user only ever sees the dark splash, no flash.
+requestAnimationFrame(() => {
+  getCurrentWindow().show().catch(() => {});
+});
 
 const app = mount(App, {
   target: document.getElementById("app")!,
