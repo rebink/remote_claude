@@ -12,6 +12,7 @@ const version = extPkg.version;
 const ext = 'vscode:extension/patchwire.patchwire-vscode';
 // Fallback hub for anyone without the app, or on another editor (Marketplace, Open VSX, .vsix).
 const installFallback = '/install-extension/';
+const download = '/download/';
 const ogDesc =
   'A VS Code extension that runs a Claude Code session on a machine you own, with two-way sync keeping your laptop and the remote byte-identical. Your code stays on your own network.';
 ---
@@ -52,6 +53,7 @@ const ogDesc =
         <span>Patchwire</span>
       </a>
       <nav class="topnav" aria-label="Primary">
+        <a href="/download/">Download</a>
         <a href="/quickstart/">Quickstart</a>
         <a href="/multi-developer/">Teams</a>
         <a href="/architecture/">Architecture</a>
@@ -60,7 +62,7 @@ const ogDesc =
       </nav>
       <div class="topbar-right">
         <span class="meta-pill"><span class="meta-dot"></span>v{version}</span>
-        <a href={ext} class="topbar-install magnet">Install for VS Code</a>
+        <a href={download} class="topbar-install magnet">Download the app</a>
       </div>
     </header>
 
@@ -76,7 +78,7 @@ const ogDesc =
 
       <div class="hero-inner">
         <div class="hero-copy">
-          <span class="eyebrow reveal">The VS Code extension</span>
+          <span class="eyebrow reveal">The desktop app</span>
           <h1 class="hero-h reveal">
             Run Claude Code on
             <span class="hero-h-2">your own <em>remote machine.</em></span>
@@ -87,16 +89,16 @@ const ogDesc =
             where you always have.
           </p>
           <div class="cta-row reveal">
-            <a href={ext} class="cta cta-primary magnet">
-              <span>Install for VS Code</span><span class="cta-arrow">→</span>
+            <a href={download} class="cta cta-primary magnet">
+              <span>Download the app</span><span class="cta-arrow">→</span>
             </a>
             <a href="/quickstart/" class="cta cta-ghost magnet">
               <span>Read the docs</span><span class="cta-arrow">↗</span>
             </a>
           </div>
           <p class="cta-fallback reveal">
-            Opens VS Code at the extension. No VS Code, or another editor?
-            <a href={installFallback}>Other ways to install ↗</a>
+            macOS · Windows · Linux. Prefer your editor?
+            <a href={ext}>Get the VS Code companion ↗</a>
           </p>
         </div>
 
@@ -267,21 +269,20 @@ const ogDesc =
       <div class="wrap endcta-inner">
         <h2 class="endcta-h reveal">Bring Claude into <em>your editor.</em></h2>
         <p class="endcta-sub reveal">
-          Install the extension. It runs on your machine, and your code never leaves
+          Download the app. It runs on your machine, and your code never leaves
           your network — unless you explicitly attach a live Flutter session, which
           opens a scoped, opt-in debug channel to your running app (and nothing else).
         </p>
         <div class="cta-row cta-center reveal">
-          <a href={ext} class="cta cta-primary cta-lg magnet">
-            <span>Install for VS Code</span><span class="cta-arrow">→</span>
+          <a href={download} class="cta cta-primary cta-lg magnet">
+            <span>Download the app</span><span class="cta-arrow">→</span>
           </a>
           <a href={repo} class="cta cta-ghost cta-lg magnet">
             <span>View on GitHub</span><span class="cta-arrow">↗</span>
           </a>
         </div>
         <p class="cta-fallback reveal">
-          Opens VS Code at the extension. No VS Code, or another editor?
-          <a href={installFallback}>Other ways to install ↗</a>
+          Prefer your editor? <a href={ext}>Get the VS Code companion ↗</a>
         </p>
       </div>
     </section>
