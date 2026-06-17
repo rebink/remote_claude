@@ -758,7 +758,11 @@ fn open_terminal(command: String) -> Result<(), String> {
         // `\` is an escape char inside an AppleScript "..." string, so escape it
         // (and `\` only — the guard already rejected `"`/newlines) before embedding.
         let escaped = command.replace('\\', "\\\\");
-        let script = format!("tell application \"Terminal\" to do script \"{escaped}\"");
+        // `activate` brings Terminal.app to the front — otherwise the new window
+        // opens BEHIND the desktop app and the user thinks nothing happened.
+        let script = format!(
+            "tell application \"Terminal\"\ndo script \"{escaped}\"\nactivate\nend tell"
+        );
         let out = std::process::Command::new("osascript").args(["-e", &script]).output().map_err(|e| e.to_string())?;
         if !out.status.success() { return Err(String::from_utf8_lossy(&out.stderr).to_string()); }
         return Ok(());
