@@ -1,0 +1,117 @@
+---
+import '../styles/custom.css';
+import { ClientRouter } from 'astro:transitions';
+import { releaseAssets, downloadUrl, repo, SHASUMS } from '../lib/release-assets.mjs';
+// Read the shipped version straight from the desktop package at build time so the
+// version pill never drifts behind a release. Mirrors index.astro's extPkg pattern.
+import desktopPkg from '../../../desktop/package.json';
+
+const version = desktopPkg.version;
+const extDeepLink = 'vscode:extension/patchwire.patchwire-vscode';
+const shasumsUrl = `https://github.com/${repo}/releases/download/desktop-latest/${SHASUMS}`;
+const ogDesc = 'Download the Patchwire desktop app for macOS, Windows, and Linux.';
+
+const reqs: Record<string, string> = {
+  macos: 'macOS 11 Big Sur or later · Apple Silicon (M1+).',
+  windows: 'Windows 10/11 · 64-bit.',
+  linux: 'x86_64 · WebKit2GTK 4.1 (libwebkit2gtk-4.1).',
+};
+const installNotes: Record<string, string> = {
+  macos: 'Unsigned: right-click Patchwire.app → Open (once), or run `xattr -dr com.apple.quarantine /Applications/Patchwire.app`.',
+  windows: 'Unsigned: SmartScreen → “More info” → “Run anyway”.',
+  linux: 'Install with `sudo dpkg -i <file>.deb` or `sudo rpm -i <file>.rpm`.',
+};
+function btnLabel(stable: string) {
+  if (stable.endsWith('.dmg')) return 'Download .dmg';
+  if (stable.endsWith('.exe')) return 'Download .exe';
+  if (stable.endsWith('.deb')) return 'Download .deb';
+  if (stable.endsWith('.rpm')) return 'Download .rpm';
+  return 'Download';
+}
+---
+
+<!doctype html>
+<html lang="en" class="rc-brand rc-dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B0B0D" />
+    <title>Download Patchwire</title>
+    <meta name="description" content={ogDesc} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://patchwire.vercel.app/download/" />
+    <meta property="og:title" content="Download Patchwire" />
+    <meta property="og:description" content={ogDesc} />
+    <meta property="og:image" content="https://patchwire.vercel.app/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Download Patchwire" />
+    <meta name="twitter:description" content={ogDesc} />
+    <ClientRouter />
+  </head>
+  <body class="page">
+    <a href="#main" class="skip-link">Skip to content</a>
+    <main id="main" class="dl">
+      <header class="dl-head">
+        <a class="dl-back" href="/">← Patchwire</a>
+        <span class="dl-ver">desktop v{version} · unsigned</span>
+      </header>
+
+      <h1 class="dl-title">Download Patchwire</h1>
+      <p class="dl-sub">The desktop app — provision a machine you own, manage sync, and launch a Claude Code session in your terminal. Pick your platform:</p>
+
+      <div class="dl-grid" id="dl-grid">
+        {releaseAssets.map((a) => (
+          <article class={`dl-card dl-${a.os}`} data-os={a.os}>
+            <div class="dl-card-top"><span class="dl-os">{a.label}</span></div>
+            <a class="dl-btn" href={downloadUrl(a.stable)} download>{btnLabel(a.stable)}</a>
+            <p class="dl-req">{reqs[a.os]}</p>
+            <details class="dl-notes"><summary>Install notes</summary><p>{installNotes[a.os]}</p></details>
+          </article>
+        ))}
+      </div>
+
+      <section class="dl-verify">
+        <h2>Verify your download</h2>
+        <p>Checksums: <a href={shasumsUrl}>{SHASUMS}</a>. Then run:</p>
+        <pre><code>shasum -a 256 -c {SHASUMS}</code></pre>
+      </section>
+
+      <section class="dl-companion">
+        <h2>Prefer your editor?</h2>
+        <p>The <strong>VS Code companion</strong> runs the same engine inside your editor.
+          <a href={extDeepLink}>Install for VS Code</a> · <a href="/install-extension/">other ways ↗</a></p>
+      </section>
+    </main>
+
+    <script is:inline>
+      (function () {
+        var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent;
+        p = String(p).toLowerCase();
+        var os = p.indexOf('mac') > -1 ? 'macos' : p.indexOf('win') > -1 ? 'windows' : p.indexOf('linux') > -1 ? 'linux' : '';
+        if (!os) return;
+        document.querySelectorAll('.dl-card[data-os="' + os + '"]').forEach(function (el) { el.classList.add('is-detected'); });
+      })();
+    </script>
+
+    <style>
+      .dl { max-width: 880px; margin: 0 auto; padding: 48px 24px 80px; }
+      .dl-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted, #9a9aa2); }
+      .dl-back { color: inherit; text-decoration: none; }
+      .dl-ver { font-variant-numeric: tabular-nums; }
+      .dl-title { font-size: 32px; margin: 28px 0 8px; }
+      .dl-sub { color: var(--text-muted, #9a9aa2); max-width: 640px; line-height: 1.6; }
+      .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 32px 0; }
+      .dl-card { border: 1px solid #26262c; border-radius: 12px; padding: 16px; background: #131316; display: flex; flex-direction: column; gap: 10px; }
+      .dl-card.is-detected { border-color: #C9F564; box-shadow: 0 0 0 1px #C9F56455; }
+      .dl-os { font-weight: 600; font-size: 14px; }
+      .dl-btn { display: inline-block; text-align: center; background: #6c5cff; color: #fff; padding: 9px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+      .dl-req { font-size: 11px; color: var(--text-muted, #9a9aa2); margin: 0; }
+      .dl-notes { font-size: 11px; color: var(--text-muted, #9a9aa2); }
+      .dl-notes summary { cursor: pointer; }
+      .dl-verify, .dl-companion { border-top: 1px solid #26262c; padding-top: 24px; margin-top: 24px; }
+      .dl-verify pre { background: #0c0c0e; border: 1px solid #26262c; border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-size: 12px; }
+      .dl-companion a { color: #C9F564; }
+    </style>
+  </body>
+</html>
