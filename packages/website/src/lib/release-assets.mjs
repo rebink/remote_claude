@@ -19,16 +19,15 @@ export const releaseAssets = [
 ];
 
 /**
- * Download URL for a stable asset under the versioned release `desktop-v<version>`.
+ * Download URL for a stable asset under the unified versioned release `v<version>`.
  * `version` is the desktop package version (read at build time on the website), which
- * MUST match the pushed release tag (`desktop-v<version>`). We use the versioned tag —
- * not a moving alias — because the release CI's token can attach a release to the
- * already-pushed tag but cannot create a brand-new `desktop-latest` tag (repo tag
- * ruleset → 403). The site rebuilds on each version bump, so the URLs stay current.
+ * MUST match the pushed release tag (`v<version>`) — every package shares one version,
+ * enforced by `scripts/release.mjs --check` in CI. The site rebuilds on each bump, so
+ * the URLs stay current.
  */
 export const downloadUrl = (stable, version) =>
-  `https://github.com/${repo}/releases/download/desktop-v${version}/${stable}`;
+  `https://github.com/${repo}/releases/download/v${version}/${stable}`;
 
 /** Versioned release URL for an arbitrary asset (e.g. SHASUMS256.txt). */
 export const releaseAssetUrl = (name, version) =>
-  `https://github.com/${repo}/releases/download/desktop-v${version}/${name}`;
+  `https://github.com/${repo}/releases/download/v${version}/${name}`;

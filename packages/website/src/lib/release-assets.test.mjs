@@ -21,10 +21,10 @@ test("every asset has a unique, non-empty stable name and known os/kind", () => 
   assert.equal(releaseAssets.length, 4);
 });
 
-test("downloadUrl points at the versioned release tag", () => {
+test("downloadUrl points at the versioned v* release tag", () => {
   assert.equal(
     downloadUrl("Patchwire-macos-arm64.dmg", "0.4.0"),
-    "https://github.com/rebink/remote_claude/releases/download/desktop-v0.4.0/Patchwire-macos-arm64.dmg",
+    "https://github.com/rebink/remote_claude/releases/download/v0.4.0/Patchwire-macos-arm64.dmg",
   );
 });
 
