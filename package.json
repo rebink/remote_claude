@@ -10,7 +10,7 @@
     "cli": "pnpm --filter @rebink/patchwire",
     "extension": "pnpm --filter patchwire-vscode",
     "website": "pnpm --filter patchwire-docs",
-    "release:desktop": "node scripts/release-desktop.mjs"
+    "release": "node scripts/release.mjs"
   },
   "packageManager": "pnpm@10.26.1"
 }
