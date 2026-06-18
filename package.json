@@ -1,6 +1,6 @@
 {
   "name": "patchwire-monorepo",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Workspace root for the Patchwire CLI, VS Code extension, and website.",
   "scripts": {
