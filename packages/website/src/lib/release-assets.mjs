@@ -1,6 +1,6 @@
 // packages/website/src/lib/release-assets.mjs
 // SINGLE SOURCE OF TRUTH for desktop installer asset names. Imported by BOTH the
-// release CI (.github/workflows/desktop-release.yml, rename + upload step) and the
+// release CI (.github/workflows/release.yml, desktop rename + upload step) and the
 // website (/download/ cards + URLs) so the filenames can never drift.
 
 export const repo = "rebink/remote_claude";
