@@ -1,9 +1,15 @@
-name: Desktop Release (unsigned)
+name: Desktop Release
 
-# Manual only — builds unsigned installers as artifacts. Does NOT publish to npm/marketplace
-# (that is release.yml, on tag). Safe to run repeatedly.
+# Tag-triggered real release (desktop-v*) → versioned release + moving desktop-latest
+# alias. workflow_dispatch stays a dry run (artifacts only, no publish).
 on:
+  push:
+    tags:
+      - "desktop-v*"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,15 +20,24 @@ jobs:
           - os: macos-latest
             triple: aarch64-apple-darwin
             bunTarget: bun-darwin-arm64
+            assetOs: macos
           - os: ubuntu-22.04
             triple: x86_64-unknown-linux-gnu
             bunTarget: bun-linux-x64
+            assetOs: linux
           - os: windows-latest
             triple: x86_64-pc-windows-msvc
             bunTarget: bun-windows-x64
+            assetOs: windows
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify tag matches desktop version
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: node scripts/release-desktop.mjs --check "$REF_NAME"
 
       - name: Install Linux WebKitGTK deps
         if: matrix.os == 'ubuntu-22.04'
@@ -41,7 +56,7 @@ jobs:
       - name: Install workspace deps
         run: pnpm install --frozen-lockfile
 
-      - name: Build the CLI sidecar binary for this runner (bun --compile, native target only)
+      - name: Build the CLI sidecar binary for this runner
         run: node scripts/build-cli-binaries.mjs --only ${{ matrix.bunTarget }}
 
       - name: Stage the sidecar for this platform
@@ -50,14 +65,62 @@ jobs:
       - name: Build the desktop app (unsigned)
         run: pnpm --filter patchwire-desktop tauri build
 
-      - name: Collect installers
+      - name: Rename bundles to stable asset names (shared constant)
         shell: bash
         run: |
           mkdir -p out
-          cp -r packages/desktop/src-tauri/target/release/bundle/* out/ 2>/dev/null || true
+          node -e '
+            (async () => {
+              const { releaseAssets } = await import("./packages/website/src/lib/release-assets.mjs");
+              const fs = require("fs");
+              const cp = require("child_process");
+              const bundleDir = "packages/desktop/src-tauri/target/release/bundle";
+              const findByExt = (ext) =>
+                cp.execSync(`find ${bundleDir} -type f -name "*.${ext}"`).toString().trim().split("\n").filter(Boolean);
+              const extFor = { dmg: "dmg", nsis: "exe", deb: "deb", rpm: "rpm" };
+              for (const a of releaseAssets.filter((a) => a.os === process.env.ASSET_OS)) {
+                const matches = findByExt(extFor[a.kind]);
+                if (!matches.length) { console.log(`no ${a.kind} bundle found, skipping ${a.stable}`); continue; }
+                fs.copyFileSync(matches[0], `out/${a.stable}`);
+                console.log(`out/${a.stable} <- ${matches[0]}`);
+              }
+            })().catch((e) => { console.error(e); process.exit(1); });
+          '
+        env:
+          ASSET_OS: ${{ matrix.assetOs }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: patchwire-desktop-${{ matrix.triple }}
+          name: patchwire-desktop-${{ matrix.assetOs }}
           path: out/**
           if-no-files-found: warn
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Flatten + checksum
+        shell: bash
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          cd release && sha256sum * > SHASUMS256.txt && cat SHASUMS256.txt
+
+      # Attach the stable-named installers + SHASUMS256.txt to the versioned release
+      # `desktop-v<x.y.z>` (the tag was pushed by the developer, so the token only
+      # attaches a release — it does not create a tag). The website links to this
+      # versioned tag (downloadUrl reads the desktop package version at build time).
+      # No moving `desktop-latest` alias: the token can't create that new tag (repo
+      # tag ruleset → 403), and the versioned scheme is simpler + race-free.
+      - name: Publish versioned release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          prerelease: true
+          files: release/*

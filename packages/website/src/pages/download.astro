@@ -1,0 +1,224 @@
+---
+import '../styles/custom.css';
+import { ClientRouter } from 'astro:transitions';
+import { releaseAssets, downloadUrl, releaseAssetUrl, repo, SHASUMS } from '../lib/release-assets.mjs';
+// Read the shipped version straight from the desktop package at build time so the
+// version pill never drifts behind a release. Mirrors index.astro's extPkg pattern.
+import desktopPkg from '../../../desktop/package.json';
+
+const version = desktopPkg.version;
+const extDeepLink = 'vscode:extension/patchwire.patchwire-vscode';
+const repoUrl = `https://github.com/${repo}`;
+const shasumsUrl = releaseAssetUrl(SHASUMS, version);
+const ogDesc = 'Download the Patchwire desktop app for macOS, Windows, and Linux.';
+
+const reqs: Record<string, string> = {
+  macos: 'macOS 11 Big Sur or later · Apple Silicon (M1+).',
+  windows: 'Windows 10 / 11 · 64-bit.',
+  linux: 'x86_64 · WebKit2GTK 4.1 (libwebkit2gtk-4.1).',
+};
+const installNotes: Record<string, string> = {
+  macos: 'Unsigned: right-click Patchwire.app → Open (once), or run `xattr -dr com.apple.quarantine /Applications/Patchwire.app`.',
+  windows: 'Unsigned: SmartScreen → “More info” → “Run anyway”.',
+  linux: 'Install with `sudo dpkg -i <file>.deb` (Debian/Ubuntu) or `sudo rpm -i <file>.rpm` (Fedora/RHEL).',
+};
+function kindLabel(stable: string) {
+  if (stable.endsWith('.dmg')) return '.dmg';
+  if (stable.endsWith('.exe')) return '.exe';
+  if (stable.endsWith('.deb')) return '.deb';
+  if (stable.endsWith('.rpm')) return '.rpm';
+  return 'download';
+}
+---
+
+<!doctype html>
+<html lang="en" class="rc-brand rc-dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B0B0D" />
+    <title>Download Patchwire</title>
+    <meta name="description" content={ogDesc} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://patchwire.vercel.app/download/" />
+    <meta property="og:title" content="Download Patchwire" />
+    <meta property="og:description" content={ogDesc} />
+    <meta property="og:image" content="https://patchwire.vercel.app/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Download Patchwire" />
+    <meta name="twitter:description" content={ogDesc} />
+    <ClientRouter />
+  </head>
+  <body class="page">
+    <a href="#main" class="skip-link">Skip to content</a>
+
+    <div class="dl-glow" aria-hidden="true"></div>
+
+    <header class="dl-top wrap">
+      <a class="dl-home" href="/">
+        <svg class="dl-mark" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 9.5 L12 5.5 Q12 3 9.5 3 L5.5 3 Q3 3 3 5.5 L3 9.5 Q3 12 5.5 12 L10 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 13 L18.5 13 Q21 13 21 15.5 L21 18.5 Q21 21 18.5 21 L15.5 21 Q13 21 13 18.5 L13 16 A3 3 0 0 0 16 13 Z" fill="currentColor"/>
+          <circle cx="12.5" cy="12.5" r="2.4" fill="#C9F564"/>
+        </svg>
+        Patchwire
+      </a>
+      <span class="dl-pill"><span class="dl-dot"></span>desktop v{version}</span>
+    </header>
+
+    <main id="main" class="wrap dl">
+      <span class="eyebrow reveal" style="--d:0ms">Install · Desktop app</span>
+      <h1 class="dl-h reveal" style="--d:60ms">Get the desktop <em>app.</em></h1>
+      <p class="dl-lead reveal" style="--d:120ms">
+        Provision a machine you own, manage two-way sync, and launch a Claude Code
+        session in your own terminal. Pick your platform — installers are unsigned;
+        verify the checksum below.
+      </p>
+
+      <div class="dl-grid">
+        {releaseAssets.map((a, i) => (
+          <article class={`dl-card reveal dl-${a.os}`} data-os={a.os} style={`--d:${180 + i * 70}ms`}>
+            <span class="dl-rec" data-os={a.os}>Recommended for you</span>
+            <div class="dl-card-h">
+              <span class="dl-os">{a.label}</span>
+              <span class="dl-arch">{a.arch}</span>
+            </div>
+            <code class="dl-file">{a.stable}</code>
+            <p class="dl-req">{reqs[a.os]}</p>
+            <a class="cta cta-primary dl-btn" href={downloadUrl(a.stable, version)} download>
+              <span>Download {kindLabel(a.stable)}</span><span class="cta-arrow">↓</span>
+            </a>
+            <details class="dl-notes"><summary>Install notes</summary><p>{installNotes[a.os]}</p></details>
+          </article>
+        ))}
+      </div>
+
+      <div class="dl-panels">
+        <section class="dl-block">
+          <span class="eyebrow">Integrity</span>
+          <h2 class="dl-bh">Verify your download</h2>
+          <p class="dl-bp">Grab <a href={shasumsUrl}>{SHASUMS}</a> from the release, then run:</p>
+          <pre class="dl-code"><code>shasum -a 256 -c {SHASUMS}</code></pre>
+        </section>
+
+        <section class="dl-block">
+          <span class="eyebrow">Companion</span>
+          <h2 class="dl-bh">Prefer your editor?</h2>
+          <p class="dl-bp">The VS&nbsp;Code companion runs the same engine inside your editor.</p>
+          <div class="dl-comp-links">
+            <a class="cta cta-ghost" href={extDeepLink}><span>Install for VS Code</span><span class="cta-arrow">→</span></a>
+            <a class="dl-alt" href="/install-extension/">other ways ↗</a>
+          </div>
+        </section>
+      </div>
+
+      <footer class="dl-foot">
+        <span>Unsigned builds · macOS · Windows · Linux</span>
+        <a href={repoUrl}>Source on GitHub ↗</a>
+      </footer>
+    </main>
+
+    <script is:inline>
+      (function () {
+        var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent;
+        p = String(p).toLowerCase();
+        var os = p.indexOf('mac') > -1 ? 'macos' : p.indexOf('win') > -1 ? 'windows' : p.indexOf('linux') > -1 ? 'linux' : '';
+        if (!os) return;
+        document.querySelectorAll('.dl-card[data-os="' + os + '"]').forEach(function (el) { el.classList.add('is-detected'); });
+        var first = document.querySelector('.dl-card.is-detected');
+        if (first) first.parentNode.insertBefore(first, first.parentNode.firstChild);
+      })();
+    </script>
+
+    <style>
+      html.rc-brand.rc-dark body.page { background: #0B0B0D; color: var(--rc-bone); font-family: var(--rc-font-body); }
+      .page {
+        --bg: #0B0B0D; --panel: #131317; --panel-2: #17171C;
+        --line: rgba(232, 226, 208, 0.10); --line-2: rgba(232, 226, 208, 0.18);
+        --text: var(--rc-bone); --dim: var(--rc-bone-dim); --soft: var(--rc-bone-soft);
+        --signal: var(--rc-phosphor); --signal-dim: var(--rc-phosphor-dim);
+        --mono: var(--rc-font-mono); --disp: var(--rc-font-display); --r: 8px;
+        margin: 0; overflow-x: hidden; position: relative; min-height: 100vh;
+      }
+      .wrap { max-width: 1080px; margin-inline: auto; padding-inline: clamp(20px, 4.5vw, 64px); }
+
+      .skip-link { position: absolute; left: 8px; top: -48px; z-index: 300; padding: 9px 16px; border-radius: var(--r); background: var(--signal); color: #0B0B0D; font-family: var(--mono); font-size: 13px; transition: top .18s ease; }
+      .skip-link:focus { top: 8px; }
+
+      /* atmosphere: a single restrained phosphor glow up top */
+      .dl-glow { position: absolute; inset: -20% 0 auto 0; height: 520px; pointer-events: none; z-index: 0;
+        background: radial-gradient(60% 70% at 50% 0%, rgba(201,245,100,0.10), transparent 70%); }
+
+      .dl-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding-top: 22px; }
+      .dl-home { font-family: var(--disp); font-weight: 600; font-size: 16px; color: var(--text); letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 9px; }
+      .dl-home:hover { color: var(--signal); }
+      .dl-mark { color: var(--text); flex: 0 0 auto; transition: transform .4s cubic-bezier(.32,.72,0,1); }
+      .dl-home:hover .dl-mark { transform: translateY(-0.5px) scale(1.04); }
+      .dl-pill { font-family: var(--mono); font-size: 12px; color: var(--dim); display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 100px; }
+      .dl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 8px var(--signal); }
+
+      .dl { position: relative; z-index: 1; padding-top: clamp(48px, 8vw, 96px); padding-bottom: 96px; }
+      .eyebrow { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--signal-dim); margin: 0 0 16px; }
+      .dl-h { font-family: var(--disp); font-weight: 600; font-size: clamp(38px, 6vw, 68px); line-height: 1.0; letter-spacing: -0.03em; margin: 0; color: var(--text); }
+      .dl-h em { font-style: italic; color: var(--signal); }
+      .dl-lead { font-size: 17px; line-height: 1.62; color: var(--dim); max-width: 58ch; margin: 20px 0 0; }
+
+      .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(236px, 1fr)); gap: 16px; margin: 48px 0 0; }
+      .dl-card { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; transition: transform .2s cubic-bezier(.32,.72,0,1), border-color .2s, background .2s; }
+      .dl-card:hover { transform: translateY(-3px); border-color: var(--line-2); background: var(--panel-2); }
+      .dl-card.is-detected { border-color: var(--signal); box-shadow: 0 0 0 1px rgba(201,245,100,0.35), 0 18px 50px -28px rgba(201,245,100,0.45); }
+      .dl-rec { display: none; }
+      .dl-card.is-detected .dl-rec { display: inline-block; position: absolute; top: -9px; left: 18px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #0B0B0D; background: var(--signal); padding: 3px 8px; border-radius: 100px; }
+
+      .dl-card-h { display: flex; align-items: center; gap: 10px; }
+      .dl-os { font-weight: 600; font-size: 14.5px; color: var(--text); line-height: 1.25; }
+      .dl-arch { margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--dim); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+      .dl-file { font-family: var(--mono); font-size: 11px; color: var(--soft); word-break: break-all; }
+      .dl-req { font-size: 12px; color: var(--dim); margin: 0; line-height: 1.5; }
+
+      .dl-btn { margin-top: auto; justify-content: center; }
+      .dl-notes { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+      .dl-notes summary { cursor: pointer; color: var(--soft); }
+      .dl-notes summary:hover { color: var(--signal); }
+      .dl-notes p { margin: 8px 0 0; line-height: 1.55; color: var(--dim); }
+
+      .dl-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 48px; }
+      .dl-block { border: 1px solid var(--line); border-radius: 14px; padding: 22px; background: var(--panel); }
+      .dl-block .eyebrow { margin-bottom: 12px; }
+      .dl-bh { font-family: var(--disp); font-weight: 600; font-size: 19px; letter-spacing: -0.01em; margin: 0 0 8px; color: var(--text); }
+      .dl-bp { font-size: 13.5px; line-height: 1.6; color: var(--dim); margin: 0; }
+      .dl-bp a, .dl-alt { color: var(--signal); border-bottom: 1px solid var(--line-2); }
+      .dl-bp a:hover, .dl-alt:hover { border-color: var(--signal); }
+      .dl-code { margin: 14px 0 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r); padding: 11px 13px; overflow-x: auto; }
+      .dl-code code { font-family: var(--mono); font-size: 12px; color: var(--text); }
+      .dl-comp-links { display: flex; align-items: center; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+      .dl-alt { font-family: var(--mono); font-size: 12px; }
+
+      /* CTA (mirrors index.astro) */
+      .cta { display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px; border-radius: var(--r); font-size: 13.5px; font-weight: 500; font-family: var(--disp); white-space: nowrap; transition: transform .18s cubic-bezier(.32,.72,0,1), background .2s, border-color .2s, color .2s; }
+      .cta-arrow { transition: transform .2s cubic-bezier(.32,.72,0,1); }
+      .cta:hover .cta-arrow { transform: translateY(2px); }
+      .cta-ghost:hover .cta-arrow { transform: translateX(3px); }
+      .cta:active { transform: translateY(1px) scale(.99); }
+      .cta-primary { background: var(--signal); }
+      .cta-primary:hover { background: #d6ff77; }
+      .page a.cta-primary { color: #0B0B0D; }
+      .cta-ghost { color: var(--text); border: 1px solid var(--line-2); }
+      .cta-ghost:hover { border-color: var(--signal); color: var(--signal); }
+
+      .dl-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--soft); flex-wrap: wrap; }
+      .dl-foot a { color: var(--dim); border-bottom: 1px solid var(--line-2); }
+      .dl-foot a:hover { color: var(--signal); border-color: var(--signal); }
+
+      /* staggered load reveal */
+      .reveal { opacity: 0; transform: translateY(12px); animation: dl-in .6s cubic-bezier(.22,.61,.36,1) forwards; animation-delay: var(--d, 0ms); }
+      @keyframes dl-in { to { opacity: 1; transform: none; } }
+      @media (prefers-reduced-motion: reduce) { .reveal { animation: none; opacity: 1; transform: none; } }
+
+      @media (max-width: 720px) {
+        .dl-panels { grid-template-columns: 1fr; }
+      }
+    </style>
+  </body>
+</html>

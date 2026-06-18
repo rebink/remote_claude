@@ -13,12 +13,6 @@ struct ProvisionState {
 }
 
 #[derive(Default)]
-struct ChatState {
-    busy: std::sync::atomic::AtomicBool,
-    child: std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
-}
-
-#[derive(Default)]
 struct SyncWatchState {
     busy: std::sync::atomic::AtomicBool,
     child: std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
@@ -359,106 +353,47 @@ async fn read_project_config(app: tauri::AppHandle, project_dir: String) -> Resu
 }
 
 #[tauri::command]
-async fn start_chat(
-    app: tauri::AppHandle,
-    state: tauri::State<'_, ChatState>,
-    project_dir: String,
-    session_uuid: String,
-    prompt: String,
-) -> Result<(), String> {
-    use std::sync::atomic::Ordering;
-    use tauri_plugin_shell::ShellExt;
-    use tauri_plugin_shell::process::CommandEvent;
-    use tauri::Emitter;
-
-    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
-    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
-    if session_uuid.trim().is_empty() { return Err("session_uuid is required".into()); }
-    if prompt.trim().is_empty() { return Err("prompt is required".into()); }
-
-    // Get sidecar handle BEFORE claiming busy — so only .spawn() is inside the claimed region.
-    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
-
-    // Atomic in-progress claim: compare_exchange false→true; fail if already true.
-    if state.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
-        return Err("a chat turn is already in progress".into());
-    }
-
-    let (mut rx, child) = match sidecar
-        .current_dir(std::path::PathBuf::from(&project_dir))
-        .args(["chat", "--session", &session_uuid, "--json", &prompt])
-        .spawn()
-    {
-        Ok(v) => v,
-        Err(e) => { state.busy.store(false, Ordering::SeqCst); return Err(e.to_string()); }
-    };
-
-    *state.child.lock().unwrap() = Some(child);
-
-    tauri::async_runtime::spawn(async move {
-        while let Some(event) = rx.recv().await {
-            match event {
-                CommandEvent::Stdout(bytes) => {
-                    let line = String::from_utf8_lossy(&bytes).trim_end().to_string();
-                    if !line.is_empty() {
-                        let _ = app.emit("pw://chat", line);
-                    }
-                }
-                CommandEvent::Terminated(p) => {
-                    if let Some(st) = app.try_state::<ChatState>() {
-                        *st.child.lock().unwrap() = None;
-                        st.busy.store(false, Ordering::SeqCst);
-                    }
-                    let _ = app.emit("pw://chat-end", p.code);
-                }
-                _ => {}
-            }
-        }
-    });
-    Ok(())
-}
-
-#[tauri::command]
-fn cancel_chat(state: tauri::State<'_, ChatState>) -> Result<(), String> {
-    use std::sync::atomic::Ordering;
-    if let Some(child) = state.child.lock().unwrap().take() {
-        let _ = child.kill();
-    }
-    state.busy.store(false, Ordering::SeqCst);
-    Ok(())
-}
-
-#[tauri::command]
-async fn apply_patch(
+async fn push_attachment(
     app: tauri::AppHandle,
     project_dir: String,
-    patch: String,
+    file_path: Option<String>,
+    use_clipboard: bool,
 ) -> Result<String, String> {
     use tauri_plugin_shell::ShellExt;
-    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
     if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
-
-    let pw_dir = std::path::Path::new(&project_dir).join(".patchwire");
-    std::fs::create_dir_all(&pw_dir).map_err(|e| e.to_string())?;
-    let patch_path = pw_dir.join("desktop.patch");
-    std::fs::write(&patch_path, &patch).map_err(|e| e.to_string())?;
-
+    if use_clipboard == file_path.is_some() {
+        return Err("provide exactly one of file_path or use_clipboard".into());
+    }
     let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    let mut argv: Vec<String> = vec!["push".into()];
+    if use_clipboard {
+        argv.push("--clip".into());
+        argv.push("--stage-only".into());
+        argv.push("--json".into());
+    } else if let Some(f) = file_path.as_ref() {
+        if f.starts_with('-') {
+            return Err("file_path must not start with '-'".into());
+        }
+        argv.push("--stage-only".into());
+        argv.push("--json".into());
+        argv.push("--".into());
+        argv.push(f.clone());
+    }
     let output = sidecar
         .current_dir(std::path::PathBuf::from(&project_dir))
-        .args(["apply", "--yes", "--json", &patch_path.to_string_lossy()])
+        .args(argv)
         .output()
         .await
         .map_err(|e| e.to_string())?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    // Return the last non-empty line (the JSON result line).
-    let line = stdout.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
-    if line.is_empty() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("apply produced no result: {stderr}"));
+    if !output.status.success() {
+        return Err(format!("push failed: {}", String::from_utf8_lossy(&output.stderr)));
     }
-    Ok(line)
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").to_string();
+    match serde_json::from_str::<serde_json::Value>(&line) {
+        Ok(v) => Ok(v.get("remotePath").and_then(|p| p.as_str()).unwrap_or("").to_string()),
+        Err(_) => Err(format!("push: unparseable output: {line}")),
+    }
 }
 
 #[tauri::command]
@@ -601,6 +536,44 @@ struct ProjectYmlArgs {
     agent_port: u16,
     remote_path: String,
     token: String,
+    exclude: Vec<String>,
+}
+
+// Best-effort project-type detection from a directory's root files. Mirrors the
+// extension's detectProjectType.ts. Never errors on a readable dir → "common".
+#[tauri::command]
+fn detect_project_type(project_dir: String) -> Result<String, String> {
+    use std::path::Path;
+    let dir = Path::new(&project_dir);
+    if dir.join("pubspec.yaml").exists() {
+        return Ok("flutter".into());
+    }
+    let pkg = dir.join("package.json");
+    if pkg.exists() {
+        const FRONTEND_DEPS: [&str; 9] = [
+            "next", "nuxt", "react", "react-dom", "vue", "@angular/core", "svelte", "vite", "astro",
+        ];
+        if let Ok(text) = std::fs::read_to_string(&pkg) {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                let has_frontend = ["dependencies", "devDependencies"].iter().any(|k| {
+                    json.get(k)
+                        .and_then(|d| d.as_object())
+                        .map(|o| FRONTEND_DEPS.iter().any(|d| o.contains_key(*d)))
+                        .unwrap_or(false)
+                });
+                if has_frontend {
+                    return Ok("node-frontend".into());
+                }
+            }
+        }
+        return Ok("node-backend".into());
+    }
+    for f in ["requirements.txt", "pyproject.toml", "setup.py", "Pipfile"] {
+        if dir.join(f).exists() {
+            return Ok("python".into());
+        }
+    }
+    Ok("common".into())
 }
 
 // Write <project_dir>/patchwire.yml with a literal token (mirrors writeYaml in the CLI but
@@ -622,8 +595,28 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
             return Err(format!("invalid {label}: contains a newline"));
         }
     }
+    for e in &args.exclude {
+        if e.contains('\n') || e.contains('\r') {
+            return Err("invalid exclude entry: contains a newline".into());
+        }
+    }
+    let exclude_block = if args.exclude.is_empty() {
+        "  exclude: []\n".to_string()
+    } else {
+        let mut b = String::from("  exclude:\n");
+        for e in &args.exclude {
+            // Double-quote every entry: glob patterns like `*.swp` / `**/Pods/`
+            // start with `*`, which YAML reads as an alias and rejects. Quoting
+            // (escaping `\` and `"`) makes any single-line value a valid scalar.
+            let escaped = e.replace('\\', "\\\\").replace('"', "\\\"");
+            b.push_str("    - \"");
+            b.push_str(&escaped);
+            b.push_str("\"\n");
+        }
+        b
+    };
     let yml = format!(
-        "project: {project}\nremote:\n  host: {host}\n  user: {user}\n  path: {path}\n  sshPort: {ssh}\n  agentUrl: http://{host}:{ap}\n  token: {token}\nsync:\n  exclude:\n    - build/\n    - .dart_tool/\n    - ios/Pods/\n    - node_modules/\n    - .git/\nai:\n  command: claude\n  args:\n    - --print\n  timeoutSec: 600\n",
+        "project: {project}\nremote:\n  host: {host}\n  user: {user}\n  path: {path}\n  sshPort: {ssh}\n  agentUrl: http://{host}:{ap}\n  token: {token}\nsync:\n{exclude_block}ai:\n  command: claude\n  args:\n    - --print\n  timeoutSec: 600\n",
         project = args.project,
         host = args.host,
         user = args.user,
@@ -631,6 +624,7 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
         ssh = args.ssh_port,
         ap = args.agent_port,
         token = args.token,
+        exclude_block = exclude_block,
     );
     // Fix 2 (MEDIUM): Write the yml file owner-only (0o600) because it contains a literal token.
     let path = std::path::Path::new(&args.project_dir).join("patchwire.yml");
@@ -654,54 +648,167 @@ fn write_project_yml(args: ProjectYmlArgs) -> Result<(), String> {
     Ok(())
 }
 
-// Run `patchwire init-remote --from-local --project <name> --remote-path <path>` in the project dir.
-// Passing --remote-path explicitly overrides the CLI default (~/workspace/<project>) so the
-// initial rsync lands in the same path that write_project_yml wrote into patchwire.yml and that
-// mutagen will use for all subsequent syncs.  Without this flag the destinations diverge.
+// Best-effort local machine name for namespacing remote paths. macOS uses the
+// friendly ComputerName; other platforms fall back to the hostname. The caller
+// slugifies the result and falls back to the SSH user if this errors.
 #[tauri::command]
-async fn init_remote_copy(app: tauri::AppHandle, project_dir: String, remote_path: String) -> Result<String, String> {
+fn computer_name() -> Result<String, String> {
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(out) = std::process::Command::new("scutil")
+            .args(["--get", "ComputerName"])
+            .output()
+        {
+            if out.status.success() {
+                let name = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if !name.is_empty() {
+                    return Ok(name);
+                }
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(name) = std::env::var("COMPUTERNAME") {
+            let n = name.trim().to_string();
+            if !n.is_empty() {
+                return Ok(n);
+            }
+        }
+    }
+    // Unix / ultimate fallback: the `hostname` command.
+    if let Ok(out) = std::process::Command::new("hostname").output() {
+        if out.status.success() {
+            let name = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !name.is_empty() {
+                return Ok(name);
+            }
+        }
+    }
+    Err("could not determine computer name".into())
+}
+
+// Run `patchwire init-remote --from-local --json` in the project dir. `mode`
+// selects how an existing remote path is handled: "create" (no flag),
+// "overwrite" (--overwrite, rm -rf + re-push) or "use_existing" (--use-existing,
+// config-only). The full NDJSON stdout is returned to the caller, which parses it
+// (parseInitRemoteResult) — including the `target_exists` signal that exits
+// non-zero but is reported on stdout.
+#[tauri::command]
+async fn init_remote_copy(
+    app: tauri::AppHandle,
+    project_dir: String,
+    remote_path: String,
+    mode: String,
+) -> Result<String, String> {
     use tauri_plugin_shell::ShellExt;
     if !std::path::Path::new(&project_dir).is_dir() {
         return Err("project_dir does not exist".into());
     }
-    // Derive the project name from the last path component (matches the yml `project` field).
     let project_name = std::path::Path::new(&project_dir)
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or_else(|| "cannot derive project name from project_dir".to_string())?
         .to_string();
+
+    let mut args: Vec<String> = vec![
+        "init-remote".into(),
+        "--from-local".into(),
+        "--project".into(),
+        project_name,
+        "--remote-path".into(),
+        remote_path,
+        "--json".into(),
+    ];
+    match mode.as_str() {
+        "overwrite" => args.push("--overwrite".into()),
+        "use_existing" => args.push("--use-existing".into()),
+        _ => {} // "create" — no flag
+    }
+
     let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
     let output = sidecar
         .current_dir(std::path::PathBuf::from(&project_dir))
-        .args(["init-remote", "--from-local", "--project", &project_name, "--remote-path", &remote_path])
+        .args(args)
         .output()
         .await
         .map_err(|e| e.to_string())?;
-    if !output.status.success() {
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    // Hard failure with no NDJSON to parse → surface stderr as an error.
+    if stdout.trim().is_empty() && !output.status.success() {
         return Err(format!(
             "init-remote failed: {}",
             String::from_utf8_lossy(&output.stderr)
         ));
     }
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .rev()
-        .find(|l| !l.trim().is_empty())
-        .unwrap_or("ok")
-        .to_string())
+    Ok(stdout)
 }
 
-// Open Terminal.app and run a command (macOS). The command is built by the caller from validated host/user.
+// Launch the user's native terminal running `command`. Cross-OS. The command is
+// built by us (buildSessionShellCommand) and contains no double quotes/newlines.
 #[tauri::command]
 fn open_terminal(command: String) -> Result<(), String> {
-    // Reject control chars / quotes that could break out of the AppleScript string.
     if command.contains('"') || command.contains('\n') || command.contains('\r') {
         return Err("invalid command".into());
     }
-    let script = format!("tell application \"Terminal\" to do script \"{command}\"");
-    let out = std::process::Command::new("osascript").args(["-e", &script]).output().map_err(|e| e.to_string())?;
-    if !out.status.success() { return Err(String::from_utf8_lossy(&out.stderr).to_string()); }
-    Ok(())
+    #[cfg(target_os = "macos")]
+    {
+        // The command legitimately contains backslashes (POSIX `'\''` escaping).
+        // `\` is an escape char inside an AppleScript "..." string, so escape it
+        // (and `\` only — the guard already rejected `"`/newlines) before embedding.
+        let escaped = command.replace('\\', "\\\\");
+        // `activate` brings Terminal.app to the front — otherwise the new window
+        // opens BEHIND the desktop app and the user thinks nothing happened.
+        let script = format!(
+            "tell application \"Terminal\"\ndo script \"{escaped}\"\nactivate\nend tell"
+        );
+        let out = std::process::Command::new("osascript").args(["-e", &script]).output().map_err(|e| e.to_string())?;
+        if !out.status.success() { return Err(String::from_utf8_lossy(&out.stderr).to_string()); }
+        return Ok(());
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let inner = format!("{command}; exec bash");
+        let candidates: [(&str, Vec<String>); 4] = [
+            ("x-terminal-emulator", vec!["-e".into(), "bash".into(), "-lc".into(), inner.clone()]),
+            ("gnome-terminal", vec!["--".into(), "bash".into(), "-lc".into(), inner.clone()]),
+            ("konsole", vec!["-e".into(), "bash".into(), "-lc".into(), inner.clone()]),
+            ("xterm", vec!["-e".into(), "bash".into(), "-lc".into(), inner.clone()]),
+        ];
+        for (prog, args) in candidates.iter() {
+            if std::process::Command::new(prog).args(args).spawn().is_ok() {
+                return Ok(());
+            }
+        }
+        return Err("no supported terminal emulator found".into());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if std::process::Command::new("wt.exe").args(["cmd", "/k", &command]).spawn().is_ok() {
+            return Ok(());
+        }
+        std::process::Command::new("cmd").args(["/c", "start", "cmd", "/k", &command]).spawn().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    #[allow(unreachable_code)]
+    Err("unsupported platform".into())
+}
+
+// `git status --porcelain` for the project; parser lives on the TS side.
+#[tauri::command]
+fn git_status(project_dir: String) -> Result<String, String> {
+    if !std::path::Path::new(&project_dir).is_dir() {
+        return Err("project_dir does not exist".into());
+    }
+    let out = std::process::Command::new("git")
+        .args(["-C", &project_dir, "status", "--porcelain"])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Err(String::from_utf8_lossy(&out.stderr).to_string());
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -710,8 +817,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(ProvisionState::default())
-        .manage(ChatState::default())
         .manage(SyncWatchState::default())
         .invoke_handler(tauri::generate_handler![
             start_provision,
@@ -728,17 +835,18 @@ pub fn run() {
             save_connection,
             delete_connection,
             read_project_config,
-            start_chat,
-            cancel_chat,
-            apply_patch,
+            push_attachment,
             start_sync_watch,
             stop_sync_watch,
             sync_command,
             ensure_ssh_key,
             verify_key,
             open_terminal,
+            computer_name,
             write_project_yml,
-            init_remote_copy
+            detect_project_type,
+            init_remote_copy,
+            git_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -23,6 +23,7 @@
   let prov = $state<ProvisionUiState>(initialState());
   let unlistenProv: UnlistenFn | null = null;
   let saved = $state(false);
+  let started = $state(false);
 
   let keyPath = $derived(`~/.patchwire/keys/${host}-${user}`);
   let copyCmd = $derived(pubKeyPath ? sshCopyIdCommand(pubKeyPath, user, host, sshPort) : "");
@@ -55,6 +56,7 @@
   async function provision() {
     prov = initialState();
     saved = false;
+    started = true;
     token = genToken();
     await startProvision({ host, user, port: sshPort, keyPath, agentPort, token });
   }
@@ -97,6 +99,18 @@
     <button class="primary" data-testid="wiz-next" onclick={() => { step = 4; provision(); }}>Provision</button>
   {:else}
     <h3>4 · Provision</h3>
+    {#if started && prov.phase !== "done"}
+      <div class="prov-working" data-testid="prov-working">
+        <span class="spinner" aria-hidden="true"></span>
+        {#if prov.phase === "executing"}
+          Installing the agent on {host}… this can take 30–60s. Keep the window open.
+        {:else if prov.phase === "preview"}
+          Reviewing plan…
+        {:else}
+          Connecting to {host} and detecting the system…
+        {/if}
+      </div>
+    {/if}
     <ul class="steps" data-testid="prov-steps">
       {#each prov.steps as s (s.id)}
         {@const st = prov.stepStatus[s.id]}
@@ -141,4 +155,7 @@
   .review { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
   .steps { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-family: monospace; }
   .step-detail { display: block; padding-left: 1.2em; font-size: 11px; }
+  .prov-working { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); padding: 8px 10px; background: var(--surface-base); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border-strong); border-top-color: var(--accent-strong); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>

@@ -1,8 +1,11 @@
 <script lang="ts">
   import { connections } from "../lib/stores";
-  import { pickFolder, writeProjectYml, initRemoteCopy, syncCommand, saveProject } from "../lib/ipc";
+  import { pickFolder, writeProjectYml, initRemoteCopy, syncCommand, saveProject, computerName, detectProjectType, type InitRemoteMode } from "../lib/ipc";
+  import { EXCLUDE_TEMPLATES, PROJECT_TYPES, PROJECT_TYPE_LABELS, type ProjectType } from "@patchwire/core/sync-templates";
+  import { slugifySegment } from "../lib/slug";
   import { buildProject } from "../lib/model";
   import type { Connection } from "../lib/types";
+  import { onMount } from "svelte";
 
   let { connection, onfinish, onback }: { connection: Connection; onfinish?: () => void; onback?: () => void } = $props();
 
@@ -14,9 +17,14 @@
   let busy = $state(false);
   let phase = $state("");
   let error = $state("");
+  let computer = $state("");
+  let existsPrompt = $state(false);
+  let projectType = $state<ProjectType>("common");
 
   let chosen = $derived($connections.find((c) => c.id === connId) ?? connection);
   let canCreate = $derived(localPath.trim() !== "" && remotePath.trim() !== "");
+
+  onMount(() => { computerName().then((v) => (computer = v)); });
 
   function basename(p: string): string { return p.replace(/[/\\]+$/, "").split(/[/\\]/).pop() ?? ""; }
 
@@ -25,26 +33,45 @@
     if (!dir) return;
     localPath = dir;
     name = basename(dir);
-    remotePath = `~/patchwire/${name}`;
+    projectType = await detectProjectType(dir);
+    const seg = slugifySegment(computer) || chosen.user;
+    remotePath = `~/patchwire/${seg}/${name}`;
   }
 
-  async function create() {
-    error = ""; busy = true;
-    try {
-      phase = "Writing config…";
-      await writeProjectYml({ projectDir: localPath, project: name, host: chosen.host, user: chosen.user, sshPort: chosen.sshPort, agentPort: chosen.agentPort, remotePath, token: chosen.token });
-      phase = "Copying to remote…";
-      await initRemoteCopy(localPath, remotePath);
+  // Copy step, re-runnable with a different mode after a target_exists prompt.
+  async function runCopy(mode: InitRemoteMode) {
+    phase = "Copying to remote…";
+    const r = await initRemoteCopy(localPath, remotePath, mode);
+    if (r.ok) {
       phase = "Starting sync…";
       await syncCommand(localPath, "start");
       await saveProject(buildProject(localPath, remotePath, name, chosen.host, chosen.user, chosen.id));
       onfinish?.();
+      return;
+    }
+    if (r.code === "target_exists") { existsPrompt = true; busy = false; return; }
+    error = `Failed: ${r.stderr ?? r.code}`;
+    busy = false;
+  }
+
+  async function create() {
+    error = ""; existsPrompt = false; busy = true;
+    try {
+      phase = "Writing config…";
+      await writeProjectYml({ projectDir: localPath, project: name, host: chosen.host, user: chosen.user, sshPort: chosen.sshPort, agentPort: chosen.agentPort, remotePath, token: chosen.token, exclude: EXCLUDE_TEMPLATES[projectType] });
+      await runCopy("create");
     } catch (e) {
       error = `Failed: ${e}`;
-    } finally {
       busy = false;
     }
   }
+
+  async function chooseExisting(mode: InitRemoteMode) {
+    existsPrompt = false; error = ""; busy = true;
+    try { await runCopy(mode); } catch (e) { error = `Failed: ${e}`; busy = false; }
+  }
+
+  function cancelExists() { existsPrompt = false; busy = false; error = "Cancelled: target exists on remote."; }
 </script>
 
 <div class="add">
@@ -59,9 +86,29 @@
   <button class="ghost" data-testid="pick-folder" onclick={choose}>Choose folder…</button>
   <label>Local path<input aria-label="Local path" data-testid="local-path" bind:value={localPath} readonly /></label>
   <label>Remote path<input aria-label="Remote path" data-testid="remote-path" bind:value={remotePath} /></label>
+  <label>Project type
+    <select aria-label="Project type" data-testid="project-type" bind:value={projectType}>
+      {#each PROJECT_TYPES as t (t)}<option value={t}>{PROJECT_TYPE_LABELS[t]}</option>{/each}
+    </select>
+  </label>
+  <div class="exclude-preview" data-testid="exclude-preview">
+    <span class="ex-label">Excludes from sync:</span>
+    {#each EXCLUDE_TEMPLATES[projectType] as e (e)}<code>{e}</code>{/each}
+  </div>
 
   {#if phase}<div class="phase" data-testid="add-phase">{phase}</div>{/if}
   {#if error}<div class="error" role="alert" data-testid="add-error">{error}</div>{/if}
+
+  {#if existsPrompt}
+    <div class="exists-modal" data-testid="exists-modal" role="dialog" aria-label="Remote path exists">
+      <p>{remotePath} already exists on the remote.</p>
+      <div class="exists-actions">
+        <button class="primary" data-testid="exists-overwrite" onclick={() => chooseExisting("overwrite")}>Overwrite (rm -rf + re-push)</button>
+        <button data-testid="exists-use-existing" onclick={() => chooseExisting("use_existing")}>Use existing (skip copy)</button>
+        <button class="ghost" data-testid="exists-cancel" onclick={cancelExists}>Cancel</button>
+      </div>
+    </div>
+  {/if}
 
   <button class="primary" data-testid="create-project" disabled={!canCreate || busy} onclick={create}>
     {busy ? "Working…" : "Create"}
@@ -79,4 +126,10 @@
   .primary:disabled { opacity: .5; cursor: not-allowed; }
   .phase { color: var(--warn); font-size: 12px; }
   .error { color: var(--error); font-size: 12px; }
+  .exists-modal { border: 1px solid var(--border-strong); background: var(--surface-raised); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: var(--text); }
+  .exists-actions { display: flex; flex-direction: column; gap: 6px; }
+  .exists-actions button { padding: 8px 10px; }
+  .exclude-preview { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 11px; color: var(--text-muted); }
+  .exclude-preview .ex-label { width: 100%; }
+  .exclude-preview code { background: var(--surface-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 1px 5px; color: var(--text); }
 </style>

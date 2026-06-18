@@ -30,6 +30,12 @@ export function findAiBin(command: string): { found: boolean; path?: string } {
   return { found: false };
 }
 
+/** Append Claude MCP-config flags when a per-session config path is provided. */
+export function withMcpArgs(args: string[], mcpConfigPath?: string): string[] {
+  if (!mcpConfigPath) return args;
+  return [...args, '--mcp-config', mcpConfigPath, '--strict-mcp-config'];
+}
+
 export function runAi(opts: {
   command: string;
   args: string[];
@@ -38,6 +44,8 @@ export function runAi(opts: {
   timeoutMs: number;
   /** When set, run the AI under a default-deny egress sandbox (seatbelt profile). */
   egressProfilePath?: string;
+  /** When set, pass `--mcp-config <path> --strict-mcp-config` to the AI. */
+  mcpConfigPath?: string;
 }): Promise<AiResult> {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -52,9 +60,10 @@ export function runAi(opts: {
       reject(e);
     };
 
+    const effectiveArgs = withMcpArgs(opts.args, opts.mcpConfigPath);
     const run = opts.egressProfilePath
-      ? wrapWithEgress(opts.command, opts.args, opts.egressProfilePath)
-      : { command: opts.command, args: opts.args };
+      ? wrapWithEgress(opts.command, effectiveArgs, opts.egressProfilePath)
+      : { command: opts.command, args: effectiveArgs };
     const child = spawn(run.command, run.args, {
       cwd: opts.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],

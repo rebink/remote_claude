@@ -13,6 +13,7 @@ const project: Project = {
   remotePath: "/remote/api-server",
   lastStatus: "in-sync",
   syncPaused: false,
+  connectionId: "c1",
 };
 
 describe("ProjectRow", () => {

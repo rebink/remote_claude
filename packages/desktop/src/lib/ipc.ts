@@ -1,11 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { Project, ProjectConfig, Connection } from "./types";
+import type { ProjectType } from "@patchwire/core/sync-templates";
 import { parseProjects, parseConnections } from "./model";
-import { parseChatLine, type ChatEvent } from "./chat-events";
-import { parseApplyResult, type ApplyResult } from "./chat-session";
 import { parseSyncLine, type SyncLine } from "./sync-events";
+import type { FlutterTarget } from "./flutter-attach";
+import { parseInitRemoteResult, type InitRemoteResult } from "./init-remote-events";
+import { parseGitStatus, type ChangedEntry } from "./git-status";
 export type { ProvisionArgs } from "../ipc";
 export { startProvision, sendConsent, onProvEvent } from "../ipc";
 
@@ -33,28 +36,22 @@ export async function pickFolder(): Promise<string | null> {
   return typeof result === "string" ? result : null;
 }
 
-export async function startChat(projectDir: string, sessionUuid: string, prompt: string): Promise<void> {
-  await invoke("start_chat", { projectDir, sessionUuid, prompt });
+export async function pickFile(): Promise<string | null> {
+  const result = await open({ directory: false, multiple: false });
+  return typeof result === "string" ? result : null;
 }
 
-export async function cancelChat(): Promise<void> {
-  await invoke("cancel_chat");
+export async function pushAttachment(projectDir: string, filePath: string | undefined, useClipboard: boolean): Promise<string> {
+  return invoke<string>("push_attachment", { projectDir, filePath: filePath ?? null, useClipboard });
 }
 
-export async function applyPatch(projectDir: string, patch: string): Promise<ApplyResult> {
-  const line = await invoke<string>("apply_patch", { projectDir, patch });
-  return parseApplyResult(line);
+export async function copyToClipboard(text: string): Promise<void> {
+  await writeText(text);
 }
 
-export async function onChatEvent(handler: (ev: ChatEvent) => void): Promise<UnlistenFn> {
-  return listen<string>("pw://chat", (e) => {
-    const ev = parseChatLine(e.payload);
-    if (ev) handler(ev);
-  });
-}
-
-export async function onChatEnd(handler: (code: number | null) => void): Promise<UnlistenFn> {
-  return listen<number | null>("pw://chat-end", (e) => handler(e.payload));
+export async function gitStatus(projectDir: string): Promise<ChangedEntry[]> {
+  const out = await invoke<string>("git_status", { projectDir });
+  return parseGitStatus(out);
 }
 
 export async function syncCommand(projectDir: string, sub: "status" | "start" | "pause" | "resume" | "flush" | "stop"): Promise<SyncLine | null> {
@@ -110,12 +107,63 @@ export interface ProjectYmlArgs {
   agentPort: number;
   remotePath: string;
   token: string;
+  exclude: string[];
 }
 
 export async function writeProjectYml(args: ProjectYmlArgs): Promise<void> {
   await invoke("write_project_yml", { args });
 }
 
-export async function initRemoteCopy(projectDir: string, remotePath: string): Promise<string> {
-  return invoke<string>("init_remote_copy", { projectDir, remotePath });
+export type InitRemoteMode = "create" | "overwrite" | "use_existing";
+export type { InitRemoteResult };
+
+export async function initRemoteCopy(
+  projectDir: string,
+  remotePath: string,
+  mode: InitRemoteMode = "create",
+): Promise<InitRemoteResult> {
+  const stdout = await invoke<string>("init_remote_copy", { projectDir, remotePath, mode });
+  return parseInitRemoteResult(stdout);
+}
+
+const PROJECT_TYPE_SET = new Set<ProjectType>(["flutter", "node-frontend", "node-backend", "python", "common"]);
+
+/** Best-effort project-type detection of a local folder; "common" if unavailable/unrecognized. */
+export async function detectProjectType(projectDir: string): Promise<ProjectType> {
+  try {
+    const r = await invoke<string>("detect_project_type", { projectDir });
+    return PROJECT_TYPE_SET.has(r as ProjectType) ? (r as ProjectType) : "common";
+  } catch {
+    return "common";
+  }
+}
+
+/** Local machine name for path namespacing; "" if unavailable (caller falls back). */
+export async function computerName(): Promise<string> {
+  try {
+    const r = await invoke<string>("computer_name");
+    return typeof r === "string" ? r : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Best-effort detection of a running VM Service URI (clipboard scan in the Rust cmd). Returns null if none. */
+export async function detectVmUri(): Promise<string | null> {
+  const r = await invoke<string | null>("detect_vm_uri");
+  return typeof r === "string" && r ? r : null;
+}
+
+/** Validate the URI, open the reverse tunnel, register the session with the agent. Returns the detected target. */
+export async function startFlutterAttach(projectDir: string, vmUri: string): Promise<FlutterTarget> {
+  return invoke<FlutterTarget>("start_flutter_attach", { projectDir, vmUri });
+}
+
+export async function stopFlutterAttach(projectDir: string): Promise<void> {
+  await invoke("stop_flutter_attach", { projectDir });
+}
+
+/** Fires when the tunnelled VM Service WebSocket closes (app restart). */
+export async function onFlutterVmClosed(handler: () => void): Promise<UnlistenFn> {
+  return listen<string>("pw://flutter-vm-closed", () => handler());
 }

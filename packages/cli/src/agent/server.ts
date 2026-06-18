@@ -1,9 +1,12 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { ChatBody } from '@patchwire/protocol';
 import type { AskEvent, VerifyResult } from '@patchwire/protocol';
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
+import { FlutterSessionStore } from './flutter/session-store.ts';
+import { buildMcpConfig } from './flutter/mcp-config.ts';
+import { resolvePatchwireBin } from './flutter/resolve-bin.ts';
 import { z } from 'zod';
 import type { UsersStore } from './users-store.ts';
 import { resolveUserFromHeader } from './auth.ts';
@@ -27,6 +30,7 @@ import { createHash } from 'node:crypto';
 import type { AuditLog } from './audit-log.ts';
 import { countDiffLines } from './diff-stats.ts';
 import { evaluatePolicy } from './policy.ts';
+import { isLoopbackHost } from '../lib/flutter-vmservice.ts';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -116,6 +120,33 @@ export function registerSessionStatus(app: FastifyInstance, turns: TurnState): v
 }
 
 
+const FlutterSessionPostBody = z.object({
+  project: z.string().min(1).regex(/^[a-zA-Z0-9_.-]+$/, 'invalid project name'),
+  url: z.string().url(),
+  target: z.enum(['device', 'web', 'desktop']),
+});
+
+/** Mount POST /flutter/session (attach) + DELETE /flutter/session/:project (detach). */
+export function registerFlutterSessionRoutes(app: FastifyInstance, store: FlutterSessionStore): void {
+  app.post('/flutter/session', async (req: FastifyRequest, reply) => {
+    const parsed = FlutterSessionPostBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid body', issues: parsed.error.issues });
+    // SSRF guard: the VM Service URL is only ever a reverse-tunnelled loopback
+    // endpoint. Reject anything else so a client can't make the MCP subprocess
+    // connect to an arbitrary host (e.g. cloud metadata).
+    let vmHost: string;
+    try { vmHost = new URL(parsed.data.url).hostname; } catch { return reply.code(400).send({ error: 'bad url' }); }
+    if (!isLoopbackHost(vmHost)) return reply.code(400).send({ error: 'VM Service URL must target loopback' });
+    store.set(req.username!, parsed.data);
+    return reply.status(204).send();
+  });
+  app.delete('/flutter/session/:project', async (req: FastifyRequest<{ Params: { project: string } }>, reply) => {
+    store.clear(req.username!, req.params.project);
+    return reply.status(204).send();
+  });
+}
+
+
 export function buildServer(opts: AgentOptions) {
   const app = Fastify({ logger: { level: 'info' }, bodyLimit: 5 * 1024 * 1024 });
 
@@ -132,6 +163,9 @@ export function buildServer(opts: AgentOptions) {
   // queried by GET /session/:id/status. Constructed once per server instance.
   const turns = new TurnState();
   registerSessionStatus(app, turns);
+
+  const flutterSessions = new FlutterSessionStore();
+  registerFlutterSessionRoutes(app, flutterSessions);
 
   // Streaming runner configured from AgentOptions (not env). Honors `--aiCommand`
   // / `--aiArgs` exactly the same way the `/ask` path does via `runAi`.
@@ -228,8 +262,20 @@ export function buildServer(opts: AgentOptions) {
     );
     emit({ type: 'accepted', queueWaitMs: lease.queueWaitMs });
 
+    // Declared outside the try so the finally block can clean it up.
+    let mcpTempDir: string | undefined;
     try {
       const startRun = Date.now();
+
+      let mcpConfigPath: string | undefined;
+      const fsession = flutterSessions.get(username, project);
+      if (fsession) {
+        const dir = mkdtempSync(join(tmpdir(), 'pw-flutter-'));
+        mcpTempDir = dir;
+        mcpConfigPath = join(dir, 'mcp.json');
+        writeFileSync(mcpConfigPath, JSON.stringify(buildMcpConfig(fsession, resolvePatchwireBin())), { mode: 0o600 });
+      }
+
       let claudeResult;
       try {
         claudeResult = await runAi({
@@ -239,6 +285,7 @@ export function buildServer(opts: AgentOptions) {
           cwd: projectDir,
           timeoutMs: opts.timeoutSec * 1000,
           ...(opts.egressProfilePath ? { egressProfilePath: opts.egressProfilePath } : {}),
+          ...(mcpConfigPath ? { mcpConfigPath } : {}),
         });
       } catch (err) {
         emit({ type: 'error', code: 'run_failed', message: (err as Error).message });
@@ -313,6 +360,13 @@ export function buildServer(opts: AgentOptions) {
         /* socket already gone */
       }
     } finally {
+      if (mcpTempDir) {
+        try {
+          rmSync(mcpTempDir, { recursive: true, force: true });
+        } catch {
+          /* best effort */
+        }
+      }
       await resetClean(projectDir).catch(() => {});
       concurrency.release(lease);
       try {

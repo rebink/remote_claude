@@ -14,7 +14,7 @@ describe("SyncPill", () => {
   it("shows conflict count", () => {
     const { getByTestId } = render(SyncPill, { props: { status: { kind: "conflict", conflicts: ["a", "b"] } } });
     expect(getByTestId("sync-pill").textContent).toContain("2");
-    expect(getByTestId("sync-pill").textContent.toLowerCase()).toContain("conflict");
+    expect(getByTestId("sync-pill").textContent!.toLowerCase()).toContain("conflict");
   });
   it("shows Paused", () => {
     const { getByTestId } = render(SyncPill, { props: { status: { kind: "paused", conflicts: [] } } });

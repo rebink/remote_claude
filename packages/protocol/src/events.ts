@@ -64,3 +64,20 @@ export type AskEvent =
   | { type: 'verifying' }
   | { type: 'result'; diff: string; files: string[]; durationMs: number; stdout: string; stderr: string; exitCode: number; verify?: VerifyResult }
   | { type: 'error'; code: string; message: string };
+
+export type FlutterTarget = 'device' | 'web' | 'desktop';
+
+/** A registered live Flutter session for a project (tunnelled VM Service). */
+export interface FlutterSession {
+  project: string;
+  /** Tunnelled VM Service URL on the agent host loopback, incl. token path. */
+  url: string;
+  target: FlutterTarget;
+}
+
+/** Request body for `POST /flutter/session` (attach). */
+export interface FlutterSessionBody {
+  project: string;
+  url: string;
+  target: FlutterTarget;
+}

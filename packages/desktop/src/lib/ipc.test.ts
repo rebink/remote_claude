@@ -11,11 +11,8 @@ import {
   listProjects,
   saveProject,
   pickFolder,
-  startChat,
-  cancelChat,
-  applyPatch,
-  onChatEvent,
-  onChatEnd,
+  pickFile,
+  pushAttachment,
   syncCommand,
   startSyncWatch,
   stopSyncWatch,
@@ -61,7 +58,7 @@ describe("listProjects", () => {
 describe("saveProject", () => {
   it("invokes save_project with the project payload", async () => {
     invokeMock.mockResolvedValue(undefined);
-    const p = { id: "x", name: "n", branch: "main", localPath: "/l", remotePath: "/r", lastStatus: "unknown", syncPaused: false } as const;
+    const p = { id: "x", name: "n", branch: "main", localPath: "/l", remotePath: "/r", host: "h", user: "u", lastStatus: "unknown", syncPaused: false, connectionId: "c1" } as const;
     await saveProject(p);
     expect(invokeMock).toHaveBeenCalledWith("save_project", { project: p });
   });
@@ -77,69 +74,6 @@ describe("pickFolder", () => {
   it("returns null when the dialog is cancelled", async () => {
     openMock.mockResolvedValue(null);
     expect(await pickFolder()).toBeNull();
-  });
-});
-
-describe("startChat", () => {
-  it("invokes start_chat with project dir, session uuid, and prompt", async () => {
-    invokeMock.mockResolvedValue(undefined);
-    await startChat("/home/r/api", "uuid-1", "add retry");
-    expect(invokeMock).toHaveBeenCalledWith("start_chat", {
-      projectDir: "/home/r/api",
-      sessionUuid: "uuid-1",
-      prompt: "add retry",
-    });
-  });
-});
-
-describe("cancelChat", () => {
-  it("invokes cancel_chat", async () => {
-    invokeMock.mockResolvedValue(undefined);
-    await cancelChat();
-    expect(invokeMock).toHaveBeenCalledWith("cancel_chat");
-  });
-});
-
-describe("applyPatch", () => {
-  it("invokes apply_patch and parses the JSON result line", async () => {
-    invokeMock.mockResolvedValue('{"type":"result","applied":true,"files":["a.ts"]}');
-    const r = await applyPatch("/home/r/api", "PATCH");
-    expect(invokeMock).toHaveBeenCalledWith("apply_patch", { projectDir: "/home/r/api", patch: "PATCH" });
-    expect(r).toEqual({ applied: true, files: ["a.ts"] });
-  });
-});
-
-describe("onChatEvent", () => {
-  it("subscribes to pw://chat, forwards parsed events, and returns the unlisten handle", async () => {
-    const unlisten = vi.fn();
-    let captured: ((e: { payload: string }) => void) | null = null;
-    listenMock.mockImplementation((name: string, cb: (e: { payload: string }) => void) => {
-      if (name === "pw://chat") captured = cb;
-      return Promise.resolve(unlisten);
-    });
-    const seen: unknown[] = [];
-    const stop = await onChatEvent((ev) => seen.push(ev));
-    captured!({ payload: '{"type":"chat_text","chunk":"hi"}' });
-    captured!({ payload: "blank-ignored-not-json" });
-    expect(seen).toEqual([{ type: "chat_text", chunk: "hi" }]); // unparseable line dropped
-    expect(typeof stop).toBe("function");
-  });
-});
-
-describe("onChatEnd", () => {
-  it("subscribes to pw://chat-end, forwards the exit code payload, and returns the unlisten handle", async () => {
-    const unlisten = vi.fn();
-    let captured: ((e: { payload: number | null }) => void) | null = null;
-    listenMock.mockImplementation((name: string, cb: (e: { payload: number | null }) => void) => {
-      if (name === "pw://chat-end") captured = cb;
-      return Promise.resolve(unlisten);
-    });
-    const codes: (number | null)[] = [];
-    const stop = await onChatEnd((code) => codes.push(code));
-    captured!({ payload: 1 });
-    captured!({ payload: null });
-    expect(codes).toEqual([1, null]);
-    expect(stop).toBe(unlisten);
   });
 });
 
@@ -219,16 +153,40 @@ describe("connections ipc", () => {
   });
 });
 
+describe("attachment ipc", () => {
+  beforeEach(() => openMock.mockReset());
+  it("pickFile opens a file (not directory) dialog", async () => {
+    openMock.mockResolvedValue("/home/r/mock.png");
+    expect(await pickFile()).toBe("/home/r/mock.png");
+    expect(openMock).toHaveBeenCalledWith({ directory: false, multiple: false });
+  });
+  it("pickFile returns null on cancel", async () => {
+    openMock.mockResolvedValue(null);
+    expect(await pickFile()).toBeNull();
+  });
+  it("pushAttachment (file) invokes push_attachment", async () => {
+    invokeMock.mockResolvedValue("/remote/.patchwire-inbox/mock.png");
+    const r = await pushAttachment("/l/api", "/home/r/mock.png", false);
+    expect(invokeMock).toHaveBeenCalledWith("push_attachment", { projectDir: "/l/api", filePath: "/home/r/mock.png", useClipboard: false });
+    expect(r).toBe("/remote/.patchwire-inbox/mock.png");
+  });
+  it("pushAttachment (clipboard) passes filePath null + useClipboard true", async () => {
+    invokeMock.mockResolvedValue("/remote/.patchwire-inbox/clip.png");
+    await pushAttachment("/l/api", undefined, true);
+    expect(invokeMock).toHaveBeenCalledWith("push_attachment", { projectDir: "/l/api", filePath: null, useClipboard: true });
+  });
+});
+
 describe("add-project ipc", () => {
   it("writeProjectYml invokes write_project_yml with all fields", async () => {
     invokeMock.mockResolvedValue(undefined);
-    const a = { projectDir: "/l/api", project: "api", host: "h", user: "u", sshPort: 22, agentPort: 7878, remotePath: "~/patchwire/api", token: "T" };
+    const a = { projectDir: "/l/api", project: "api", host: "h", user: "u", sshPort: 22, agentPort: 7878, remotePath: "~/patchwire/api", token: "T", exclude: [] };
     await writeProjectYml(a);
     expect(invokeMock).toHaveBeenCalledWith("write_project_yml", { args: a });
   });
-  it("initRemoteCopy invokes init_remote_copy with the project dir and remote path", async () => {
-    invokeMock.mockResolvedValue("ok");
-    expect(await initRemoteCopy("/l/api", "~/patchwire/api")).toBe("ok");
-    expect(invokeMock).toHaveBeenCalledWith("init_remote_copy", { projectDir: "/l/api", remotePath: "~/patchwire/api" });
+  it("initRemoteCopy invokes init_remote_copy with projectDir, remotePath, and mode; returns InitRemoteResult", async () => {
+    invokeMock.mockResolvedValue('{"type":"done","ok":true}');
+    expect(await initRemoteCopy("/l/api", "~/patchwire/api")).toEqual({ ok: true });
+    expect(invokeMock).toHaveBeenCalledWith("init_remote_copy", { projectDir: "/l/api", remotePath: "~/patchwire/api", mode: "create" });
   });
 });

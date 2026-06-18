@@ -7,8 +7,10 @@
   ],
   "permissions": [
     "core:default",
+    "core:window:allow-show",
     "opener:default",
     "shell:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "clipboard-manager:allow-write-text"
   ]
 }
