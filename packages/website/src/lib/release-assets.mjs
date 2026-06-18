@@ -18,6 +18,17 @@ export const releaseAssets = [
   { os: "linux",   arch: "x64",   kind: "rpm",  stable: "Patchwire-linux-x64.rpm",          label: "Linux · Fedora/RHEL (.rpm)" },
 ];
 
-/** Stable download URL via the moving `desktop-latest` alias release. */
-export const downloadUrl = (stable) =>
-  `https://github.com/${repo}/releases/download/desktop-latest/${stable}`;
+/**
+ * Download URL for a stable asset under the versioned release `desktop-v<version>`.
+ * `version` is the desktop package version (read at build time on the website), which
+ * MUST match the pushed release tag (`desktop-v<version>`). We use the versioned tag —
+ * not a moving alias — because the release CI's token can attach a release to the
+ * already-pushed tag but cannot create a brand-new `desktop-latest` tag (repo tag
+ * ruleset → 403). The site rebuilds on each version bump, so the URLs stay current.
+ */
+export const downloadUrl = (stable, version) =>
+  `https://github.com/${repo}/releases/download/desktop-v${version}/${stable}`;
+
+/** Versioned release URL for an arbitrary asset (e.g. SHASUMS256.txt). */
+export const releaseAssetUrl = (name, version) =>
+  `https://github.com/${repo}/releases/download/desktop-v${version}/${name}`;

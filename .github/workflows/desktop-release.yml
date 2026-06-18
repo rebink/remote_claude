@@ -105,6 +105,12 @@ jobs:
           find artifacts -type f -exec cp {} release/ \;
           cd release && sha256sum * > SHASUMS256.txt && cat SHASUMS256.txt
 
+      # Attach the stable-named installers + SHASUMS256.txt to the versioned release
+      # `desktop-v<x.y.z>` (the tag was pushed by the developer, so the token only
+      # attaches a release — it does not create a tag). The website links to this
+      # versioned tag (downloadUrl reads the desktop package version at build time).
+      # No moving `desktop-latest` alias: the token can't create that new tag (repo
+      # tag ruleset → 403), and the versioned scheme is simpler + race-free.
       - name: Publish versioned release
         uses: softprops/action-gh-release@v2
         with:
@@ -112,15 +118,3 @@ jobs:
           name: ${{ github.ref_name }}
           prerelease: true
           files: release/*
-
-      - name: Move desktop-latest alias to this build
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          gh release delete desktop-latest --yes --cleanup-tag || true
-          gh release create desktop-latest release/* \
-            --title "Desktop (latest)" \
-            --notes "Rolling latest desktop build (unsigned). Same assets as ${{ github.ref_name }}." \
-            --prerelease \
-            --target "$GITHUB_SHA"

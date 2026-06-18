@@ -1,7 +1,7 @@
 ---
 import '../styles/custom.css';
 import { ClientRouter } from 'astro:transitions';
-import { releaseAssets, downloadUrl, repo, SHASUMS } from '../lib/release-assets.mjs';
+import { releaseAssets, downloadUrl, releaseAssetUrl, repo, SHASUMS } from '../lib/release-assets.mjs';
 // Read the shipped version straight from the desktop package at build time so the
 // version pill never drifts behind a release. Mirrors index.astro's extPkg pattern.
 import desktopPkg from '../../../desktop/package.json';
@@ -9,7 +9,7 @@ import desktopPkg from '../../../desktop/package.json';
 const version = desktopPkg.version;
 const extDeepLink = 'vscode:extension/patchwire.patchwire-vscode';
 const repoUrl = `https://github.com/${repo}`;
-const shasumsUrl = `https://github.com/${repo}/releases/download/desktop-latest/${SHASUMS}`;
+const shasumsUrl = releaseAssetUrl(SHASUMS, version);
 const ogDesc = 'Download the Patchwire desktop app for macOS, Windows, and Linux.';
 
 const reqs: Record<string, string> = {
@@ -86,7 +86,7 @@ function kindLabel(stable: string) {
             </div>
             <code class="dl-file">{a.stable}</code>
             <p class="dl-req">{reqs[a.os]}</p>
-            <a class="cta cta-primary dl-btn" href={downloadUrl(a.stable)} download>
+            <a class="cta cta-primary dl-btn" href={downloadUrl(a.stable, version)} download>
               <span>Download {kindLabel(a.stable)}</span><span class="cta-arrow">↓</span>
             </a>
             <details class="dl-notes"><summary>Install notes</summary><p>{installNotes[a.os]}</p></details>
