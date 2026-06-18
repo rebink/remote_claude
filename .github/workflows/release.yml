@@ -4,13 +4,96 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            bunTarget: bun-darwin-arm64
+            assetOs: macos
+          - os: ubuntu-22.04
+            bunTarget: bun-linux-x64
+            assetOs: linux
+          - os: windows-latest
+            bunTarget: bun-windows-x64
+            assetOs: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches every package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: node scripts/release.mjs --check "$REF_NAME"
+
+      - name: Install Linux WebKitGTK deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the CLI sidecar binary for this runner
+        run: node scripts/build-cli-binaries.mjs --only ${{ matrix.bunTarget }}
+
+      - name: Stage the sidecar for this platform
+        run: node packages/desktop/scripts/stage-sidecar.mjs --from-release dist-cli-bin
+
+      - name: Build the desktop app (unsigned)
+        run: pnpm --filter patchwire-desktop tauri build
+
+      - name: Rename bundles to stable asset names (shared constant)
+        shell: bash
+        run: |
+          mkdir -p out
+          node -e '
+            (async () => {
+              const { releaseAssets } = await import("./packages/website/src/lib/release-assets.mjs");
+              const fs = require("fs");
+              const cp = require("child_process");
+              const bundleDir = "packages/desktop/src-tauri/target/release/bundle";
+              const findByExt = (ext) =>
+                cp.execSync(`find ${bundleDir} -type f -name "*.${ext}"`).toString().trim().split("\n").filter(Boolean);
+              const extFor = { dmg: "dmg", nsis: "exe", deb: "deb", rpm: "rpm" };
+              for (const a of releaseAssets.filter((a) => a.os === process.env.ASSET_OS)) {
+                const matches = findByExt(extFor[a.kind]);
+                if (!matches.length) { console.log(`no ${a.kind} bundle found, skipping ${a.stable}`); continue; }
+                fs.copyFileSync(matches[0], `out/${a.stable}`);
+                console.log(`out/${a.stable} <- ${matches[0]}`);
+              }
+            })().catch((e) => { console.error(e); process.exit(1); });
+          '
+        env:
+          ASSET_OS: ${{ matrix.assetOs }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: patchwire-desktop-${{ matrix.assetOs }}
+          path: out/**
+          if-no-files-found: error
+
   publish:
+    needs: desktop
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +105,11 @@ jobs:
           node-version: '22'
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify tag matches every package version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: node scripts/release.mjs --check "$REF_NAME"
 
       - run: pnpm install --frozen-lockfile=false
 
@@ -39,7 +127,7 @@ jobs:
         run: pnpm --filter patchwire-vscode package
 
       # Each publish step runs only when its token/secret is configured, so a
-      # tag push always produces the GitHub release + .vsix even before the
+      # tag push always produces the GitHub release + assets even before the
       # npm / Marketplace / Open VSX accounts are set up.
       - name: Check which publish secrets are configured
         id: secrets
@@ -94,11 +182,27 @@ jobs:
       - name: Smoke-test the linux-x64 agent binary
         run: ./dist-bin/patchwire-agent-linux-x64 --version
 
-      - name: Create GitHub release with .vsix attached
+      - name: Download desktop installers
+        uses: actions/download-artifact@v4
+        with:
+          path: desktop-artifacts
+
+      - name: Flatten installers + checksum
+        shell: bash
+        run: |
+          mkdir -p release
+          find desktop-artifacts -type f -exec cp {} release/ \;
+          cd release && sha256sum * > SHASUMS256.txt && cat SHASUMS256.txt
+
+      - name: Create one GitHub release (extension + agent + desktop)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          prerelease: true
           generate_release_notes: true
           files: |
             packages/extension/patchwire-vscode-*.vsix
             dist-bin/patchwire-agent-*
             dist-bin/manifest.json
+            release/*
