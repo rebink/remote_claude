@@ -53,7 +53,6 @@ describe("SetupWizard Step 4 (provision)", () => {
     provCb!({ payload: '{"type":"result","status":"rolled-back","outcome":{"failedStep":"bootstrap-agent"}}' });
     await Promise.resolve();
     // prov-detail should contain the error message (may appear in both the step row and result banner)
-    const { getAllByTestId } = await import("@testing-library/svelte");
     const details = document.querySelectorAll('[data-testid="prov-detail"]');
     expect(details.length).toBeGreaterThan(0);
     const detailTexts = Array.from(details).map((el) => el.textContent ?? "");
@@ -120,7 +119,7 @@ describe("SetupWizard Step 4 — provisioning indicator", () => {
   }
 
   it("shows prov-working with 'Connecting' text immediately after Provision is clicked (idle phase, no events yet)", async () => {
-    listenMock.mockImplementation((name: string, cb: any) => {
+    listenMock.mockImplementation((_name: string, _cb: any) => {
       // capture but never fire any events
       return Promise.resolve(() => {});
     });

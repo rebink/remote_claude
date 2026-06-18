@@ -58,7 +58,7 @@ describe("listProjects", () => {
 describe("saveProject", () => {
   it("invokes save_project with the project payload", async () => {
     invokeMock.mockResolvedValue(undefined);
-    const p = { id: "x", name: "n", branch: "main", localPath: "/l", remotePath: "/r", lastStatus: "unknown", syncPaused: false } as const;
+    const p = { id: "x", name: "n", branch: "main", localPath: "/l", remotePath: "/r", host: "h", user: "u", lastStatus: "unknown", syncPaused: false, connectionId: "c1" } as const;
     await saveProject(p);
     expect(invokeMock).toHaveBeenCalledWith("save_project", { project: p });
   });
@@ -180,7 +180,7 @@ describe("attachment ipc", () => {
 describe("add-project ipc", () => {
   it("writeProjectYml invokes write_project_yml with all fields", async () => {
     invokeMock.mockResolvedValue(undefined);
-    const a = { projectDir: "/l/api", project: "api", host: "h", user: "u", sshPort: 22, agentPort: 7878, remotePath: "~/patchwire/api", token: "T" };
+    const a = { projectDir: "/l/api", project: "api", host: "h", user: "u", sshPort: 22, agentPort: 7878, remotePath: "~/patchwire/api", token: "T", exclude: [] };
     await writeProjectYml(a);
     expect(invokeMock).toHaveBeenCalledWith("write_project_yml", { args: a });
   });

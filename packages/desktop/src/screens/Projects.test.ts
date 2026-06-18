@@ -8,7 +8,6 @@ import Projects from "./Projects.svelte";
 import { projects } from "../lib/stores";
 
 const conn = { id: "c1", name: "mini", host: "h", user: "u", sshPort: 22, keyPath: "/k", agentPort: 7878, token: "T" };
-const connOther = { id: "c2", name: "other", host: "h2", user: "u", sshPort: 22, keyPath: "/k", agentPort: 7879, token: "T2" };
 
 beforeEach(() => {
   invokeMock.mockReset();
