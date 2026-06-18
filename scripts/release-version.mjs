@@ -15,7 +15,11 @@ export const JSON_TARGETS = [
 
 export const TOML_TARGETS = ["packages/desktop/src-tauri/Cargo.toml"];
 
-export const TARGETS = [...JSON_TARGETS, ...TOML_TARGETS];
+// TS modules that inline the version as `export const VERSION = '...'` (the CLI/agent
+// bundles this constant — it can't read package.json from a compiled binary at runtime).
+export const TS_TARGETS = ["packages/cli/src/version.ts"];
+
+export const TARGETS = [...JSON_TARGETS, ...TOML_TARGETS, ...TS_TARGETS];
 
 export function isSemver(v) {
   return /^\d+\.\d+\.\d+$/.test(String(v));
@@ -41,9 +45,18 @@ export function bumpTomlVersion(tomlText, version) {
   return tomlText.replace(re, `$1${version}$2`);
 }
 
-/** Bump any target's text, choosing JSON vs TOML by file extension. */
+/** Replace the FIRST `VERSION = '...'` / `VERSION = "..."` literal in a TS module. */
+export function bumpTsVersion(tsText, version) {
+  const re = /(VERSION\s*=\s*['"])[^'"]*(['"])/;
+  if (!re.test(tsText)) throw new Error("no VERSION constant found");
+  return tsText.replace(re, `$1${version}$2`);
+}
+
+/** Bump any target's text, choosing JSON vs TOML vs TS by file extension. */
 export function bumpVersion(path, text, version) {
-  return path.endsWith(".toml") ? bumpTomlVersion(text, version) : bumpJsonVersion(text, version);
+  if (path.endsWith(".toml")) return bumpTomlVersion(text, version);
+  if (path.endsWith(".ts")) return bumpTsVersion(text, version);
+  return bumpJsonVersion(text, version);
 }
 
 /** Read the version out of any target file's text. */
@@ -51,6 +64,11 @@ export function readVersion(path, text) {
   if (path.endsWith(".toml")) {
     const m = text.match(/^version\s*=\s*"([^"]*)"/m);
     if (!m) throw new Error(`no version in ${path}`);
+    return m[1];
+  }
+  if (path.endsWith(".ts")) {
+    const m = text.match(/VERSION\s*=\s*['"]([^'"]*)['"]/);
+    if (!m) throw new Error(`no VERSION in ${path}`);
     return m[1];
   }
   return JSON.parse(text).version;

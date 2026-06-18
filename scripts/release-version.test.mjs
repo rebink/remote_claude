@@ -3,16 +3,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   TARGETS, isSemver, versionFromTag,
-  bumpJsonVersion, bumpTomlVersion, bumpVersion,
+  bumpJsonVersion, bumpTomlVersion, bumpTsVersion, bumpVersion,
   readVersion, readAllVersions, checkVersions,
 } from "./release-version.mjs";
 
-test("TARGETS covers all 9 version-bearing files", () => {
-  assert.equal(TARGETS.length, 9);
+test("TARGETS covers all 10 version-bearing files", () => {
+  assert.equal(TARGETS.length, 10);
   assert.ok(TARGETS.includes("package.json"));
   assert.ok(TARGETS.includes("packages/cli/package.json"));
   assert.ok(TARGETS.includes("packages/desktop/src-tauri/tauri.conf.json"));
   assert.ok(TARGETS.includes("packages/desktop/src-tauri/Cargo.toml"));
+  assert.ok(TARGETS.includes("packages/cli/src/version.ts"));
 });
 
 test("isSemver", () => {
@@ -47,20 +48,36 @@ test("bumpTomlVersion replaces only the [package] crate version, not deps", () =
   assert.match(out, /tauri = \{ version = "2" \}/);
 });
 
+test("bumpTsVersion replaces the VERSION constant literal", () => {
+  const ts = `export const VERSION = '0.4.0';\n`;
+  assert.equal(bumpTsVersion(ts, "0.5.0"), `export const VERSION = '0.5.0';\n`);
+  assert.equal(bumpTsVersion(`export const VERSION = "0.4.0";`, "0.5.0"), `export const VERSION = "0.5.0";`);
+});
+
+test("bumpTsVersion throws when no VERSION constant", () => {
+  assert.throws(() => bumpTsVersion(`export const X = '1';`, "0.5.0"), /VERSION/);
+});
+
 test("bumpVersion dispatches on extension", () => {
   assert.match(bumpVersion("a/Cargo.toml", `version = "0.1.0"\n`, "0.5.0"), /version = "0\.5\.0"/);
   assert.match(bumpVersion("a/package.json", `{"version":"0.1.0"}`, "0.5.0"), /"version":"0\.5\.0"/);
+  assert.match(bumpVersion("a/version.ts", `export const VERSION = '0.1.0';`, "0.5.0"), /VERSION = '0\.5\.0'/);
 });
 
-test("readVersion reads JSON and TOML", () => {
+test("readVersion reads JSON, TOML and TS", () => {
   assert.equal(readVersion("a/package.json", `{"version":"0.4.0"}`), "0.4.0");
   assert.equal(readVersion("a/Cargo.toml", `[package]\nversion = "0.1.0"\n`), "0.1.0");
+  assert.equal(readVersion("a/version.ts", `export const VERSION = '0.4.0';\n`), "0.4.0");
 });
 
 test("readAllVersions uses the injected reader for every target", () => {
-  const fake = (p) => (p.endsWith(".toml") ? `version = "0.4.0"\n` : `{"version":"0.4.0"}`);
+  const fake = (p) => {
+    if (p.endsWith(".toml")) return `version = "0.4.0"\n`;
+    if (p.endsWith(".ts")) return `export const VERSION = '0.4.0';\n`;
+    return `{"version":"0.4.0"}`;
+  };
   const all = readAllVersions(fake);
-  assert.equal(all.length, 9);
+  assert.equal(all.length, 10);
   assert.ok(all.every((t) => t.version === "0.4.0"));
 });
 
