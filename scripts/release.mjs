@@ -49,8 +49,7 @@ for (const path of TARGETS) {
 sh(`git add ${TARGETS.join(" ")}`);
 sh(`git commit -m "chore(release): ${tag}"`);
 sh(`git tag ${tag}`);
-sh("git push origin main");
-sh(`git push origin ${tag}`);
+sh(`git push origin main ${tag}`);
 
 console.log(`✓ released ${tag}: bumped ${TARGETS.length} files, committed, tagged, pushed`);
 console.log("→ watch CI: https://github.com/rebink/remote_claude/actions");
