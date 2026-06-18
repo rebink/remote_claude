@@ -57,7 +57,12 @@ function kindLabel(stable: string) {
 
     <header class="dl-top wrap">
       <a class="dl-home" href="/">
-        <span class="dl-mark" aria-hidden="true">◖◗</span> Patchwire
+        <svg class="dl-mark" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 9.5 L12 5.5 Q12 3 9.5 3 L5.5 3 Q3 3 3 5.5 L3 9.5 Q3 12 5.5 12 L10 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 13 L18.5 13 Q21 13 21 15.5 L21 18.5 Q21 21 18.5 21 L15.5 21 Q13 21 13 18.5 L13 16 A3 3 0 0 0 16 13 Z" fill="currentColor"/>
+          <circle cx="12.5" cy="12.5" r="2.4" fill="#C9F564"/>
+        </svg>
+        Patchwire
       </a>
       <span class="dl-pill"><span class="dl-dot"></span>desktop v{version}</span>
     </header>
@@ -148,7 +153,8 @@ function kindLabel(stable: string) {
       .dl-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding-top: 22px; }
       .dl-home { font-family: var(--disp); font-weight: 600; font-size: 16px; color: var(--text); letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 9px; }
       .dl-home:hover { color: var(--signal); }
-      .dl-mark { color: var(--signal); font-size: 13px; letter-spacing: -3px; }
+      .dl-mark { color: var(--text); flex: 0 0 auto; transition: transform .4s cubic-bezier(.32,.72,0,1); }
+      .dl-home:hover .dl-mark { transform: translateY(-0.5px) scale(1.04); }
       .dl-pill { font-family: var(--mono); font-size: 12px; color: var(--dim); display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 100px; }
       .dl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 8px var(--signal); }
 
