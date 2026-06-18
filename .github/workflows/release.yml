@@ -17,15 +17,12 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            triple: aarch64-apple-darwin
             bunTarget: bun-darwin-arm64
             assetOs: macos
           - os: ubuntu-22.04
-            triple: x86_64-unknown-linux-gnu
             bunTarget: bun-linux-x64
             assetOs: linux
           - os: windows-latest
-            triple: x86_64-pc-windows-msvc
             bunTarget: bun-windows-x64
             assetOs: windows
     runs-on: ${{ matrix.os }}
@@ -92,7 +89,7 @@ jobs:
         with:
           name: patchwire-desktop-${{ matrix.assetOs }}
           path: out/**
-          if-no-files-found: warn
+          if-no-files-found: error
 
   publish:
     needs: desktop
