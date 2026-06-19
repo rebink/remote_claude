@@ -1,5 +1,6 @@
 // packages/cli/src/services/types.ts
 import type { TunnelHandle } from '../lib/reverse-tunnel.ts';
+export type { TunnelHandle } from '../lib/reverse-tunnel.ts';
 
 export type ServiceKind = 'docker' | 'dart-vm' | 'dart-server' | 'generic';
 export type ProjectionStatus = 'binding' | 'active' | 'reconnecting' | 'stale' | 'failed';
