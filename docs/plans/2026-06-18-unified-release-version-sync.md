@@ -644,14 +644,14 @@ git checkout main && git pull
 pnpm release 0.5.0
 ```
 
-This bumps all 9 targets to 0.5.0, commits `chore(release): v0.5.0`, tags `v0.5.0`, pushes main + tag, and CI ships CLI + extension + desktop installers + agent binaries at 0.5.0 in one GitHub release.
+This bumps all 10 targets to the new version, commits `chore(release): vX.Y.Z`, tags it, pushes main + tag, and CI ships CLI + extension + desktop installers + agent binaries in one GitHub release. (The first unified release shipped as **v0.5.2**; the CLI's inlined `version.ts` was added as the 10th target after it surfaced during that deploy.)
 
 ---
 
 ## Self-Review
 
 **Spec coverage:**
-- Sync engine (9 TARGETS, JSON+TOML, v* regex, checkVersions) → Task 1 ✓
+- Sync engine (10 TARGETS, JSON+TOML+TS, v* regex, checkVersions) → Task 1 ✓
 - `pnpm release` (bump/commit/tag/auto-push, --dry-run, --check) → Task 2 ✓
 - Merge workflows + delete desktop-release.yml → Task 4 ✓
 - Website repoint → Task 3 ✓

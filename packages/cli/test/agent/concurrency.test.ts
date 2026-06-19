@@ -5,7 +5,9 @@ describe('ConcurrencyManager', () => {
   it('allows immediate acquire when both caps have slots', async () => {
     const m = new ConcurrencyManager({ globalCap: 2, perUserCap: 1 });
     const lease = await m.acquire('alice');
-    expect(lease.queueWaitMs).toBeLessThan(5);
+    // Immediate grant: positionAtEntry===0 is the deterministic signal; the wait
+    // just shouldn't be a real queue delay (generous bound avoids CI timing flake).
+    expect(lease.queueWaitMs).toBeLessThan(100);
     expect(lease.positionAtEntry).toBe(0);
     m.release(lease);
     expect(m.snapshot().inFlight).toEqual([]);

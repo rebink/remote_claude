@@ -63,6 +63,8 @@ module. No I/O in the pure layer (file reader injected) so it stays unit-testabl
 - `packages/website/package.json` (`patchwire-docs`)
 - `packages/desktop/src-tauri/tauri.conf.json` (JSON)
 - `packages/desktop/src-tauri/Cargo.toml` (TOML)
+- `packages/cli/src/version.ts` (TS — `export const VERSION`, inlined into the
+  compiled agent binary so it can't read `package.json` at runtime)
 
 Helpers:
 
@@ -75,6 +77,8 @@ Helpers:
   name, so they are never matched.
 - `bumpTomlVersion(text, version)` — **new**. Replaces the first
   `^version = "…"` line (the `[package]` crate version in `Cargo.toml`).
+- `bumpTsVersion(text, version)` — **new**. Replaces the first
+  `VERSION = '…'`/`"…"` literal (the CLI's inlined `version.ts` constant).
 - `readAllVersions(readFile)` — returns `{ path, version }[]` across all TARGETS,
   parsing JSON via `JSON.parse` and TOML via the same `^version = "…"` regex.
 - `checkVersions(tagRef, versions)` — returns `{ ok, version }` or
