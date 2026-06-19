@@ -5,7 +5,7 @@ const KEY = 'patchwire.boundServiceIds';
 
 export interface Memento {
   get<T>(key: string, defaultValue: T): T;
-  update(key: string, value: unknown): Promise<void>;
+  update(key: string, value: unknown): Thenable<void>;
 }
 
 export interface ServiceController {
