@@ -1,8 +1,8 @@
 // packages/cli/src/commands/services.ts
 import type { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { resolve, join } from 'node:path';
+import { resolve } from 'node:path';
+import { resolveProjectKey } from '../lib/project-key.ts';
 import type { Readable, Writable } from 'node:stream';
 import { parse as parseYaml } from 'yaml';
 import { ConfigSchema } from '../lib/config.ts';
@@ -61,7 +61,7 @@ export function makeStdioIo(source: Readable, sink: Writable): SessionIo {
 function loadSshTarget(): SshTarget {
   const raw = parseYaml(readFileSync(resolve(process.cwd(), 'patchwire.yml'), 'utf8'));
   const cfg = ConfigSchema.parse(raw);
-  const kp = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+  const kp = resolveProjectKey(cfg.remote.host, cfg.remote.user);
   return {
     host: cfg.remote.host,
     user: cfg.remote.user,

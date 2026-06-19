@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { resolveProjectKey } from '../lib/project-key.ts';
 import { loadConfig } from '../lib/config.ts';
 import * as rsync from '../lib/rsync.ts';
 import { runSsh } from '../lib/ssh-runner.ts';
@@ -25,7 +24,7 @@ export interface SyncOpts {
  * files made it to the Mini regardless; the HEAD-tracking just won't update).
  */
 async function commitPostPush(cfg: Config): Promise<void> {
-  const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+  const keyPath = resolveProjectKey(cfg.remote.host, cfg.remote.user);
   if (!existsSync(keyPath)) return;
   // `git add -A`: stage everything including untracked and deletions.
   // `--allow-empty`: commit even when no changes (rsync was a no-op).

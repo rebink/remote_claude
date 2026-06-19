@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { resolveProjectKey } from '../lib/project-key.ts';
 import chalk from 'chalk';
 import { loadConfig } from '../lib/config.ts';
 import { AgentClient } from '../lib/client.ts';
@@ -68,7 +68,7 @@ export async function runDoctor(cwd: string): Promise<void> {
       const cfg = await loadConfig(cwd);
       checks.push({ name: 'patchwire.yml valid', pass: true });
 
-      const sshKeyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+      const sshKeyPath = resolveProjectKey(cfg.remote.host, cfg.remote.user);
       const ssh = spawnSync(
         'ssh',
         [
@@ -102,7 +102,7 @@ export async function runDoctor(cwd: string): Promise<void> {
       // Safety: remote project has no git remotes configured.
       try {
         const { runSsh } = await import('../lib/ssh-runner.ts');
-        const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+        const keyPath = resolveProjectKey(cfg.remote.host, cfg.remote.user);
         const remotePath = cfg.remote.path;
         const r = await runSsh({
           host: cfg.remote.host,
