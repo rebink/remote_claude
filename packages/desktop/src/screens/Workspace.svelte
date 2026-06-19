@@ -7,6 +7,7 @@
   import AttachPanel from "../components/AttachPanel.svelte";
   import ChangesList from "../components/ChangesList.svelte";
   import FlutterPanel from "../components/FlutterPanel.svelte";
+  import ServicesPanel from "../components/ServicesPanel.svelte";
   import SyncPill from "../components/SyncPill.svelte";
   import type { SyncStatus } from "../lib/sync-events";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -56,6 +57,7 @@
       <AttachPanel projectDir={project.localPath} />
       <ChangesList projectDir={project.localPath} />
       <FlutterPanel projectDir={project.localPath} />
+      <ServicesPanel {project} />
     </section>
   </div>
 </div>
