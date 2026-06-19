@@ -53,4 +53,11 @@ describe('service command handlers', () => {
     await h.copyAddress(item('x', '127.0.0.1:5432'));
     expect(writeText).toHaveBeenCalledWith('127.0.0.1:5432');
   });
+
+  it('copyAddress is a no-op when the item has no remote address', async () => {
+    const writeText = vi.fn(async () => {});
+    const h = makeServiceCommandHandlers({ bind: vi.fn(), unbind: vi.fn(), retry: vi.fn() }, fakeMemento(), { writeText });
+    await h.copyAddress(item('x', null));
+    expect(writeText).not.toHaveBeenCalled();
+  });
 });

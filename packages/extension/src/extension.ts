@@ -43,8 +43,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const hasYml = existsSync(join(wsForServices, 'patchwire.yml'));
     const servicesProvider = new ServicesTreeProvider(servicesController, () => boundIdsFrom(context.workspaceState));
     servicesProvider.setHasConfig(hasYml);
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('patchwire.services', servicesProvider));
-
+    // createTreeView registers the provider AND gives us the view handle for
+    // lazy-start visibility wiring — so no separate registerTreeDataProvider.
     const servicesTreeView = vscode.window.createTreeView('patchwire.services', { treeDataProvider: servicesProvider });
     context.subscriptions.push(servicesTreeView);
     context.subscriptions.push(wireServices({
