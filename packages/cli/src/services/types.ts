@@ -42,6 +42,10 @@ export interface Transport {
 export interface ServiceProjectionManager {
   bind(service: DiscoveredService): Promise<Projection>;
   unbind(id: string): Promise<void>;
+  /** Reconcile against currently-present services; absent bound entries become 'stale'. */
+  refresh(present: DiscoveredService[]): void;
+  /** Re-arm a 'failed' or 'stale' entry: reset attempts, re-bind (re-mirror), back to 'active'. */
+  retry(id: string): Promise<void>;
   status(): Projection[];
   on(event: 'change', cb: (projections: Projection[]) => void): void;
   stopAll(): void;

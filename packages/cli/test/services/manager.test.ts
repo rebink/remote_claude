@@ -79,4 +79,34 @@ describe('makeManager', () => {
     }
     expect(m.status()[0].status).toBe('failed');
   });
+
+  it('refresh marks a vanished bound service as stale and stops its tunnel', async () => {
+    const { transport } = upTransport();
+    const m = makeManager(transport, { probe: async () => {}, delay: async () => {} });
+    await m.bind(svc);
+    m.refresh([]); // svc no longer present
+    expect(m.status()[0].status).toBe('stale');
+  });
+
+  it('retry re-arms a stale service back to active', async () => {
+    const { transport } = upTransport();
+    const m = makeManager(transport, { probe: async () => {}, delay: async () => {} });
+    await m.bind(svc);
+    m.refresh([]);
+    await m.retry(svc.id);
+    expect(m.status()[0].status).toBe('active');
+  });
+
+  it('retry re-arms a failed service back to active', async () => {
+    const { transport, closes } = upTransport();
+    const m = makeManager(transport, { probe: async () => {}, delay: async () => {}, maxAttempts: 1 });
+    await m.bind(svc);
+    closes[closes.length - 1](255);
+    await new Promise((r) => setTimeout(r, 0));
+    closes[closes.length - 1](255);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(m.status()[0].status).toBe('failed');
+    await m.retry(svc.id);
+    expect(m.status()[0].status).toBe('active');
+  });
 });

@@ -1,7 +1,7 @@
 // packages/cli/src/services/manager.ts
 import { firstStablePort } from './mirror.ts';
 import type {
-  DiscoveredService, Projection, ServiceProjectionManager, Transport, TunnelHandle,
+  DiscoveredService, Projection, ProjectionStatus, ServiceProjectionManager, Transport, TunnelHandle,
 } from './types.ts';
 
 interface ManagerDeps {
@@ -51,7 +51,7 @@ export function makeManager(transport: Transport, deps: ManagerDeps = {}): Servi
       entry.projection.status = 'reconnecting';
       emit();
       await delay(backoff(entry.attempts));
-      if (entry.stopped || entry.projection.status === 'stale') return;
+      if (entry.stopped || (entry.projection.status as ProjectionStatus) === 'stale') return;
       supervise(entry, onClose);
       entry.projection.status = 'active';
       emit();
