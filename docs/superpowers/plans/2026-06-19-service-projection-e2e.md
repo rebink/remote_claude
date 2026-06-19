@@ -59,7 +59,21 @@ The desktop app drives the same engine via a long-lived `patchwire services serv
 5. Kill the `ssh -R` tunnel → pill `reconnecting` → `active` (exponential-backoff auto-heal); exhaust retries (6) → `failed` + Retry button.
 6. Close the workspace → the session process is killed → all tunnels drop.
 
+## VS Code Extension (P3)
+
+The extension spawns the same `services serve --stream` session directly via `child_process` (no Rust) when the Services view first opens.
+
+1. Open a project (with `patchwire.yml`) in VS Code; open the Patchwire → Services view.
+2. First reveal spawns `services serve --stream`; `Postgres (...)` appears with a `circle-outline` icon.
+3. Click the inline Bind (plug) icon → icon goes `sync~spin`→`pass-filled`, description shows `active · 127.0.0.1:5432`. Copy icon copies the address.
+4. Reopen the window → the bound service auto-rebinds (workspaceState).
+5. Stop the container → status `stale` (warning icon) after a refresh; Retry icon re-arms.
+6. Close the window → the session process is killed → tunnels drop.
+
 ## Status
 
 - **Phase 1** (engine + CLI): unit-green.
-- **Phase 2** (desktop UI + manager hardening): unit-green — CLI 629 tests, desktop 156 tests, `cargo build` clean. This runbook is the gating manual validation on a real provisioned host.
+- **Phase 2** (desktop UI + manager hardening): unit-green — CLI 629 tests, desktop 156 tests, `cargo build` clean.
+- **Phase 3** (VS Code extension tree view): unit-green — extension 78 tests, typecheck + build clean.
+
+This runbook is the gating manual validation on a real provisioned host across all three surfaces.
