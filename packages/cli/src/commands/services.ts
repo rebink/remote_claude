@@ -11,7 +11,13 @@ import { makeSshTransport } from '../services/transport-ssh.ts';
 import { makeManager } from '../services/manager.ts';
 import { writeManifest } from '../services/manifest.ts';
 import { log } from '../lib/log.ts';
+import { makeLineReader } from './setup.ts';
 import type { DiscoveredService, Projection, SshTarget } from '../services/types.ts';
+
+/** True for y / yes (case-insensitive), false for everything else including empty. */
+export function isAffirmative(answer: string): boolean {
+  return /^y(es)?$/i.test(answer.trim());
+}
 
 /** Merge discoverer outputs, de-duping by service id. */
 export function aggregateDiscovered(lists: DiscoveredService[][]): DiscoveredService[] {
@@ -58,12 +64,29 @@ export function registerServicesCommand(program: Command): void {
   cmd
     .command('bind <idOrPort>')
     .description('Bind one discovered service onto the remote loopback')
-    .action(async (idOrPort: string) => {
+    .option('--yes', 'skip confirmation prompt (for non-interactive / headless use)')
+    .action(async (idOrPort: string, opts: { yes?: boolean }) => {
       const docker = await makeDockerDiscoverer().discover();
       const dart = parseDartOutput(process.env.PW_DART_OUTPUT ?? '');
       const all = aggregateDiscovered([docker, dart]);
       const svc = all.find((s) => s.id === idOrPort || String(s.localPort) === idOrPort);
-      if (!svc) { log.err(`No discovered service matches "${idOrPort}".`); process.exitCode = 1; return; }
+      if (!svc) {
+        log.err(`No service matches "${idOrPort}". Run \`patchwire services discover\` to list available services.`);
+        process.exitCode = 1;
+        return;
+      }
+
+      if (!opts.yes) {
+        process.stdout.write(
+          `About to expose local 127.0.0.1:${svc.localPort} (${svc.label}) on the remote agent's loopback. Proceed? [y/N] `,
+        );
+        const readLine = makeLineReader(process.stdin);
+        const answer = await readLine();
+        if (!isAffirmative(answer)) {
+          log.info('Aborted.');
+          return;
+        }
+      }
 
       const manager = makeManager(makeSshTransport(loadSshTarget()));
       manager.on('change', (ps) => writeManifest(process.cwd(), ps));

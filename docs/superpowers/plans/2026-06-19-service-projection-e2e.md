@@ -23,9 +23,10 @@ Validates the full local→remote loop: discover → reverse-tunnel → same-por
 
 3. Bind by port:
    ```
-   pnpm --filter @rebink/patchwire dev:cli services bind 5432
+   pnpm --filter @rebink/patchwire dev:cli services bind 5432 --yes
    ```
    Expect: `Bound Postgres ...: 127.0.0.1:5432 on remote (mirrored).` plus a status line `docker:...:5432  5432→5432  mirror  active`.
+   Note: interactive `bind` (without `--yes`) prints what will be exposed and prompts `Proceed? [y/N]` before binding; `--yes` bypasses the prompt for non-interactive use.
 
 4. On the remote host, confirm the tunnel carries the query back to the laptop's Postgres:
    ```
@@ -43,7 +44,7 @@ Validates the full local→remote loop: discover → reverse-tunnel → same-por
 
 7. Auto-heal: kill the `ssh -R` tunnel process for port 5432. Expect the manager to log `reconnecting` then return to `active`, and step 4 to succeed again.
 
-8. Port-conflict / remap: occupy remote `127.0.0.1:5432` (e.g. `ssh <host> 'nc -l 127.0.0.1 5432 &'`), re-bind, and expect the status line to read `remap` with a non-5432 `remotePort`, reflected in the manifest and MCP registry.
+8. Port-conflict / remap: occupy remote `127.0.0.1:5432` (e.g. `ssh <host> 'nc -l 127.0.0.1 5432 &'`), re-bind with `--yes`, and expect the status line to read `remap` with a non-5432 `remotePort`, reflected in the manifest and MCP registry.
 
 **Cleanup:** `docker stop <postgres container>`; unbind / stop the CLI session.
 
