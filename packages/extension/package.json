@@ -65,6 +65,30 @@
         "command": "patchwire.attachClipboardImage",
         "title": "Attach clipboard image to claude session",
         "category": "Patchwire"
+      },
+      {
+        "command": "patchwire.services.bind",
+        "title": "Bind",
+        "category": "Patchwire",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "patchwire.services.unbind",
+        "title": "Unbind",
+        "category": "Patchwire",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "patchwire.services.retry",
+        "title": "Retry",
+        "category": "Patchwire",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "patchwire.services.copyAddress",
+        "title": "Copy Remote Address",
+        "category": "Patchwire",
+        "icon": "$(copy)"
       }
     ],
     "viewsContainers": {
@@ -82,6 +106,34 @@
           "type": "webview",
           "id": "patchwire.chatPanel",
           "name": "Chat"
+        },
+        {
+          "id": "patchwire.services",
+          "name": "Services"
+        }
+      ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "patchwire.services.bind",
+          "when": "view == patchwire.services && viewItem =~ /^service:available/",
+          "group": "inline"
+        },
+        {
+          "command": "patchwire.services.unbind",
+          "when": "view == patchwire.services && viewItem =~ /^service:bound/",
+          "group": "inline"
+        },
+        {
+          "command": "patchwire.services.copyAddress",
+          "when": "view == patchwire.services && viewItem =~ /^service:bound/",
+          "group": "inline"
+        },
+        {
+          "command": "patchwire.services.retry",
+          "when": "view == patchwire.services && viewItem =~ /:(failed|stale)$/",
+          "group": "inline"
         }
       ]
     },
