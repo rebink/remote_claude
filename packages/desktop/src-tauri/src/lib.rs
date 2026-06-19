@@ -475,8 +475,11 @@ async fn start_services(
     if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
     if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
 
-    // Kill any prior session for this workspace.
-    if let Some(child) = state.child.lock().unwrap().take() { let _ = child.kill(); }
+    // Kill any prior session for this workspace; reset busy so compare_exchange below succeeds.
+    if let Some(child) = state.child.lock().unwrap().take() {
+        let _ = child.kill();
+        state.busy.store(false, Ordering::SeqCst);
+    }
 
     let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
     if state.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
