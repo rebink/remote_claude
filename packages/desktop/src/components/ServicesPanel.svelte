@@ -6,7 +6,14 @@
 
   let { project }: { project: Project } = $props();
   let view = $state<ServicesView>(initialServices);
-  let bound = $state<Set<string>>(new Set(project.boundServiceIds ?? []));
+  let bound = $state<Set<string>>(new Set());
+  let seededFor = $state<string | null>(null);
+  $effect(() => {
+    if (seededFor !== project.id) {
+      seededFor = project.id;
+      bound = new Set(project.boundServiceIds ?? []);
+    }
+  });
 
   onMount(() => {
     let un: (() => void) | undefined;
@@ -53,14 +60,15 @@
     <ul class="list">
       {#each view.candidates as s (s.id)}
         {@const st = statusOf(s.id)}
+        {@const addr = remoteOf(s.id)}
         <li class="row" data-testid="svc-{s.id}">
           <label class="tog">
             <input type="checkbox" checked={bound.has(s.id)} onchange={() => toggle(s.id)} aria-label="bind {s.label}" />
             <span class="label">{s.label}</span>
           </label>
           <span class="pill pill-{st}">{st}</span>
-          {#if remoteOf(s.id)}
-            <button class="copy" onclick={() => copy(remoteOf(s.id)!)} title="Copy remote address">{remoteOf(s.id)}</button>
+          {#if addr}
+            <button class="copy" onclick={() => copy(addr)} title="Copy remote address">{addr}</button>
           {/if}
           {#if st === "failed" || st === "stale"}
             <button class="retry" onclick={() => retry(s.id)}>Retry</button>
