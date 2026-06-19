@@ -34,6 +34,9 @@ export function makeManager(transport: Transport, deps: ManagerDeps = {}): Servi
   }
 
   function makeOnClose(entry: Entry): (code: number | null) => void {
+    // P1: flat backoff, retries forever. The 'failed' (give-up after N attempts)
+    // and 'stale' (service vanished) statuses in ProjectionStatus are reserved
+    // for P2 and are intentionally never set here yet.
     const onClose = async () => {
       if (entry.stopped) return;
       entry.projection.status = 'reconnecting';
