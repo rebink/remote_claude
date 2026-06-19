@@ -58,4 +58,25 @@ describe('makeManager', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(openSpy).not.toHaveBeenCalled();
   });
+
+  it('backs off with the attempt number on each reconnect', async () => {
+    const { transport, closes } = upTransport();
+    const backoff = vi.fn((_a: number) => 0);
+    const m = makeManager(transport, { probe: async () => {}, delay: async () => {}, backoff });
+    await m.bind(svc);
+    closes[closes.length - 1](255);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(backoff).toHaveBeenCalledWith(1);
+  });
+
+  it('gives up with status "failed" after maxAttempts consecutive drops', async () => {
+    const { transport, closes } = upTransport();
+    const m = makeManager(transport, { probe: async () => {}, delay: async () => {}, maxAttempts: 2 });
+    await m.bind(svc);
+    for (let i = 0; i < 3; i++) {
+      closes[closes.length - 1](255);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(m.status()[0].status).toBe('failed');
+  });
 });
