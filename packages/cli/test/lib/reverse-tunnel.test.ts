@@ -15,6 +15,14 @@ describe('buildReverseTunnelArgs', () => {
       'admin@h.example',
     ]);
   });
+
+  it('omits -i entirely when keyPath is empty (falls back to SSH agent / default identities)', () => {
+    const args = buildReverseTunnelArgs({ ...ssh, keyPath: '', remotePort: 9123, localPort: 50123 });
+    expect(args).not.toContain('-i');
+    expect(args).toContain('-R');
+    expect(args).toContain('127.0.0.1:9123:127.0.0.1:50123');
+    expect(args).toContain('admin@h.example');
+  });
 });
 
 describe('openReverseTunnel', () => {

@@ -1,7 +1,8 @@
 // packages/cli/src/commands/services.ts
 import type { Command } from 'commander';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { resolve, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { ConfigSchema } from '../lib/config.ts';
 import { makeDockerDiscoverer } from '../services/discoverers/docker.ts';
@@ -27,15 +28,16 @@ export function renderStatus(projections: Projection[]): string {
     .join('\n');
 }
 
-/** Read host/user/port from patchwire.yml in cwd. keyPath defaults to '' (use SSH agent). */
+/** Read host/user/port from patchwire.yml in cwd. Uses per-project SSH key if present, else '' (SSH agent). */
 function loadSshTarget(): SshTarget {
   const raw = parseYaml(readFileSync(resolve(process.cwd(), 'patchwire.yml'), 'utf8'));
   const cfg = ConfigSchema.parse(raw);
+  const kp = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
   return {
     host: cfg.remote.host,
     user: cfg.remote.user,
     port: cfg.remote.sshPort ?? 22,
-    keyPath: '',
+    keyPath: existsSync(kp) ? kp : '',
   };
 }
 

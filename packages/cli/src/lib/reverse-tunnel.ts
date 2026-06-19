@@ -19,7 +19,7 @@ export interface ReverseTunnelOpts {
  */
 export function buildReverseTunnelArgs(o: ReverseTunnelOpts): string[] {
   return [
-    '-i', o.keyPath,
+    ...(o.keyPath ? ['-i', o.keyPath] : []),
     '-p', String(o.port),
     '-o', 'StrictHostKeyChecking=accept-new',
     '-o', 'BatchMode=yes',
