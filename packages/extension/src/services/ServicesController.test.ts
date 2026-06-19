@@ -84,4 +84,14 @@ describe('ServicesController', () => {
     f.exit();
     expect(seen.at(-1)!.error).toBe('session stopped');
   });
+
+  it('clears the stopped error when restarted', () => {
+    const f = fakeChild();
+    const { c } = makeController(f.child);
+    c.start();
+    f.exit(); // sets error 'session stopped', nulls child
+    expect(c.current().error).toBe('session stopped');
+    c.start(); // restart
+    expect(c.current().error).toBeUndefined();
+  });
 });

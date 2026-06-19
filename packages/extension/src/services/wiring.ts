@@ -16,12 +16,13 @@ export interface WireServicesDeps {
   hasConfig: boolean;
 }
 
-/** Start the session lazily the first time the Services view becomes visible. */
+/**
+ * Start the session when the Services view becomes visible. If a prior session
+ * died (controller no longer running), reopening the view restarts it.
+ */
 export function wireServices(deps: WireServicesDeps): { dispose(): void } {
-  let started = false;
   return deps.treeView.onDidChangeVisibility((e) => {
-    if (!e.visible || started || !deps.hasConfig) return;
-    started = true;
+    if (!e.visible || !deps.hasConfig || deps.controller.isRunning()) return;
     deps.controller.start();
     deps.controller.discover();
     for (const id of deps.boundIds()) deps.controller.bind(id);

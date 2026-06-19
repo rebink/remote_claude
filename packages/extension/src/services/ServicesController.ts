@@ -32,6 +32,9 @@ export class ServicesController {
 
   start(): void {
     if (this.child) return;
+    if (this.view.error) {
+      this.view = { ...this.view, error: undefined };
+    }
     const child = this.spawnFn(this.command, [...this.baseArgs, 'services', 'serve', '--stream'], { cwd: this.cwd, env: this.env });
     this.child = child;
     child.stdout?.on('data', (chunk) => this.onData(chunk.toString()));
