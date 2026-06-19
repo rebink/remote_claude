@@ -3,6 +3,7 @@ import type { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve, join } from 'node:path';
+import type { Readable, Writable } from 'node:stream';
 import { parse as parseYaml } from 'yaml';
 import { ConfigSchema } from '../lib/config.ts';
 import { makeDockerDiscoverer } from '../services/discoverers/docker.ts';
@@ -13,6 +14,7 @@ import { writeManifest } from '../services/manifest.ts';
 import { log } from '../lib/log.ts';
 import { makeLineReader } from './setup.ts';
 import type { DiscoveredService, Projection, SshTarget } from '../services/types.ts';
+import { runServicesSession, type SessionIo } from '../services/session.ts';
 
 /** True for y / yes (case-insensitive), false for everything else including empty. */
 export function isAffirmative(answer: string): boolean {
@@ -32,6 +34,27 @@ export function renderStatus(projections: Projection[]): string {
   return projections
     .map((p) => `${p.service.id}\t${p.service.localPort}→${p.remotePort}\t${p.mirrored ? 'mirror' : 'remap'}\t${p.status}`)
     .join('\n');
+}
+
+/** Build a SessionIo over a readable line source and a writable sink (NDJSON). */
+export function makeStdioIo(source: Readable, sink: Writable): SessionIo {
+  let buf = '';
+  let lineCb: (l: string) => void = () => {};
+  source.on('data', (chunk: Buffer | string) => {
+    buf += chunk.toString();
+    let nl = buf.indexOf('\n');
+    while (nl >= 0) {
+      const line = buf.slice(0, nl);
+      buf = buf.slice(nl + 1);
+      lineCb(line);
+      nl = buf.indexOf('\n');
+    }
+  });
+  return {
+    onLine: (cb) => { lineCb = cb; },
+    write: (obj) => { sink.write(JSON.stringify(obj) + '\n'); },
+    onClose: (cb) => { source.on('end', cb); source.on('close', cb); },
+  };
 }
 
 /** Read host/user/port from patchwire.yml in cwd. Uses per-project SSH key if present, else '' (SSH agent). */
@@ -93,5 +116,25 @@ export function registerServicesCommand(program: Command): void {
       const p = await manager.bind(svc);
       log.ok(`Bound ${p.service.label}: 127.0.0.1:${p.remotePort} on remote (${p.mirrored ? 'mirrored' : 'remapped'}).`);
       log.info(renderStatus(manager.status()));
+    });
+
+  cmd
+    .command('serve')
+    .description('Long-lived projection session: NDJSON commands on stdin, events on stdout')
+    .option('--stream', 'stream NDJSON events (required)')
+    .action(() => {
+      const target = loadSshTarget();
+      const manager = makeManager(makeSshTransport(target));
+      const io = makeStdioIo(process.stdin, process.stdout);
+      process.stdin.resume();
+      runServicesSession(io, {
+        manager,
+        discover: async (dartVmUri?: string) => {
+          const docker = await makeDockerDiscoverer().discover();
+          const dart = parseDartOutput(dartVmUri ?? process.env.PW_DART_OUTPUT ?? '');
+          return aggregateDiscovered([docker, dart]);
+        },
+        onManifest: (projections) => { try { writeManifest(process.cwd(), projections); } catch { /* ignore */ } },
+      });
     });
 }
