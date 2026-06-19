@@ -48,6 +48,18 @@ Validates the full local→remote loop: discover → reverse-tunnel → same-por
 
 **Cleanup:** `docker stop <postgres container>`; unbind / stop the CLI session.
 
+## Desktop (P2)
+
+The desktop app drives the same engine via a long-lived `patchwire services serve --stream` session (one per workspace).
+
+1. Open a project workspace in the desktop app with a local Postgres container running.
+2. The Services panel auto-lists `Postgres (...)`; toggle it on → pill goes `binding`→`active`, remote `127.0.0.1:5432` shown with a copy button.
+3. Reopen the workspace → the bound service auto-rebinds (persisted in the project record's `boundServiceIds`).
+4. Stop the container → next discover tick marks the pill `stale`; restart it and click Retry → back to `active`.
+5. Kill the `ssh -R` tunnel → pill `reconnecting` → `active` (exponential-backoff auto-heal); exhaust retries (6) → `failed` + Retry button.
+6. Close the workspace → the session process is killed → all tunnels drop.
+
 ## Status
 
-Phase 1 engine + CLI: implemented and unit-green (609 tests). This runbook is the gating manual validation before Phase 2 (desktop UI) wires the same engine behind a GUI.
+- **Phase 1** (engine + CLI): unit-green.
+- **Phase 2** (desktop UI + manager hardening): unit-green — CLI 629 tests, desktop 156 tests, `cargo build` clean. This runbook is the gating manual validation on a real provisioned host.
