@@ -51,6 +51,9 @@ export function makeManager(transport: Transport, deps: ManagerDeps = {}): Servi
       entry.projection.status = 'reconnecting';
       emit();
       await delay(backoff(entry.attempts));
+      // refresh() may have flipped this entry to 'stale' (and stopped its tunnel)
+      // while we were backing off. TS narrowed status to 'reconnecting' from the
+      // assignment above, so the cast restores the real runtime union for the check.
       if (entry.stopped || (entry.projection.status as ProjectionStatus) === 'stale') return;
       supervise(entry, onClose);
       entry.projection.status = 'active';
