@@ -1,6 +1,6 @@
 {
   "name": "@patchwire/protocol",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
   "description": "Shared HTTP/NDJSON wire types for the Patchwire CLI agent and the VS Code extension.",
   "type": "module",
