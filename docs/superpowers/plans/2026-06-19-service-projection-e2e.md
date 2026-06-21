@@ -70,10 +70,27 @@ The extension spawns the same `services serve --stream` session directly via `ch
 5. Stop the container → status `stale` (warning icon) after a refresh; Retry icon re-arms.
 6. Close the window → the session process is killed → tunnels drop.
 
+## Automated real-ssh harness (no remote host needed)
+
+The manual steps above need a provisioned host. For the **core engine** there is an
+automated harness that needs only local Docker: a throwaway sshd container stands in
+as the remote, and the host's ssh client forwards a tunnelled Postgres back to the
+host's own DB.
+
+```
+bash e2e/service-projection/run.sh
+```
+
+Proves — with real `ssh -R`, real `docker ps`, real `psql` — the discover→bind→reach
+loop, the same-port-conflict **remap**, and supervised **auto-heal**. Last run: **6/6 green**.
+(The desktop Tauri bridge and the VS Code extension UI still need the manual steps,
+since they just drive the same CLI the harness exercises.)
+
 ## Status
 
-- **Phase 1** (engine + CLI): unit-green.
-- **Phase 2** (desktop UI + manager hardening): unit-green — CLI 629 tests, desktop 156 tests, `cargo build` clean.
-- **Phase 3** (VS Code extension tree view): unit-green — extension 78 tests, typecheck + build clean.
+- **Phase 1** (engine + CLI): unit-green + **real-ssh E2E green** (harness, 6/6).
+- **Phase 2** (desktop UI + manager hardening): unit-green — CLI 630 tests, desktop 156 tests, `cargo build` clean. Engine path validated by the harness; desktop bridge needs the manual GUI steps.
+- **Phase 3** (VS Code extension tree view): unit-green — extension 81 tests, typecheck + build clean. Engine path validated by the harness; extension UI needs the manual GUI steps.
 
-This runbook is the gating manual validation on a real provisioned host across all three surfaces.
+The core reverse-tunnel/mirror/heal engine is now validated against real ssh+docker.
+The manual runbook remains the gate for the desktop + extension UI layers on a real host.
