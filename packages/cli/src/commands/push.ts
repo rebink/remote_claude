@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { resolveProjectKey } from '../lib/project-key.ts';
 import { spawn, spawnSync } from 'node:child_process';
 import { loadConfig, type Config } from '../lib/config.ts';
 import { stageAttachment, remoteAttachmentPath, pruneInbox, INBOX_DIR } from '../lib/attachments.ts';
@@ -52,7 +53,7 @@ export async function runPush(cwd: string, files: string[], opts: PushOpts = {})
   if (opts.clean) {
     pruneInbox(cwd);
     if (!opts.stageOnly) {
-      const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+      const keyPath = resolveProjectKey(cfg.remote.host, cfg.remote.user);
       await runSsh({ host: cfg.remote.host, user: cfg.remote.user, port: cfg.remote.sshPort ?? 22, keyPath,
         command: `rm -rf ${quoteForShell(remoteAttachmentPath(cfg.remote.path, INBOX_DIR))}` });
     }
@@ -64,7 +65,7 @@ export async function runPush(cwd: string, files: string[], opts: PushOpts = {})
   const sources = clipSource ? [clipSource] : files;
   if (sources.length === 0) { log.err('No file to push. Pass a path or --clip.'); process.exitCode = 1; return; }
 
-  const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+  const keyPath = resolveProjectKey(cfg.remote.host, cfg.remote.user);
   const results: string[] = [];
   if (!opts.stageOnly) assertRsyncAvailable();
   try {

@@ -167,3 +167,16 @@ export async function stopFlutterAttach(projectDir: string): Promise<void> {
 export async function onFlutterVmClosed(handler: () => void): Promise<UnlistenFn> {
   return listen<string>("pw://flutter-vm-closed", () => handler());
 }
+
+export async function startServices(projectDir: string, dartVmUri?: string): Promise<void> {
+  await invoke("start_services", { projectDir, dartVmUri: dartVmUri ?? null });
+}
+export async function servicesSend(cmd: Record<string, unknown>): Promise<void> {
+  await invoke("services_send", { json: JSON.stringify(cmd) });
+}
+export async function stopServices(): Promise<void> {
+  await invoke("stop_services");
+}
+export async function onServicesEvent(handler: (line: string) => void): Promise<UnlistenFn> {
+  return listen<string>("pw://services", (e) => handler(e.payload));
+}

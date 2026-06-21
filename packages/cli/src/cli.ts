@@ -10,6 +10,8 @@ import { runApply } from './commands/apply.ts';
 import { runPush } from './commands/push.ts';
 import { runDoctor } from './commands/doctor.ts';
 import { registerFlutterMcpCommand } from './commands/flutter-mcp.ts';
+import { registerServicesCommand } from './commands/services.ts';
+import { registerServicesMcpCommand } from './commands/services-mcp.ts';
 import { log } from './lib/log.ts';
 import { VERSION } from './version.ts';
 import { ConfigSchema } from './lib/config.ts';
@@ -428,6 +430,8 @@ program
   });
 
 registerFlutterMcpCommand(program);
+registerServicesCommand(program);
+registerServicesMcpCommand(program);
 
 program.parseAsync(process.argv).catch((err: Error) => {
   log.err(err.message);

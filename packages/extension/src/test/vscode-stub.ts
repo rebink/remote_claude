@@ -88,6 +88,12 @@ export const window = {
   activeTerminal: undefined as unknown,
   onDidCloseTerminal: (_cb: unknown) => ({ dispose: () => {} }),
   onDidOpenTerminal: (_cb: unknown) => ({ dispose: () => {} }),
+  registerTreeDataProvider: (_id: string, _provider: unknown) => ({ dispose: () => {} }),
+  createTreeView: (_id: string, _opts: unknown) => ({
+    onDidChangeVisibility: (_cb: (e: { visible: boolean }) => void) => ({ dispose: () => {} }),
+    visible: false,
+    dispose: () => {},
+  }),
 };
 
 export const env = {
@@ -97,3 +103,22 @@ export const env = {
 export const commands = {
   executeCommand: async (_command: string, ..._args: unknown[]) => undefined,
 };
+
+export enum TreeItemCollapsibleState { None = 0, Collapsed = 1, Expanded = 2 }
+
+export class ThemeIcon {
+  constructor(public readonly id: string) {}
+}
+
+export class TreeItem {
+  label?: string;
+  description?: string;
+  iconPath?: unknown;
+  contextValue?: string;
+  tooltip?: string;
+  collapsibleState?: TreeItemCollapsibleState;
+  constructor(label?: string, collapsibleState?: TreeItemCollapsibleState) {
+    this.label = label;
+    this.collapsibleState = collapsibleState;
+  }
+}

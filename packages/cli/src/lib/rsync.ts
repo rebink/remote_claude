@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { writeFile, mkdtemp, rm } from 'node:fs/promises';
-import { homedir, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolveProjectKey } from './project-key.ts';
 import type { Config } from './config.ts';
 import { log } from './log.ts';
 
@@ -56,7 +57,7 @@ export async function rsyncPush(
     const remoteTarget = `${cfg.remote.user}@${cfg.remote.host}:${cfg.remote.path}/`;
     // Use the per-project SSH key if it exists (matches the bootstrap flow). Without -i,
     // ssh tries default keys (~/.ssh/id_*) which our setup never installs on the Mini.
-    const keyPath = join(homedir(), '.patchwire', 'keys', `${cfg.remote.host}-${cfg.remote.user}`);
+    const keyPath = resolveProjectKey(cfg.remote.host, cfg.remote.user);
     const sshParts: string[] = ['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new'];
     if (existsSync(keyPath)) sshParts.push('-i', keyPath);
     if (cfg.remote.sshPort) sshParts.push('-p', String(cfg.remote.sshPort));

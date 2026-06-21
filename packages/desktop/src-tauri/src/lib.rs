@@ -18,6 +18,12 @@ struct SyncWatchState {
     child: std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
 }
 
+#[derive(Default)]
+struct ServicesSessionState {
+    child: std::sync::Mutex<Option<tauri_plugin_shell::process::CommandChild>>,
+    busy: std::sync::atomic::AtomicBool,
+}
+
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ProvisionArgs {
@@ -455,6 +461,85 @@ fn stop_sync_watch(state: tauri::State<'_, SyncWatchState>) -> Result<(), String
 }
 
 #[tauri::command]
+async fn start_services(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ServicesSessionState>,
+    project_dir: String,
+    dart_vm_uri: Option<String>,
+) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    use tauri_plugin_shell::ShellExt;
+    use tauri_plugin_shell::process::CommandEvent;
+    use tauri::Emitter;
+
+    if project_dir.trim().is_empty() { return Err("project_dir is required".into()); }
+    if !std::path::Path::new(&project_dir).is_dir() { return Err("project_dir does not exist".into()); }
+
+    // Kill any prior session for this workspace; reset busy so compare_exchange below succeeds.
+    if let Some(child) = state.child.lock().unwrap().take() {
+        let _ = child.kill();
+        state.busy.store(false, Ordering::SeqCst);
+    }
+
+    let sidecar = app.shell().sidecar("patchwire").map_err(|e| e.to_string())?;
+    if state.busy.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+        return Err("a services session is already running".into());
+    }
+    let (mut rx, mut child) = match sidecar
+        .current_dir(std::path::PathBuf::from(&project_dir))
+        .args(["services", "serve", "--stream"])
+        .spawn()
+    {
+        Ok(v) => v,
+        Err(e) => { state.busy.store(false, Ordering::SeqCst); return Err(e.to_string()); }
+    };
+
+    // If a Dart VM URI was detected, prime discovery with it.
+    if let Some(uri) = dart_vm_uri.filter(|u| !u.trim().is_empty()) {
+        let line = format!("{{\"cmd\":\"discover\",\"dartVmUri\":{}}}\n", serde_json::to_string(&uri).unwrap_or_else(|_| "\"\"".into()));
+        let _ = child.write(line.as_bytes());
+    }
+
+    *state.child.lock().unwrap() = Some(child);
+
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(bytes) => {
+                    let line = String::from_utf8_lossy(&bytes).trim_end().to_string();
+                    if !line.is_empty() { let _ = app.emit("pw://services", line); }
+                }
+                CommandEvent::Terminated(p) => {
+                    if let Some(st) = app.try_state::<ServicesSessionState>() {
+                        *st.child.lock().unwrap() = None;
+                        st.busy.store(false, Ordering::SeqCst);
+                    }
+                    let _ = app.emit("pw://services-end", p.code);
+                }
+                _ => {}
+            }
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn services_send(state: tauri::State<'_, ServicesSessionState>, json: String) -> Result<(), String> {
+    let mut guard = state.child.lock().unwrap();
+    let child = guard.as_mut().ok_or("no services session running")?;
+    let line = format!("{}\n", json.trim_end());
+    child.write(line.as_bytes()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn stop_services(state: tauri::State<'_, ServicesSessionState>) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    if let Some(child) = state.child.lock().unwrap().take() { let _ = child.kill(); }
+    state.busy.store(false, Ordering::SeqCst);
+    Ok(())
+}
+
+#[tauri::command]
 async fn sync_command(
     app: tauri::AppHandle,
     project_dir: String,
@@ -820,6 +905,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(ProvisionState::default())
         .manage(SyncWatchState::default())
+        .manage(ServicesSessionState::default())
         .invoke_handler(tauri::generate_handler![
             start_provision,
             send_consent,
@@ -846,7 +932,10 @@ pub fn run() {
             write_project_yml,
             detect_project_type,
             init_remote_copy,
-            git_status
+            git_status,
+            start_services,
+            services_send,
+            stop_services
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

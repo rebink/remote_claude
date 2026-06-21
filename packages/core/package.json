@@ -9,7 +9,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./sync-templates": "./src/sync-templates.ts",
-    "./session-command": "./src/session-command.ts"
+    "./session-command": "./src/session-command.ts",
+    "./services-protocol": "./src/services-protocol.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

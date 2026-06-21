@@ -29,6 +29,7 @@ export interface Project {
   lastStatus: ProjectStatus;
   syncPaused: boolean;
   connectionId: string;
+  boundServiceIds?: string[];
 }
 
 export interface ProjectConfig {

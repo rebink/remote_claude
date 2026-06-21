@@ -5,6 +5,11 @@ import { DiffContentProvider, SCHEME } from './diff/DiffContentProvider.ts';
 import { ChatPanel } from './chat/ChatPanel.ts';
 import { registerCommands } from './commands.ts';
 import { SetupWizard } from './setup/SetupWizard.ts';
+import { resolveCli } from './cli/resolveCli.ts';
+import { ServicesController } from './services/ServicesController.ts';
+import { ServicesTreeProvider } from './services/ServicesTreeProvider.ts';
+import { makeServiceCommandHandlers, boundIdsFrom } from './services/serviceCommands.ts';
+import { wireServices } from './services/wiring.ts';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel('Patchwire');
@@ -27,6 +32,36 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // ("command 'patchwire.openSetup' not found"), and it never recovered when a
   // folder was opened later. The commands that need a folder guard for it.
   registerCommands(context, { output, setupWizard, panel });
+
+  // Services tree view — lazy-start on first visibility.
+  const wsForServices = currentWs();
+  if (wsForServices) {
+    const inv = resolveCli(context.extensionUri.fsPath);
+    const servicesController = new ServicesController(inv.command, inv.baseArgs, wsForServices, inv.env);
+    context.subscriptions.push({ dispose: () => servicesController.dispose() });
+
+    const hasYml = existsSync(join(wsForServices, 'patchwire.yml'));
+    const servicesProvider = new ServicesTreeProvider(servicesController, () => boundIdsFrom(context.workspaceState));
+    servicesProvider.setHasConfig(hasYml);
+    // createTreeView registers the provider AND gives us the view handle for
+    // lazy-start visibility wiring — so no separate registerTreeDataProvider.
+    const servicesTreeView = vscode.window.createTreeView('patchwire.services', { treeDataProvider: servicesProvider });
+    context.subscriptions.push(servicesTreeView);
+    context.subscriptions.push(wireServices({
+      controller: servicesController,
+      treeView: servicesTreeView,
+      boundIds: () => boundIdsFrom(context.workspaceState),
+      hasConfig: hasYml,
+    }));
+
+    const serviceHandlers = makeServiceCommandHandlers(servicesController, context.workspaceState);
+    context.subscriptions.push(
+      vscode.commands.registerCommand('patchwire.services.bind', (i) => serviceHandlers.bind(i)),
+      vscode.commands.registerCommand('patchwire.services.unbind', (i) => serviceHandlers.unbind(i)),
+      vscode.commands.registerCommand('patchwire.services.retry', (i) => serviceHandlers.retry(i)),
+      vscode.commands.registerCommand('patchwire.services.copyAddress', (i) => serviceHandlers.copyAddress(i)),
+    );
+  }
 
   // Workspace-dependent startup. Re-run when the user opens or switches a folder,
   // so a session can start even if VS Code launched with no folder open.
