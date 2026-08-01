@@ -35,11 +35,17 @@ const target: MutagenTarget = {
 };
 
 describe("sessionName", () => {
-  it("derives rc-<project>-<host> sanitized", () => {
-    expect(sessionName("api-server", "studio-mini")).toBe("rc-api-server-studio-mini");
+  it("derives rc-<project>-<host>-<pathhash> sanitized", () => {
+    expect(sessionName("api-server", "studio-mini", "/x")).toBe("rc-api-server-studio-mini-629e2b1d");
   });
   it("lowercases, replaces non [a-z0-9-], collapses + trims dashes", () => {
-    expect(sessionName("My_App!", "Host.Local")).toBe("rc-my-app-host-local");
+    expect(sessionName("My_App!", "Host.Local", "/x")).toBe("rc-my-app-host-local-629e2b1d");
+  });
+  it("gives distinct names to distinct local paths (worktree isolation)", () => {
+    expect(sessionName("p", "h", "/a")).not.toBe(sessionName("p", "h", "/b"));
+  });
+  it("is stable + trailing-slash insensitive for the same local path", () => {
+    expect(sessionName("p", "h", "/a")).toBe(sessionName("p", "h", "/a/"));
   });
 });
 

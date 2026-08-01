@@ -56,7 +56,7 @@ function actionRunner(
     const bin = await deps.resolveBin();
     if (!bin) { emitStatus(deps.print, { kind: "not_installed" }); return; }
     const t = deps.loadTarget(cwd);
-    op(deps.run, sessionName(t.project, t.host));
+    op(deps.run, sessionName(t.project, t.host, t.localPath));
     deps.print(JSON.stringify({ type: "sync_action", action, ok: true }));
   };
 }
@@ -69,7 +69,7 @@ export async function runSyncStatus(cwd: string, deps: SyncDeps): Promise<void> 
   const bin = await deps.resolveBin();
   if (!bin) { emitStatus(deps.print, { kind: "not_installed" }); return; }
   const t = deps.loadTarget(cwd);
-  emitStatus(deps.print, getStatus(deps.run, sessionName(t.project, t.host)));
+  emitStatus(deps.print, getStatus(deps.run, sessionName(t.project, t.host, t.localPath)));
 }
 
 export async function runSyncStart(cwd: string, deps: SyncDeps): Promise<void> {
@@ -103,7 +103,7 @@ export async function runSyncWatch(cwd: string, deps: SyncDeps, opts: WatchOpts 
   const t = deps.loadTarget(cwd);
   deps.ensureSsh({ host: t.host, user: t.user, sshPort: t.sshPort });
   ensureSession(deps.run, t);
-  const name = sessionName(t.project, t.host);
+  const name = sessionName(t.project, t.host, t.localPath);
   const interval = opts.intervalMs ?? 2000;
   let tick = 0;
   // Unbounded in production (maxTicks undefined → loop until process killed).

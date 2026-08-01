@@ -3,6 +3,7 @@
  * Ported verbatim from packages/extension/src/sync/MutagenController.ts.
  * No spawn / IO — pure functions only.
  */
+import { createHash } from "node:crypto";
 
 export type MutagenStatus =
   | { kind: "not_installed" }
@@ -41,12 +42,22 @@ function mergeIgnores(base: string[], extra: string[]): string[] {
   return [...base, ...extra.filter((p) => !base.includes(p))];
 }
 
+/** Short, stable hash of the local (alpha) path — makes the session name worktree-unique. */
+function shortPathHash(localPath: string): string {
+  return createHash("sha1").update(localPath.replace(/\/+$/, "")).digest("hex").slice(0, 8);
+}
+
 /**
- * Stable session name. Mutagen names must match `[a-z0-9](-?[a-z0-9])*` —
+ * Worktree-unique session name. Includes a hash of the local path so two
+ * worktrees of the same project+host resolve to DISTINCT sessions instead of
+ * colliding on one name. Mutagen names must match `[a-z0-9](-?[a-z0-9])*` —
  * lowercase alphanumeric with single dashes. No underscores, dots, uppercase.
+ *
+ * MUST stay in sync with the `sessionName` getter in
+ * packages/extension/src/sync/MutagenController.ts.
  */
-export function sessionName(project: string, host: string): string {
-  const raw = `rc-${project}-${host}`.toLowerCase();
+export function sessionName(project: string, host: string, localPath: string): string {
+  const raw = `rc-${project}-${host}-${shortPathHash(localPath)}`.toLowerCase();
   return raw.replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
 }
 
@@ -133,7 +144,7 @@ export function getStatus(run: MutagenRunner, name: string): MutagenStatus {
 }
 
 export function ensureSession(run: MutagenRunner, target: MutagenTarget): void {
-  const name = sessionName(target.project, target.host);
+  const name = sessionName(target.project, target.host, target.localPath);
   const exists = run(["sync", "list", name, "--template", "{{ range . }}{{ .Name }}{{ end }}"]);
   if (exists.status === 0 && exists.stdout.trim() !== "") return; // already exists
   run(buildCreateArgs(name, target));

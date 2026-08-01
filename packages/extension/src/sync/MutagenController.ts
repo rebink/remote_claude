@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { createNodeHostPlatform } from '@patchwire/core';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -78,17 +79,43 @@ export class MutagenController {
     this.mutagenBin = mutagenBin;
   }
 
+  /** Short, stable hash of the local (alpha) path — makes the session name worktree-unique. */
+  private shortPathHash(): string {
+    return createHash('sha1').update(this.target.localPath.replace(/\/+$/, '')).digest('hex').slice(0, 8);
+  }
+
   /**
-   * Stable session name. Mutagen names must match `[a-z0-9](-?[a-z0-9])*` —
-   * lowercase alphanumeric with single dashes. No underscores, dots,
-   * uppercase, or consecutive dashes allowed.
+   * Worktree-unique session name. Includes a hash of the local path so two
+   * worktrees of the same project+host resolve to DISTINCT sessions instead
+   * of colliding on one name — the old `rc-<project>-<host>` scheme let a
+   * second window silently hijack (or terminate + recreate) the first
+   * window's session, churning files under an in-progress commit.
+   *
+   * Mutagen names must match `[a-z0-9](-?[a-z0-9])*` — lowercase alphanumeric
+   * with single dashes. No underscores, dots, uppercase, or consecutive
+   * dashes allowed.
+   *
+   * MUST stay in sync with packages/cli/src/lib/mutagen.ts `sessionName()`.
    */
   private get sessionName(): string {
-    const raw = `rc-${this.target.project}-${this.target.host}`.toLowerCase();
+    const raw = `rc-${this.target.project}-${this.target.host}-${this.shortPathHash()}`.toLowerCase();
     return raw
       .replace(/[^a-z0-9-]/g, '-')   // anything else → dash
       .replace(/-+/g, '-')           // collapse consecutive dashes
       .replace(/^-+|-+$/g, '');      // trim leading/trailing dashes
+  }
+
+  /**
+   * Pre-worktree-hash session name (`rc-<project>-<host>`). Sessions created
+   * before the path-hash fix share this name across every worktree; we retire
+   * them on startup so they stop syncing a stale path against the remote.
+   */
+  private get legacySessionName(): string {
+    const raw = `rc-${this.target.project}-${this.target.host}`.toLowerCase();
+    return raw
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   /**
@@ -165,25 +192,68 @@ export class MutagenController {
     return r.status === 0 && r.stdout.trim() === this.sessionName;
   }
 
+  /**
+   * Terminate any pre-path-hash session sharing our project+host name. Those
+   * sessions predate worktree-unique naming and, left alive, keep syncing a
+   * single shared path against the remote — the root cause of staged changes
+   * being clobbered mid-commit across worktrees. Idempotent + best-effort.
+   */
+  private retireLegacySession(): void {
+    const legacy = this.legacySessionName;
+    if (legacy === this.sessionName) return;
+    const r = spawnSync(this.mutagenBin,['sync', 'list', legacy, '--template', '{{ range . }}{{ .Name }}{{ end }}'], {
+      encoding: 'utf8', timeout: 10000, env: this.mutagenEnv(),
+    });
+    if (r.status === 0 && r.stdout.trim() === legacy) {
+      this.output.appendLine(`[mutagen] retiring legacy shared session "${legacy}" (superseded by worktree-scoped name)`);
+      spawnSync(this.mutagenBin,['sync', 'terminate', legacy], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
+    }
+  }
+
+  /** The named session's alpha (local) path, or null if unknown/unparseable. */
+  private alphaPathOf(name: string): string | null {
+    const r = spawnSync(this.mutagenBin,['sync', 'list', name, '--template', '{{ range . }}{{ .Alpha.Path }}{{ end }}'], {
+      encoding: 'utf8', timeout: 10000, env: this.mutagenEnv(),
+    });
+    if (r.status !== 0) return null;
+    const p = (r.stdout || '').trim();
+    return p === '' ? null : p;
+  }
+
+  /**
+   * True if the named session's alpha endpoint is our local path. Best-effort:
+   * if the endpoint can't be determined, returns true so we don't force a
+   * needless recreate on a healthy session.
+   */
+  private alphaMatches(name: string): boolean {
+    const alpha = this.alphaPathOf(name);
+    if (alpha === null) return true;
+    return alpha.replace(/\/+$/, '') === this.target.localPath.replace(/\/+$/, '');
+  }
+
   /** Create the bidirectional sync session if it doesn't exist yet. */
   async ensureSession(): Promise<{ ok: true } | { ok: false; error: string }> {
+    this.retireLegacySession();
     if (this.sessionExists()) {
       // Check the existing session's status. If it's healthy (watching/syncing)
-      // reattach. If it's in an error state (failed SSH, bad config, etc.)
-      // terminate + recreate so we don't perpetuate the bad state.
+      // AND its alpha endpoint is our local path, reattach. If it's in an error
+      // state (failed SSH, bad config) or points somewhere else (stale/hijacked
+      // session), terminate + recreate so we don't perpetuate the bad state or
+      // sync the wrong directory.
       const r = spawnSync(this.mutagenBin,['sync', 'list', this.sessionName, '--template', '{{ range . }}{{ .Status }}{{ end }}'], {
         encoding: 'utf8',
         timeout: 10000,
         env: this.mutagenEnv(),
       });
       const status = (r.stdout || '').trim().toLowerCase();
-      const healthy = status.includes('watching') || status.includes('ready') || status.includes('scanning') || status.includes('staging') || status.includes('reconcil');
-      if (healthy) {
+      const statusHealthy = status.includes('watching') || status.includes('ready') || status.includes('scanning') || status.includes('staging') || status.includes('reconcil');
+      const endpointOk = this.alphaMatches(this.sessionName);
+      if (statusHealthy && endpointOk) {
         this.output.appendLine(`[mutagen] reattaching to existing session "${this.sessionName}" (status: ${status})`);
         this.startPolling();
         return { ok: true };
       }
-      this.output.appendLine(`[mutagen] existing session is in bad state (${status}); terminating + recreating`);
+      this.output.appendLine(`[mutagen] existing session unusable (status: ${status}, endpointOk: ${endpointOk}); terminating + recreating`);
       spawnSync(this.mutagenBin,['sync', 'terminate', this.sessionName], { encoding: 'utf8', timeout: 10000, env: this.mutagenEnv() });
     }
 
