@@ -429,6 +429,19 @@ program
     await runSyncStop(process.cwd(), { ...base, run: base.makeRun(bin ?? 'mutagen') });
   });
 
+program
+  .command('refresh')
+  .description('Purge the remote folder and re-seed it fresh from this machine (DESTRUCTIVE)')
+  .option('--yes', 'skip confirmation — required for non-interactive use', false)
+  .option('--json', 'JSON output', true)
+  .action(async (opts: { yes?: boolean; json?: boolean }) => {
+    const { runRefresh, realRefreshDeps } = await import('./commands/refresh.ts');
+    const deps = realRefreshDeps(loadMutagenTarget);
+    const confirmed = opts.yes === true; // interactive typed-name prompt = future work
+    const res = await runRefresh(process.cwd(), deps, { confirmed, json: opts.json !== false });
+    if (!res.ok) process.exitCode = 1;
+  });
+
 registerFlutterMcpCommand(program);
 registerServicesCommand(program);
 registerServicesMcpCommand(program);

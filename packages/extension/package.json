@@ -89,6 +89,12 @@
         "title": "Copy Remote Address",
         "category": "Patchwire",
         "icon": "$(copy)"
+      },
+      {
+        "command": "patchwire.forceRefresh",
+        "title": "Force Refresh Remote",
+        "category": "Patchwire",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {

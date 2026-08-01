@@ -1,0 +1,10 @@
+{
+  "planPath": "docs/plans/2026-08-01-force-refresh.md",
+  "tasks": [
+    {"id": 1, "subject": "Task 1: CLI runRefresh orchestrator (TDD)", "status": "completed"},
+    {"id": 2, "subject": "Task 2: Wire patchwire refresh command", "status": "completed", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 3: Extension patchwire.forceRefresh command", "status": "completed", "blockedBy": [1]},
+    {"id": 4, "subject": "Task 4: Full build + verification", "status": "completed", "blockedBy": [2, 3]}
+  ],
+  "lastUpdated": "2026-08-01"
+}

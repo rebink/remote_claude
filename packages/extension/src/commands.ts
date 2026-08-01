@@ -66,6 +66,39 @@ function makeAttachDeps(
   };
 }
 
+/** Exact-match confirm gate for the destructive force refresh. */
+export function refreshConfirmed(typed: string | undefined, project: string): boolean {
+  return typed === project;
+}
+
+function runForceRefresh(context: vscode.ExtensionContext, deps: ExtensionDeps, cwd: string): Promise<void> {
+  const inv = resolveCli(context.extensionUri.fsPath);
+  deps.output.show();
+  deps.output.appendLine('[refresh] starting force refresh…');
+  return new Promise((resolve) => {
+    const child = spawn(inv.command, [...inv.baseArgs, 'refresh', '--yes', '--json'], { cwd, env: inv.env });
+    let buf = '';
+    child.stdout?.on('data', (b: Buffer) => {
+      buf += b.toString();
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+      for (const line of lines) {
+        if (line.trim()) deps.output.appendLine(`[refresh] ${line.trim()}`);
+      }
+    });
+    child.stderr?.on('data', (b: Buffer) => deps.output.appendLine(`[refresh] ${b.toString().trim()}`));
+    child.on('close', (code: number | null) => {
+      if (code === 0) vscode.window.showInformationMessage('Patchwire: force refresh complete.');
+      else vscode.window.showErrorMessage(`Patchwire: force refresh failed (exit ${code ?? 'null'}). See output.`);
+      resolve();
+    });
+    child.on('error', (e: Error) => {
+      deps.output.appendLine(`[refresh] ${e.message}`);
+      resolve();
+    });
+  });
+}
+
 export function registerCommands(context: vscode.ExtensionContext, deps: ExtensionDeps): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('patchwire.viewOutput', () => deps.output.show()),
@@ -110,6 +143,29 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Extensi
         return;
       }
       await attachFile(null, makeAttachDeps(context, deps.panel, ws.uri.fsPath, project), { clip: true });
+    }),
+    vscode.commands.registerCommand('patchwire.forceRefresh', async () => {
+      const ws = vscode.workspace.workspaceFolders?.[0];
+      if (!ws) {
+        vscode.window.showErrorMessage('Patchwire: open a workspace folder first.');
+        return;
+      }
+      const project = deps.panel.getProject();
+      if (!project) {
+        vscode.window.showErrorMessage('No patchwire.yml found — run Patchwire: Setup first.');
+        return;
+      }
+      const typed = await vscode.window.showInputBox({
+        title: 'Force Refresh — destructive',
+        prompt: `Deletes the REMOTE copy of "${project}" and re-seeds it from this machine. Remote-only changes are lost. Type "${project}" to confirm.`,
+        placeHolder: project,
+        ignoreFocusOut: true,
+      });
+      if (!refreshConfirmed(typed, project)) {
+        vscode.window.showInformationMessage('Patchwire: force refresh cancelled.');
+        return;
+      }
+      await runForceRefresh(context, deps, ws.uri.fsPath);
     }),
   );
 }
